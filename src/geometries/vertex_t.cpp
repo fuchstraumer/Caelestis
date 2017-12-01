@@ -1,5 +1,5 @@
 #include "vpr_stdafx.h"
-#include "objects/vertex_t.hpp"
+#include "geometries/vertex_t.hpp"
 
 namespace vulpes {
 

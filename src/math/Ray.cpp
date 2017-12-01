@@ -1,5 +1,5 @@
 #include "vpr_stdafx.h"
-#include "util/Ray.hpp"
+#include "math/Ray.hpp"
 
 namespace vulpes {
 

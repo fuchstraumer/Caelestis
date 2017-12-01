@@ -1,9 +1,9 @@
 #include "vpr_stdafx.h"
-#include "objects/Skybox.hpp"
+#include "geometries/Skybox.hpp"
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
-#include "BaseScene.hpp"
+
 namespace vulpes {
 
     static const std::array<glm::vec3, 8> positions {
@@ -109,8 +109,8 @@ namespace vulpes {
     void Skybox::createShaders() {
 
 
-        vert = std::make_unique<ShaderModule>(device, BaseScene::SceneConfiguration.ResourcePathPrefixStr + "rsrc/shaders/skybox/skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-        frag = std::make_unique<ShaderModule>(device, BaseScene::SceneConfiguration.ResourcePathPrefixStr + "rsrc/shaders/skybox/skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+        vert = std::make_unique<ShaderModule>(device,"rsrc/shaders/skybox/skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+        frag = std::make_unique<ShaderModule>(device,"rsrc/shaders/skybox/skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
     }
 
@@ -143,9 +143,9 @@ namespace vulpes {
         graphicsPipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
         graphicsPipelineStateInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
 
-        graphicsPipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
-        if(BaseScene::SceneConfiguration.EnableMSAA) {
-            graphicsPipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
+        graphicsPipelineStateInfo.MultisampleInfo.sampleShadingEnable = Instance::GraphicsSettings.EnableMSAA;
+        if(Instance::GraphicsSettings.EnableMSAA) {
+            graphicsPipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
         }
 
         graphicsPipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = 1;

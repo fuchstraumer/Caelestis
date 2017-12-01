@@ -1,5 +1,5 @@
 #include "vpr_stdafx.h"
-#include "util/MatrixUtils.hpp"
+#include "math/MatrixUtils.hpp"
 
 namespace vulpes {
 

@@ -1,11 +1,11 @@
-#include "util/Camera.hpp"
-#include "util/MatrixUtils.hpp"
+#include "camera/Camera.hpp"
+#include "math/MatrixUtils.hpp"
 #include "glm/gtx/rotate_vector.hpp"
 #include "glm/gtx/rotate_normalized_axis.hpp"
 #include "glm/gtx/quaternion.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/matrix_access.hpp"
-
+#include "imgui/imgui.h"
 namespace vulpes {
 
 

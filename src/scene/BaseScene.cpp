@@ -1,5 +1,5 @@
 #include "vpr_stdafx.h"
-#include "BaseScene.hpp"
+#include "scene/BaseScene.hpp"
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "core/PhysicalDevice.hpp"
@@ -17,6 +17,7 @@
 
 namespace vulpes {
 
+    vulpesSceneConfig BaseScene::SceneConfiguration = vulpesSceneConfig();
     bool BaseScene::CameraLock = false;
     PerspectiveCamera BaseScene::fpsCamera = PerspectiveCamera(1440, 900, 70.0f);
     ArcballCamera BaseScene::arcballCamera = ArcballCamera(1440, 900, 70.9f, UtilitySphere(glm::vec3(0.0f), 7.0f));

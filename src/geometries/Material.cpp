@@ -1,7 +1,8 @@
-#include "vpr_stdafx.h"
-#include "objects/Material.hpp"
+
+#include "geometries/Material.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
+
 
 namespace vulpes {
 

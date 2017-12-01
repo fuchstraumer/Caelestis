@@ -1,9 +1,9 @@
 #include "vpr_stdafx.h"
-#include "util/Arcball.hpp"
-#include "util/Ray.hpp"
-#include "util/MatrixUtils.hpp"
-#include "util/MathUtils.hpp"
-#include "imgui.h"
+#include "camera/Arcball.hpp"
+#include "math/Ray.hpp"
+#include "math/MatrixUtils.hpp"
+#include "math/MathUtils.hpp"
+#include "imgui/imgui.h"
 namespace vulpes {
 
     ArcballCamera::ArcballCamera(const size_t& pixel_width, const size_t& pixel_height, const float& field_of_view, const UtilitySphere & _sphere) : PerspectiveCamera(pixel_width, pixel_height, 70.0f), sphere(_sphere), initialOrientation(glm::quat()), fromVector(0.0f), toVector(0.0f), constraintAxis(0.0f) {}

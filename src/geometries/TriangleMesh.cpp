@@ -1,4 +1,4 @@
-#include "objects/TriangleMesh.hpp"
+#include "geometries/TriangleMesh.hpp"
 
 namespace vulpes {
 

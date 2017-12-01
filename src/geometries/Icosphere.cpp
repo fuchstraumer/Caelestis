@@ -1,10 +1,11 @@
 #include "vpr_stdafx.h"
 #include <unordered_map>
-#include "objects/Icosphere.hpp"
+#include "geometries/Icosphere.hpp"
+#include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 #include "core/PhysicalDevice.hpp"
-#include "BaseScene.hpp"
+
 
 namespace vulpes {
 
@@ -252,9 +253,9 @@ namespace vulpes {
         pipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
         pipelineStateInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
 
-        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
+        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = Instance::GraphicsSettings.EnableMSAA;
         if (pipelineStateInfo.MultisampleInfo.sampleShadingEnable) {
-            pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
+            pipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
         }
 
         pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = 1;

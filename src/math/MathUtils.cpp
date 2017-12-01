@@ -1,5 +1,5 @@
 #include "vpr_stdafx.h"
-#include "util/MathUtils.hpp"
+#include "math/MathUtils.hpp"
 
 namespace vulpes {
 

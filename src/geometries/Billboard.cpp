@@ -1,9 +1,8 @@
-#include "vpr_stdafx.h"
-#include "objects/Billboard.hpp"
+#include "geometries/Billboard.hpp"
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
-#include "BaseScene.hpp"
+
 namespace vulpes {
 
     constexpr static std::array<float, 20> billboard_vertices {
@@ -118,9 +117,9 @@ namespace vulpes {
         pipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
         pipelineStateInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
 
-        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
+        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = Instance::GraphicsSettings.EnableMSAA;
         if (pipelineStateInfo.MultisampleInfo.sampleShadingEnable) {
-            pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
+            pipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
         }
 
         

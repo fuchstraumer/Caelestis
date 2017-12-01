@@ -1,11 +1,11 @@
 #include "vpr_stdafx.h"
-#include <unordered_map>
-#include "objects/ObjModel.hpp"
+#include "geometries/ObjModel.hpp"
 #include "core/Instance.hpp"
 #include "command/TransferPool.hpp"
-#include "BaseScene.hpp"
+#include <unordered_map>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#include "tiny_obj_loader.h"
 
 namespace vulpes {
 
@@ -119,9 +119,9 @@ namespace vulpes {
         pipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
         pipelineStateInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
 
-        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
+        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = Instance::GraphicsSettings.EnableMSAA;
         if (pipelineStateInfo.MultisampleInfo.sampleShadingEnable) {
-            pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
+            pipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
         }
 
         pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = 1;
