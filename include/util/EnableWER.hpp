@@ -1,7 +1,7 @@
 #pragma once
 #ifndef VULPES_ENABLE_WER_HPP
 #define VULPES_ENABLE_WER_HPP
-
+#ifdef _WIN32
 namespace vulpes {
     namespace util {
 
@@ -16,5 +16,5 @@ namespace vulpes {
 
     }
 }
-
+#endif
 #endif //!VULPES_ENABLE_WER_HPP

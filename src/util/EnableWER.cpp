@@ -1,9 +1,9 @@
 #include "vpr_stdafx.h"
 #include "util/EnableWER.hpp"
 #include "core/Instance.hpp"
-#include "BaseScene.hpp"
+#include "scene/BaseScene.hpp"
 
-
+#ifdef _WIN32
 #ifdef USE_EXPERIMENTAL_FILESYSTEM
 #include <experimental/filesystem>
 #endif
@@ -14,10 +14,10 @@ namespace vulpes {
         
 #ifndef _WIN32
         typedef int LSTATUS;
-#endif
+
 
         inline static void winErrorToLog(const LSTATUS& status) {
-#ifdef _WIN32
+
             if (status == ERROR_ACCESS_DENIED) {
                 LOG(ERROR) << "Windows API call returned ERROR_ACCESS_DENIED:" << std::to_string(status);
             }
@@ -121,3 +121,4 @@ namespace vulpes {
 
     }
 }
+#endif
