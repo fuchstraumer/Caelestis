@@ -2,7 +2,7 @@
 #ifndef VULPES_SPHERE_UTILITY_HPP
 #define VULPES_SPHERE_UTILITY_HPP
 #include "vpr_stdafx.h"
-#include "Ray.hpp"
+#include "math/Ray.hpp"
 namespace vulpes {
 
     struct UtilitySphere {

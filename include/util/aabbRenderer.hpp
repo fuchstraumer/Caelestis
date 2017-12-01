@@ -5,11 +5,11 @@
 #include "vpr_stdafx.h"
 #include "AABB.hpp"
 #include "ForwardDecl.hpp"
-#include "../resource/Buffer.hpp"
-#include "../render/GraphicsPipeline.hpp"
-#include "../resource/PipelineCache.hpp"
-#include "../resource/ShaderModule.hpp"
-#include "../resource/PipelineLayout.hpp"
+#include "resource/Buffer.hpp"
+#include "render/GraphicsPipeline.hpp"
+#include "resource/PipelineCache.hpp"
+#include "resource/ShaderModule.hpp"
+#include "resource/PipelineLayout.hpp"
 
 namespace vulpes {
 

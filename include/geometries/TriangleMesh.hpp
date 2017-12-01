@@ -2,7 +2,6 @@
 #ifndef VULPESRENDER_TRIANGLE_MESH_HPP
 #define VULPESRENDER_TRIANGLE_MESH_HPP
 
-#include "vpr_stdafx.h"
 #include "resource/Buffer.hpp"
 #include "vertex_t.hpp"
 

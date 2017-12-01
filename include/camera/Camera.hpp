@@ -3,7 +3,7 @@
 #define VULPES_CAMERA_H
 
 #include "vpr_stdafx.h"
-#include "util/Ray.hpp"
+#include "math/Ray.hpp"
 #include "glm/gtc/quaternion.hpp"
 
 namespace vulpes {

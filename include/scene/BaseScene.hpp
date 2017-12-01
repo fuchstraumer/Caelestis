@@ -16,8 +16,8 @@
 #include "render/Multisampling.hpp"
 #include "resource/PipelineCache.hpp"
 #include "BaseSceneConfig.hpp"
-#include "util/Camera.hpp"
-#include "util/Arcball.hpp"
+#include "camera/Camera.hpp"
+#include "camera/Arcball.hpp"
 
 namespace vulpes {
 

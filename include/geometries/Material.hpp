@@ -2,11 +2,10 @@
 #ifndef VULPESRENDER_MATERIALS_HPP
 #define VULPESRENDER_MATERIALS_HPP
 
-#include "vpr_stdafx.h"
 #include "resource/Texture.hpp"
 #include "resource/DescriptorSet.hpp"
 #include "resource/Buffer.hpp"
-#include "tinyobj/tiny_obj_loader.h"
+#include "tiny_obj_loader.h"
 
 namespace vulpes {
 

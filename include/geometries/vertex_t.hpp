@@ -2,7 +2,6 @@
 #ifndef VULPES_VERTEX_T_HPP
 #define VULPES_VERTEX_T_HPP
 
-#include "vpr_stdafx.h"
 #include "glm/gtx/hash.hpp"
 
 namespace vulpes {

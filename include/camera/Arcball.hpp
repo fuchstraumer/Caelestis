@@ -2,7 +2,7 @@
 #ifndef VULPES_VK_ARCBALL_H
 #define VULPES_VK_ARCBALL_H
 #include "Camera.hpp"
-#include "utilitySphere.hpp"
+#include "util/utilitySphere.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/quaternion.hpp"
 

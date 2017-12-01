@@ -1,7 +1,6 @@
 #ifndef VULPESRENDER_SKYBOX_OBJECT_HPP
 #define VULPESRENDER_SKYBOX_OBJECT_HPP
 
-#include "vpr_stdafx.h"
 #include "TriangleMesh.hpp"
 #include "resource/Texture.hpp"
 #include "resource/Buffer.hpp"

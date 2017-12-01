@@ -1,7 +1,6 @@
 #ifndef VULPESRENDER_OBJ_MODEL_HPP
 #define VULPESRENDER_OBJ_MODEL_HPP
 
-#include "vpr_stdafx.h"
 #include "TriangleMesh.hpp"
 #include "resource/Texture.hpp"
 #include "resource/Buffer.hpp"
@@ -10,7 +9,6 @@
 #include "resource/PipelineLayout.hpp"
 #include "resource/PipelineCache.hpp"
 #include "render/GraphicsPipeline.hpp"
-#include "tinyobj/tiny_obj_loader.h"
 #include "Material.hpp"
 
 namespace vulpes {

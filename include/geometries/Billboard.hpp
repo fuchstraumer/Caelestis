@@ -2,7 +2,6 @@
 #ifndef VULPESRENDER_BILLBOARD_OBJECT_HPP
 #define VULPESRENDER_BILLBOARD_OBJECT_HPP
 
-#include "vpr_stdafx.h"
 #include "resource/Texture.hpp"
 #include "resource/Buffer.hpp"
 #include "resource/ShaderModule.hpp"
