@@ -5,9 +5,12 @@
 #include <unordered_map>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
 namespace vulpes {
+
+    std::map<std::string, std::unique_ptr<Material>> ObjModel::materialsPool = std::map<std::string, std::unique_ptr<Material>>{};
 
     void ObjModel::LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool) {
         
