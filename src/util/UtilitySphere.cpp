@@ -1,5 +1,5 @@
 #include "vpr_stdafx.h"
-#include "util/utilitySphere.hpp"
+#include "util/UtilitySphere.hpp"
 
 namespace vulpes {
 
