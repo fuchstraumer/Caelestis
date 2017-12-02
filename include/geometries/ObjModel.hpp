@@ -1,3 +1,4 @@
+#pragma once
 #ifndef VULPESRENDER_OBJ_MODEL_HPP
 #define VULPESRENDER_OBJ_MODEL_HPP
 
