@@ -32,21 +32,6 @@ namespace vulpes {
         glm::vec3 fromVector, toVector, constraintAxis;
         bool axisConstrained = false;
     };
-    //inline void Arcball::MouseDrag(const int& button, const float & x, const float & y) {
-    //    ImGuiIO& io = ImGui::GetIO();
-    //    auto delta = io.MouseDelta;
-    //    if (button == 0) {
-    //        rotateAround(target, Up, -delta.x * 0.01f);
-    //        rotateAround(target, glm::quat_cast(rotation) * Right, -delta.y * 0.01f);
-    //    }
-    //    else if (button == 1) {
-    //        Position.x += (-delta.x * 0.1f);
-    //        Position.z += (-delta.y * 0.1f);
-    //        target.x += (-delta.x * 0.1f);
-    //        target.z += (-delta.y * 0.1f);
-    //    }
-
-    //}
 
 }
 
