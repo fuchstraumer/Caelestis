@@ -1,7 +1,7 @@
 #include "vpr_stdafx.h"
 #include "math/MathUtils.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     using glm_index_t = glm::length_t;
 

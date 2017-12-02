@@ -1,9 +1,10 @@
 #pragma once
 #ifndef VULPESRENDER_RAY_HPP
 #define VULPESRENDER_RAY_HPP
-#include "vpr_stdafx.h"
+#include "glm/vec3.hpp"
+#include "glm/fwd.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     class Ray {
     public:

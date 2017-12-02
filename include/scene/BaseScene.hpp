@@ -19,7 +19,7 @@
 #include "camera/Camera.hpp"
 #include "camera/Arcball.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     /** Scenes combine the various modules and objects of this library to create a fully renderable scene. Currently only the BaseScene class has been specified,
      *  but this class will simplify much of the setup work required and is extremely easy to extend and use. There is also currently a mostly-untested house demo
@@ -119,19 +119,19 @@ namespace vulpes {
          */
         virtual void endFrame(const size_t& curr_idx) = 0;
 
-        std::unique_ptr<Multisampling> msaa;
-        std::unique_ptr<imguiWrapper> gui;
+        std::unique_ptr<vpr::Multisampling> msaa;
+        std::unique_ptr<vpr::imguiWrapper> gui;
         uint32_t width, height;
         VkSemaphore semaphores[2];
         std::vector<VkSemaphore> renderCompleteSemaphores;
-        std::unique_ptr<Instance> instance;
-        std::unique_ptr<Device> device;
-        std::unique_ptr<Swapchain> swapchain;
+        std::unique_ptr<vpr::Instance> instance;
+        std::unique_ptr<vpr::Device> device;
+        std::unique_ptr<vpr::Swapchain> swapchain;
         std::vector<VkFramebuffer> framebuffers;
-        std::unique_ptr<DepthStencil> depthStencil;
-        std::unique_ptr<CommandPool> graphicsPool, secondaryPool;
-        std::unique_ptr<TransferPool> transferPool;
-        std::unique_ptr<Renderpass> renderPass;
+        std::unique_ptr<vpr::DepthStencil> depthStencil;
+        std::unique_ptr<vpr::CommandPool> graphicsPool, secondaryPool;
+        std::unique_ptr<vpr::TransferPool> transferPool;
+        std::unique_ptr<vpr::Renderpass> renderPass;
 
         std::vector<VkAttachmentDescription> attachmentDescriptions;
         std::vector<VkAttachmentReference> attachmentReferences;

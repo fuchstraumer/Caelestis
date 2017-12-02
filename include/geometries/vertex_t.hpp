@@ -1,10 +1,12 @@
 #pragma once
 #ifndef VULPES_VERTEX_T_HPP
 #define VULPES_VERTEX_T_HPP
-
+#include "glm/vec3.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/hash.hpp"
+#include <vulkan/vulkan.h>
 
-namespace vulpes {
+namespace vpsk {
 
     /** \ingroup Objects
     */
@@ -34,8 +36,8 @@ namespace vulpes {
 namespace std {
     /** Hash method ovverride so that we can use vulpes::vertex_t in standard library containers. Used with tinyobj to remove/avoid duplicated vertices. \ingroup Objects */
     template<>
-    struct hash<vulpes::vertex_t> {
-        size_t operator()(const vulpes::vertex_t& vert) const {
+    struct hash<vpsk::vertex_t> {
+        size_t operator()(const vpsk::vertex_t& vert) const {
             return (hash<glm::vec3>()(vert.pos)) ^ (hash<glm::vec3>()(vert.normal) << 1) ^ (hash<glm::vec2>()(vert.uv) << 4);
         }
     };

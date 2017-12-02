@@ -3,7 +3,9 @@
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 
-namespace vulpes {
+using namespace vpr;
+
+namespace vpsk {
 
     constexpr static std::array<float, 20> billboard_vertices {
         -0.5f,-0.5f, 0.0f, 0.0f, 1.0f,

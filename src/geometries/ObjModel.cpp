@@ -7,7 +7,9 @@
 #include "stb/stb_image.h"
 #include "tiny_obj_loader.h"
 
-namespace vulpes {
+using namespace vpr;
+
+namespace vpsk {
 
     std::map<std::string, std::unique_ptr<Material>> ObjModel::materialsPool = std::map<std::string, std::unique_ptr<Material>>{};
 

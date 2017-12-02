@@ -2,7 +2,6 @@
 #ifndef VULPES_VK_AABB_RENDERER_H
 #define VULPES_VK_AABB_RENDERER_H
 
-#include "vpr_stdafx.h"
 #include "AABB.hpp"
 #include "ForwardDecl.hpp"
 #include "resource/Buffer.hpp"
@@ -11,7 +10,7 @@
 #include "resource/ShaderModule.hpp"
 #include "resource/PipelineLayout.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     namespace util {
 
@@ -20,11 +19,11 @@ namespace vulpes {
             aabbRenderer& operator=(const aabbRenderer&) = delete;
         public:
 
-            aabbRenderer(const Device* dvc);
+            aabbRenderer(const vpr::Device* dvc);
             ~aabbRenderer();
 
             void Clear();
-            void Init(const VkRenderPass& renderpass, const glm::mat4& projection, const GraphicsPipelineInfo& pipeline_info = GraphicsPipelineInfo());
+            void Init(const VkRenderPass& renderpass, const glm::mat4& projection, const vpr::GraphicsPipelineInfo& pipeline_info = vpr::GraphicsPipelineInfo());
             void RecordCommands(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin_info, const glm::mat4& view, const VkViewport& viewport, const VkRect2D& scissor);
             void AddAABB(const AABB& aabb);
 
@@ -37,7 +36,7 @@ namespace vulpes {
             void createPipelineLayout();
             void createShaders();
             void createBuffers();
-            void setupGraphicsPipelineInfo(const GraphicsPipelineInfo& pipeline_info);
+            void setupGraphicsPipelineInfo(const vpr::GraphicsPipelineInfo& pipeline_info);
             void createGraphicsPipeline(const VkRenderPass& renderpass);
 
             void rebuildBuffers();
@@ -46,16 +45,16 @@ namespace vulpes {
             std::vector<glm::vec3> vertices;
             std::vector<uint16_t> indices;
 
-            const Device* device;
+            const vpr::Device* device;
 
-            std::unique_ptr<Buffer> vbo, ebo;
-            std::unique_ptr<ShaderModule> vert, frag;
-            std::unique_ptr<GraphicsPipeline> pipeline;
-            std::unique_ptr<PipelineCache> pipelineCache;
-            std::unique_ptr<PipelineLayout> pipelineLayout;
+            std::unique_ptr<vpr::Buffer> vbo, ebo;
+            std::unique_ptr<vpr::ShaderModule> vert, frag;
+            std::unique_ptr<vpr::GraphicsPipeline> pipeline;
+            std::unique_ptr<vpr::PipelineCache> pipelineCache;
+            std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
 
             VkBufferMemoryBarrier updateBarrier;
-            GraphicsPipelineInfo pipelineStateInfo;
+            vpr::GraphicsPipelineInfo pipelineStateInfo;
             VkGraphicsPipelineCreateInfo pipelineCreateInfo;
 
         };

@@ -7,7 +7,7 @@
 #include "resource/Buffer.hpp"
 #include "tiny_obj_loader.h"
 
-namespace vulpes {
+namespace vpsk {
 
     struct pbrTexturePack;
 
@@ -47,9 +47,9 @@ namespace vulpes {
         Material(Material&&) noexcept;
         Material& operator=(Material&&) noexcept;
 
-        void Create(const std::string& mtl_file_path, const Device* device, DescriptorPool* descriptor_pool);
-        void Create(const tinyobj::material_t& tinyobj_imported_material, const Device* dvc, DescriptorPool* descriptor_pool);
-        void UploadToDevice(TransferPool* transfer_pool);
+        void Create(const std::string& mtl_file_path, const vpr::Device* device, vpr::DescriptorPool* descriptor_pool);
+        void Create(const tinyobj::material_t& tinyobj_imported_material, const vpr::Device* dvc, vpr::DescriptorPool* descriptor_pool);
+        void UploadToDevice(vpr::TransferPool* transfer_pool);
 
         /** Binds the descriptor set belonging to this object, to which all available textures will have been attached.
         *   This is the only required command during rendering to use the Material class.
@@ -65,24 +65,24 @@ namespace vulpes {
         void createTextures(const tinyobj::material_t& material_);
         void createPbrTexturePack(const tinyobj::material_t& material_, const uint32_t& curr_binding_idx);
     
-        std::unique_ptr<Texture<texture_2d_t>> ambient;
-        std::unique_ptr<Texture<texture_2d_t>> diffuse;
-        std::unique_ptr<Texture<texture_2d_t>> specular;
-        std::unique_ptr<Texture<texture_2d_t>> specularHighlight;
-        std::unique_ptr<Texture<texture_2d_t>> bumpMap;
-        std::unique_ptr<Texture<texture_2d_t>> displacementMap;
-        std::unique_ptr<Texture<texture_2d_t>> alpha;
-        std::unique_ptr<Texture<texture_2d_t>> reflection;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> ambient;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> diffuse;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> specular;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> specularHighlight;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> bumpMap;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> displacementMap;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> alpha;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> reflection;
 
-        std::unique_ptr<Buffer> ubo;
+        std::unique_ptr<vpr::Buffer> ubo;
         material_ubo_t uboData;
-        std::unique_ptr<DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::DescriptorSet> descriptorSet;
         // OPTIONAL
         std::unique_ptr<pbrTexturePack> pbrTextures;
 
-        const Device* device;
+        const vpr::Device* device;
 
-        std::list<Texture<texture_2d_t>*> activeTextures;
+        std::list<vpr::Texture<vpr::texture_2d_t>*> activeTextures;
 
     };
 
@@ -102,15 +102,15 @@ namespace vulpes {
         pbrTexturePack() = default;
         ~pbrTexturePack() = default;
 
-        std::unique_ptr<Texture<texture_2d_t>> Roughness;
-        std::unique_ptr<Texture<texture_2d_t>> Metallic;
-        std::unique_ptr<Texture<texture_2d_t>> Sheen;
-        std::unique_ptr<Texture<texture_2d_t>> Emissive;
-        std::unique_ptr<Texture<texture_2d_t>> NormalMap;
-        std::unique_ptr<Buffer> ubo;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Roughness;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Metallic;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Sheen;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Emissive;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> NormalMap;
+        std::unique_ptr<vpr::Buffer> ubo;
         pbr_ubo_t uboData;
 
-        std::unique_ptr<DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::DescriptorSet> descriptorSet;
 
     };
 

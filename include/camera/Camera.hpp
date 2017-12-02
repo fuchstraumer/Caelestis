@@ -4,9 +4,10 @@
 
 #include "vpr_stdafx.h"
 #include "math/Ray.hpp"
+#include "glm/vec2.hpp"
 #include "glm/gtc/quaternion.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
     enum class Direction : uint8_t {

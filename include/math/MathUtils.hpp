@@ -1,10 +1,9 @@
 #pragma once
 #ifndef VULPES_MATH_UTILITIES_HPP
 #define VULPES_MATH_UTILITIES_HPP
+#include "glm/vec2.hpp"
 
-#include "vpr_stdafx.h"
-
-namespace vulpes {
+namespace vpsk {
 
     float PointOnEllipseBisector(const size_t& num_components, const glm::vec2& extents, const glm::vec2& y, glm::vec2& x);
     float PointOnEllipseSqrDistanceImpl(const glm::vec2& extents, const glm::vec2& y, glm::vec2& x);

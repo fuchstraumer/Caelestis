@@ -6,7 +6,8 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/matrix_access.hpp"
 #include "imgui/imgui.h"
-namespace vulpes {
+
+namespace vpsk {
 
 
     constexpr float CAMERA_FLOAT_PI = 3.14159265359f;

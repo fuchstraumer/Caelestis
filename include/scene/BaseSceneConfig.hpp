@@ -1,10 +1,11 @@
 #pragma once
 #ifndef VULPES_VK_SCENE_CONFIGURATION_H
 #define VULPES_VK_SCENE_CONFIGURATION_H
+#include <string>
+#include <vulkan/vulkan.h>
+#include <cstdint>
 
-#include "vpr_stdafx.h"
-
-namespace vulpes {
+namespace vpsk {
 
     // Default width/height of window. Should probably move this elsewhere and/or remove it entirely.
     constexpr uint32_t DEFAULT_WIDTH = 1440, DEFAULT_HEIGHT = 900;

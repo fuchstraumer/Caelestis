@@ -10,7 +10,7 @@
 #include "resource/PipelineCache.hpp"
 #include "render/GraphicsPipeline.hpp"
 
-namespace vulpes {
+namespace vpsk {
     
     /** Defines a billboard/sprite object that will always face the camera. Texture used for the sprite can be of any format.
     *   \ingroup Objects
@@ -24,16 +24,16 @@ namespace vulpes {
         ~Billboard();
 
         void SetSurfaceTexture(const char* texture_filename);
-        void Init(const Device* dvc, const VkRenderPass& renderpass, TransferPool* transfer_pool, DescriptorPool* descriptor_pool);
+        void Init(const vpr::Device* dvc, const VkRenderPass& renderpass, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool);
         void Render(const VkCommandBuffer& cmd_, const VkCommandBufferBeginInfo& begin_info_, const VkViewport& viewport, const VkRect2D& scissor);
         void UpdateUBO(const glm::mat4& view);
 
     protected:
 
         void createBuffers();
-        void transferResources(TransferPool* transfer_pool_);
+        void transferResources(vpr::TransferPool* transfer_pool_);
         void createShaders();
-        void createDescriptorSet(DescriptorPool* descriptor_pool);
+        void createDescriptorSet(vpr::DescriptorPool* descriptor_pool);
         void createPipelineLayout();
         void createPipelineCache();
         void setPipelineStateInfo();
@@ -49,17 +49,17 @@ namespace vulpes {
         };
 
         glm::vec3 position, scale;
-        const Device* device = nullptr;
+        const vpr::Device* device = nullptr;
 
-        std::unique_ptr<Buffer> vbo;
-        std::unique_ptr<DescriptorSet> descriptorSet;
-        std::unique_ptr<PipelineLayout> pipelineLayout;
-        std::unique_ptr<PipelineCache> pipelineCache;
-        std::unique_ptr<ShaderModule> vert, frag;
-        std::unique_ptr<GraphicsPipeline> pipeline;
-        std::unique_ptr<Texture<texture_2d_t>> texture;
+        std::unique_ptr<vpr::Buffer> vbo;
+        std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
+        std::unique_ptr<vpr::PipelineCache> pipelineCache;
+        std::unique_ptr<vpr::ShaderModule> vert, frag;
+        std::unique_ptr<vpr::GraphicsPipeline> pipeline;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
 
-        GraphicsPipelineInfo pipelineStateInfo;
+        vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
 
         struct billboard_ubo_data_t {

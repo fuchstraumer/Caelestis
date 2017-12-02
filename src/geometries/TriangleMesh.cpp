@@ -1,6 +1,8 @@
 #include "geometries/TriangleMesh.hpp"
 
-namespace vulpes {
+using namespace vpr;
+
+namespace vpsk {
 
     TriangleMesh::TriangleMesh(const glm::vec3& _position, const glm::vec3& _scale, const glm::vec3& _rotation) : position(_position), scale(_scale), rotation(_rotation) {}
 

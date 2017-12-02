@@ -1,7 +1,7 @@
-#include "vpr_stdafx.h"
 #include "util/UtilitySphere.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     constexpr float USPHERE_FLOAT_PI = 3.14159265359f;
 

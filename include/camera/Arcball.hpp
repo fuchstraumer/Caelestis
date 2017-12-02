@@ -7,7 +7,7 @@
 #include "glm/gtx/quaternion.hpp"
 
 
-namespace vulpes {
+namespace vpsk {
 
     class ArcballCamera : public PerspectiveCamera {
     public:

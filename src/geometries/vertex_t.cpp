@@ -1,7 +1,7 @@
-#include "vpr_stdafx.h"
 #include "geometries/vertex_t.hpp"
 
-namespace vulpes {
+
+namespace vpsk {
 
     const VkVertexInputBindingDescription vertex_t::bindingDescription{
         0, (sizeof(glm::vec3) * 2) + sizeof(glm::vec2), VK_VERTEX_INPUT_RATE_VERTEX

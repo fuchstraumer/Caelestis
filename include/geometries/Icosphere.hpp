@@ -14,7 +14,7 @@
 #include "resource/DescriptorSet.hpp"
 #include "vertex_t.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     /** Defines an icosphere object that is subdivided from the base 12 vertices based on detail_level. Each additional level will double the triangle count,
     *   but an attempt to use shared vertices is made and should reduce or avoid duplicated vertices. Unlike Billboard and Skybox, you must specify shaders to 
@@ -34,7 +34,7 @@ namespace vulpes {
         Icosphere(const size_t& detail_level, const glm::vec3& position, const glm::vec3& scale = glm::vec3(1.0f), const glm::vec3& rotation = glm::vec3(0.0f));
         ~Icosphere();
 
-        void Init(const Device* dvc, const glm::mat4& projection, const VkRenderPass& renderpass, TransferPool* transfer_pool, DescriptorPool* descriptor_pool);
+        void Init(const vpr::Device* dvc, const glm::mat4& projection, const VkRenderPass& renderpass, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool);
         void Render(const VkCommandBuffer& cmd_buffer, const VkCommandBufferBeginInfo& begin_info, const VkViewport& viewport, const VkRect2D& scissor);
         void CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
         void SetTexture(const char* filename);
@@ -48,13 +48,13 @@ namespace vulpes {
 
 
         void createMesh(const size_t& subdivision_level);
-        void uploadData(TransferPool* transfer_pool);
+        void uploadData(vpr::TransferPool* transfer_pool);
         void createPipelineCache();
         void createPipelineLayout();
         void setPipelineStateInfo();
         void createGraphicsPipeline(const VkRenderPass& render_pass);
         void createTexture();
-        void createDescriptorSet(DescriptorPool* descriptor_pool);
+        void createDescriptorSet(vpr::DescriptorPool* descriptor_pool);
         void subdivide(const size_t& subdivision_level);
         void calculateUVs();
 
@@ -70,14 +70,14 @@ namespace vulpes {
         constexpr static VkVertexInputBindingDescription bindingDescription{ 0, sizeof(vertex_t), VK_VERTEX_INPUT_RATE_VERTEX };
         constexpr static VkVertexInputAttributeDescription attributeDescription{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
 
-        std::unique_ptr<ShaderModule> vert, frag;
-        std::unique_ptr<DescriptorSet> descriptorSet;
-        std::unique_ptr<PipelineCache> pipelineCache;
-        std::unique_ptr<PipelineLayout> pipelineLayout;
-        std::unique_ptr<GraphicsPipeline> graphicsPipeline;
-        std::unique_ptr<Texture<texture_2d_t>> texture;
+        std::unique_ptr<vpr::ShaderModule> vert, frag;
+        std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::PipelineCache> pipelineCache;
+        std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
+        std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
 
-        GraphicsPipelineInfo pipelineStateInfo;
+        vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
         size_t subdivisionLevel;
 

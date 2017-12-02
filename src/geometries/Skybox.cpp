@@ -4,7 +4,9 @@
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 
-namespace vulpes {
+using namespace vpr;
+
+namespace vpsk {
 
     static const std::array<glm::vec3, 8> positions {
         glm::vec3(-1.0f, -1.0f, +1.0f), 

@@ -5,7 +5,7 @@
 #include "resource/Buffer.hpp"
 #include "vertex_t.hpp"
 
-namespace vulpes { 
+namespace vpsk { 
     
     /** The objects group defines useful commonly used or "baseline" renderable objects. This includes a suitable base 
     *   class for objects meshed with triangles, to more complex objects like a pbr-compatible .obj model renderer and 
@@ -49,7 +49,7 @@ namespace vulpes {
         /** Uses the data from vertices + indices to create the internal vbo and ebo objects. If called with empty containers, this will throw.
         *   Does not transfer any resources.
         */
-        void CreateBuffers(const Device* dvc);
+        void CreateBuffers(const vpr::Device* dvc);
 
         /** Records commands required to upload the VBO and EBO into the given command buffer: works well when called amid transfers for derived classes,
         *   to pool transfers together and save on the amount of required submissions.
@@ -97,9 +97,9 @@ namespace vulpes {
 
         uint32_t numVertices, numIndices;
 
-        std::unique_ptr<Buffer> vbo;
-        std::unique_ptr<Buffer> ebo;
-        const Device* device;
+        std::unique_ptr<vpr::Buffer> vbo;
+        std::unique_ptr<vpr::Buffer> ebo;
+        const vpr::Device* device;
     };
 
 }

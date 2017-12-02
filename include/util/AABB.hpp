@@ -8,7 +8,8 @@ namespace vpsk {
     namespace util {
 
         class AABB {
-            
+        public:
+
             AABB() = default;
             AABB(const glm::vec3& p);
             AABB(const glm::vec3& p0, const glm::vec3& p1);
@@ -38,6 +39,7 @@ namespace vpsk {
 
             size_t IdxToLargestAxis() const noexcept;
             glm::vec3 Lerp(const glm::vec3& amt) const noexcept;
+            
         private:
 
             glm::vec3 min, max;

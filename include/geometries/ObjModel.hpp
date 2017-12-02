@@ -12,7 +12,7 @@
 #include "render/GraphicsPipeline.hpp"
 #include "Material.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     struct obj_model_ubo_t {
         glm::mat4 model;
@@ -26,24 +26,24 @@ namespace vulpes {
         ObjModel& operator=(const ObjModel&) = delete;
     public:
 
-        ObjModel(const Device* dvc);
+        ObjModel(const vpr::Device* dvc);
         ~ObjModel();
 
-        void LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool);
+        void LoadModelFromFile(const std::string& obj_model_filename, vpr::TransferPool* transfer_pool);
         void CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
         void CompleteSetup(const glm::mat4& projection, const VkRenderPass& renderpass);
         void UpdateUBO(const glm::mat4& view);
 
     private:
 
-        void loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, TransferPool* transfer_pool);
-        void createMaterials(const std::vector<tinyobj::material_t>& materials, TransferPool* transfer_pool);
+        void loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, vpr::TransferPool* transfer_pool);
+        void createMaterials(const std::vector<tinyobj::material_t>& materials, vpr::TransferPool* transfer_pool);
         void createPipelineCache();
         void createPipelineLayout();
         void setPipelineStateInfo();
         void createGraphicsPipeline(const VkRenderPass& renderpass);
 
-        DescriptorPool* descriptorPool;
+        vpr::DescriptorPool* descriptorPool;
 
         constexpr static VkVertexInputBindingDescription bindDescription {
             0, sizeof(vertex_t), VK_VERTEX_INPUT_RATE_VERTEX
@@ -60,12 +60,12 @@ namespace vulpes {
 
         std::map<std::string, std::unique_ptr<Material>>::iterator myMaterial;
 
-        std::unique_ptr<ShaderModule> vert, frag;
-        std::unique_ptr<PipelineLayout> pipelineLayout;
-        std::unique_ptr<PipelineCache> pipelineCache;
-        std::unique_ptr<GraphicsPipeline> graphicsPipeline;
+        std::unique_ptr<vpr::ShaderModule> vert, frag;
+        std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
+        std::unique_ptr<vpr::PipelineCache> pipelineCache;
+        std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
         std::vector<VkDescriptorSet> descriptorSets;
-        GraphicsPipelineInfo pipelineStateInfo;
+        vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
         std::string modelName;
     };

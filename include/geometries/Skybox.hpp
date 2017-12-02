@@ -11,7 +11,7 @@
 #include "resource/PipelineCache.hpp"
 #include "render/GraphicsPipeline.hpp"
 
-namespace vulpes {
+namespace vpsk {
 
     /** Does what it says on the tin and nothing more. The texture used must be of a format like DDS or KTX that supports having all size cubemap faces in
     *   one file. Not only does this allow for high-resolution and performant textures, but its required for how the texture loading system for cubemaps currently
@@ -25,22 +25,22 @@ namespace vulpes {
         Skybox& operator=(const Skybox&) = delete;
     public:
 
-        Skybox(const Device* dvc);
+        Skybox(const vpr::Device* dvc);
         ~Skybox();
 
         void CreateTexture(const std::string& texture_filename, const VkFormat& texture_format);
-        void Create(const glm::mat4& projection, const VkRenderPass& render_pass, TransferPool* transfer_pool, DescriptorPool* descriptor_pool);
+        void Create(const glm::mat4& projection, const VkRenderPass& render_pass, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool);
         void Render(const VkCommandBuffer& draw_cmd, const VkCommandBufferBeginInfo& begin_info, const VkViewport& viewport, const VkRect2D& scissor);
         void UpdateUBO(const glm::mat4& view_matrix) noexcept;
 
     private:
 
         void createMesh();
-        void uploadData(TransferPool* transfer_pool);
+        void uploadData(vpr::TransferPool* transfer_pool);
         void createTexture(const std::string& filename, const VkFormat& file_format);
         void createShaders();
         void createPipelineCache();
-        void setupDescriptorSet(DescriptorPool* descriptor_pool);
+        void setupDescriptorSet(vpr::DescriptorPool* descriptor_pool);
         void setupPipelineLayout();
         void setPipelineStateInfo();
         void createGraphicsPipeline(const VkRenderPass& render_pass);
@@ -53,14 +53,14 @@ namespace vulpes {
         const VkVertexInputBindingDescription bind_descr{ 0, sizeof(vertex_t), VK_VERTEX_INPUT_RATE_VERTEX };
         const VkVertexInputAttributeDescription attr_descr{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
 
-        std::unique_ptr<Texture<gli::texture_cube>> texture;
-        std::unique_ptr<ShaderModule> vert, frag;
-        std::unique_ptr<DescriptorSet> descriptorSet;
-        std::unique_ptr<PipelineCache> pipelineCache;
-        std::unique_ptr<PipelineLayout> pipelineLayout;
-        std::unique_ptr<GraphicsPipeline> graphicsPipeline;
+        std::unique_ptr<vpr::Texture<gli::texture_cube>> texture;
+        std::unique_ptr<vpr::ShaderModule> vert, frag;
+        std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::PipelineCache> pipelineCache;
+        std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
+        std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
 
-        GraphicsPipelineInfo graphicsPipelineStateInfo;
+        vpr::GraphicsPipelineInfo graphicsPipelineStateInfo;
         VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
 
     };

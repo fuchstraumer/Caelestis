@@ -3,8 +3,9 @@
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 
+using namespace vpr;
 
-namespace vulpes {
+namespace vpsk {
 
     Material::Material(Material&& other) noexcept : ambient(std::move(other.ambient)), diffuse(std::move(other.diffuse)), specular(std::move(other.specular)), specularHighlight(std::move(other.specularHighlight)), bumpMap(std::move(other.bumpMap)), displacementMap(std::move(other.displacementMap)),
         alpha(std::move(other.alpha)), reflection(std::move(other.reflection)), ubo(std::move(other.ubo)), uboData(std::move(other.uboData)), descriptorSet(std::move(other.descriptorSet)), pbrTextures(std::move(other.pbrTextures)), activeTextures(std::move(other.activeTextures)) {}

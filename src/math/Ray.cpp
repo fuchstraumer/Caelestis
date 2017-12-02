@@ -1,9 +1,7 @@
-#include "vpr_stdafx.h"
 #include "math/Ray.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
-namespace vulpes {
-
-
+namespace vpsk {
 
     Ray::Ray(const glm::vec3 & _origin, const glm::vec3& _dir) : direction(_dir), origin(_origin), invDirection(1.0f / _dir), signX((_dir.x < 0.0f) ? 1 : 0), signY((_dir.y < 0.0f) ? 1 : 0), signZ((_dir.z < 0.0f) ? 1 : 0) {}
 

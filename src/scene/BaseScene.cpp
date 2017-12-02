@@ -14,8 +14,9 @@
 #include <experimental/filesystem>
 #endif
 
+using namespace vpr;
 
-namespace vulpes {
+namespace vpsk {
 
     vulpesSceneConfig BaseScene::SceneConfiguration = vulpesSceneConfig();
     bool BaseScene::CameraLock = false;
@@ -24,7 +25,7 @@ namespace vulpes {
 
     std::vector<uint16_t> BaseScene::pipelineCacheHandles = std::vector<uint16_t>();
 
-    vulpes::BaseScene::BaseScene(const size_t& num_secondary_buffers, const uint32_t& _width, const uint32_t& _height) : width(_width), height(_height), numSecondaryBuffers(num_secondary_buffers) {
+    BaseScene::BaseScene(const size_t& num_secondary_buffers, const uint32_t& _width, const uint32_t& _height) : width(_width), height(_height), numSecondaryBuffers(num_secondary_buffers) {
 
         const bool verbose_logging = BaseScene::SceneConfiguration.VerboseLogging;
 
@@ -156,7 +157,7 @@ namespace vulpes {
     }
 #endif
     
-    vulpes::BaseScene::~BaseScene() {
+    BaseScene::~BaseScene() {
 
         destroyGUI();
         depthStencil.reset();
@@ -292,7 +293,7 @@ namespace vulpes {
         
     }
 
-    void vulpes::BaseScene::CreateCommandPools() {
+    void BaseScene::CreateCommandPools() {
 
         LOG(INFO) << "Creating primary graphics and transfer command pools...";
 
@@ -403,7 +404,7 @@ namespace vulpes {
 
     }
 
-    void vulpes::BaseScene::SetupRenderpass(const VkSampleCountFlagBits& sample_count) {
+    void BaseScene::SetupRenderpass(const VkSampleCountFlagBits& sample_count) {
 
         LOG(INFO) << "Creating renderpass and MSAA attachments now...";
 
@@ -441,7 +442,7 @@ namespace vulpes {
 
     }
 
-    void vulpes::BaseScene::SetupDepthStencil() {
+    void BaseScene::SetupDepthStencil() {
 
         LOG(INFO) << "Creating depth stencil...";
         VkQueue depth_queue = device->GraphicsQueue(0);
@@ -449,7 +450,7 @@ namespace vulpes {
 
     }
 
-    void vulpes::BaseScene::SetupFramebuffers() {
+    void BaseScene::SetupFramebuffers() {
 
         LOG(INFO) << "Creating framebuffers...";
         std::array<VkImageView, 4> attachments{ msaa->ColorBufferMS->View(), VK_NULL_HANDLE, msaa->DepthBufferMS->View(), depthStencil->View() };
@@ -471,7 +472,7 @@ namespace vulpes {
 
     }
 
-    void vulpes::BaseScene::RecreateSwapchain() {
+    void BaseScene::RecreateSwapchain() {
 
         LOG_IF(BaseScene::SceneConfiguration.VerboseLogging, INFO) << "Began to recreate swapchain...";
 

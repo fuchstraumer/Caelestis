@@ -6,8 +6,9 @@
 #include "command/TransferPool.hpp"
 #include "core/PhysicalDevice.hpp"
 
+using namespace vpr;
 
-namespace vulpes {
+namespace vpsk {
 
     constexpr float golden_ratio = 1.61803398875f;
     constexpr float FLOAT_PI = 3.14159265359f;

@@ -1,9 +1,10 @@
 #pragma once
 #ifndef VULPES_SPHERE_UTILITY_HPP
 #define VULPES_SPHERE_UTILITY_HPP
-#include "vpr_stdafx.h"
 #include "math/Ray.hpp"
-namespace vulpes {
+#include <vector>
+
+namespace vpsk {
 
     struct UtilitySphere {
 

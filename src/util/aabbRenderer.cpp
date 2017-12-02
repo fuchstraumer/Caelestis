@@ -1,9 +1,9 @@
-#include "vpr_stdafx.h"
 #include "util/aabbRenderer.hpp"
 #include "core/LogicalDevice.hpp"
 
+using namespace vpr;
 
-namespace vulpes {
+namespace vpsk {
 
     namespace util {
 
@@ -161,14 +161,14 @@ namespace vulpes {
             vertices.reserve(vertices.capacity() + 8);
            
             auto new_vertices = {
-                aabb.Min,
-                glm::vec3(aabb.Max.x, aabb.Min.y, aabb.Min.z),
-                glm::vec3(aabb.Min.x, aabb.Min.y, aabb.Max.z),
-                glm::vec3(aabb.Max.x, aabb.Min.y, aabb.Max.z),
-                aabb.Max,
-                glm::vec3(aabb.Min.x, aabb.Max.y, aabb.Min.z),
-                glm::vec3(aabb.Max.x, aabb.Max.y, aabb.Min.z), 
-                glm::vec3(aabb.Min.x, aabb.Max.y, aabb.Max.z)
+                aabb.Min(),
+                glm::vec3(aabb.Max().x, aabb.Min().y, aabb.Min().z),
+                glm::vec3(aabb.Min().x, aabb.Min().y, aabb.Max().z),
+                glm::vec3(aabb.Max().x, aabb.Min().y, aabb.Max().z),
+                aabb.Max(),
+                glm::vec3(aabb.Min().x, aabb.Max().y, aabb.Min().z),
+                glm::vec3(aabb.Max().x, aabb.Max().y, aabb.Min().z), 
+                glm::vec3(aabb.Min().x, aabb.Max().y, aabb.Max().z)
             };
 
             std::initializer_list<uint16_t> new_indices = {

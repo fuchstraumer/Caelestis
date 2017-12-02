@@ -1,7 +1,11 @@
-#include "vpr_stdafx.h"
 #include "math/MatrixUtils.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/norm.hpp"
+#include "glm/vec3.hpp"
+#include "glm/gtc/type_ptr.hpp"
+#include <array>
 
-namespace vulpes {
+namespace vpsk {
 
     glm::mat4 AlignZAxisWithTarget(glm::vec3 & target_direction, glm::vec3 & up_direction) {
 
