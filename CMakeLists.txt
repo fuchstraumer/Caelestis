@@ -20,6 +20,14 @@ FILE(GLOB SCENE "${CMAKE_CURRENT_SOURCE_DIR}/include/scene/*.hpp" "${CMAKE_CURRE
 FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.h"
                "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cc")
 
+SOURCE_GROUP("geometries" FILES ${GEOMETRIES})
+SOURCE_GROUP("cameras" FILES ${CAMERAS})
+SOURCE_GROUP("lights" FILES ${LIGHTS})
+SOURCE_GROUP("math" FILES ${MATH})
+SOURCE_GROUP("scene" FILES ${SCENE})
+SOURCE_GROUP("util" FILES ${UTIL})
+#FIND_PACKAGE(Vulkan REQUIRED)
+
 ADD_EXECUTABLE(VulpesSceneKit "src/main.cpp" ${GEOMETRIES} ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL})
 ADD_DEPENDENCIES(VulpesSceneKit VulpesRender)
 IF(MSVC)
@@ -35,4 +43,14 @@ IF(UNIX)
     FIND_LIBRARY(VPLIB NAMES "libVulpesRender.a" HINTS "${PROJECT_SOURCE_DIR}/ext/lib")
     FIND_LIBRARY(GLFWLIB NAMES "libglfw3.a" HINTS "download/vulpesrender/src/VulpesRender/ext/lib")
     TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE "$ENV{VULKAN_SDK}/lib/libvulkan.so" "${VPLIB}" "${GLFWLIB}" "dl" "pthread" "X11" "Xi" "Xrandr")
+#ELSEIF(WIN32)
+#    LINK_DIRECTORIES(VulpesSceneKit "ext/lib/")
+#    FIND_LIBRARY(VPLIB NAMES "VulpesRender.lib" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib")
+#    FIND_LIBRARY(GLFWLIB NAMES "glfw3.lib" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/download/vulpesrender/src/VulpesRender/ext/lib")
+#    TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE "${VPLIB}" "${GLFWLIB}")
 ENDIF()
+
+#TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE
+#$<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}>)
+
+#TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE ${Vulkan_LIBRARIES})
