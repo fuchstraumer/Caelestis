@@ -34,17 +34,24 @@ namespace vpsk {
 
     }
 
-    void Material::createUBO(const tinyobj::material_t& material_) {
+    void Material::createUBO(const tinyobj::material_t& mtl) {
+        uboData = material_ubo_t();
 
-        uboData.ambient = glm::vec4(material_.ambient[0], material_.ambient[1], material_.ambient[2], 1.0f);
-        uboData.diffuse = glm::vec4(material_.diffuse[0], material_.diffuse[1], material_.diffuse[2], 1.0f);
-        uboData.specular = glm::vec4(material_.specular[0], material_.specular[1], material_.specular[2], 1.0f);
-        uboData.transmittance = glm::vec4(material_.transmittance[0], material_.transmittance[1], material_.transmittance[2], 1.0f);
-        uboData.emission = glm::vec4(material_.emission[0], material_.emission[1], material_.emission[2], 1.0f);
-        uboData.miscInfo.shininess = material_.shininess;
-        uboData.miscInfo.indexOfRefraction = material_.ior;
-        uboData.miscInfo.shininess = material_.shininess;
-        uboData.miscInfo.illuminationModel = material_.illum;
+        if (!mtl.ambient_texname.empty()) {
+            uboData.ambient = glm::vec4(mtl.ambient[0], mtl.ambient[1], mtl.ambient[2], 1.0f);
+        }
+
+        if (!mtl.diffuse_texname.empty()) {
+            uboData.diffuse = glm::vec4(mtl.diffuse[0], mtl.diffuse[1], mtl.diffuse[2], 1.0f);
+        }
+        
+        uboData.specular = glm::vec4(mtl.specular[0], mtl.specular[1], mtl.specular[2], 1.0f);
+        uboData.transmittance = glm::vec4(mtl.transmittance[0], mtl.transmittance[1], mtl.transmittance[2], 1.0f);
+        uboData.emission = glm::vec4(mtl.emission[0], mtl.emission[1], mtl.emission[2], 1.0f);
+        uboData.miscInfo.shininess = mtl.shininess;
+        uboData.miscInfo.indexOfRefraction = mtl.ior;
+        uboData.miscInfo.shininess = mtl.shininess;
+        uboData.miscInfo.illuminationModel = mtl.illum;
 
         ubo = std::make_unique<Buffer>(device);
         ubo->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uboData));

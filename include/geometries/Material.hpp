@@ -23,16 +23,16 @@ namespace vpsk {
     class Material {
     
         struct material_ubo_t {
-            glm::vec4 ambient;
-            glm::vec4 diffuse;
-            glm::vec4 specular;
-            glm::vec4 transmittance;
-            glm::vec4 emission;
+            glm::vec4 ambient = glm::vec4(0.0f);
+            glm::vec4 diffuse = glm::vec4(0.0f);
+            glm::vec4 specular = glm::vec4(0.0f);
+            glm::vec4 transmittance = glm::vec4(0.0f);
+            glm::vec4 emission = glm::vec4(0.0f);
             struct misc_info_t {
-                float shininess;
-                float indexOfRefraction;
-                float dissolve;
-                int illuminationModel;
+                float shininess = 0.0f;
+                float indexOfRefraction = 0.0f;
+                float dissolve = 0.0f;
+                int illuminationModel = 0;
             } miscInfo;
         };
 
