@@ -30,11 +30,15 @@ namespace vpsk {
         const glm::ivec3& GetIdxVector() const noexcept;
         const glm::vec3& GetSVector() const noexcept;
         
+        const float& GetTMax() const noexcept;
+        void SetTMax(const float& t_max) noexcept;
+        
     protected:
 
         void setIdxVector() const;
         void setSVector() const;
 
+        float tMax;
         mutable glm::ivec3 idxVector;
         mutable bool idxVectorSet = false;
         mutable glm::vec3 sVector;
