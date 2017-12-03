@@ -30,7 +30,7 @@ FIND_PACKAGE(Vulkan REQUIRED)
 
 ADD_SUBDIRECTORY(tinyobjloader)
 
-ADD_EXECUTABLE(VulpesSceneKit "src/main.cpp" ${GEOMETRIES} ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL})
+ADD_LIBRARY(VulpesSceneKit STATIC "src/main.cpp" ${GEOMETRIES} ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL})
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE $<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}>)
 TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE ${Vulkan_LIBRARIES})
 
@@ -38,20 +38,20 @@ IF(MSVC)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
 ELSEIF(UNIX)
     # Enables more symbols to be loaded when debugging with GDB
-    TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PRIVATE "-DGLIBCXX_DEBUG")
+    TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC "-DGLIBCXX_DEBUG")
     # We tend to end up with 64-bit glfw and 32-bit programs, somehow, on unix.
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 ENDIF()
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "$ENV{VULKAN_SDK}/include")
 IF(UNIX)
     LINK_DIRECTORIES(VulpesSceneKit "ext/lib/")
     FIND_LIBRARY(VPLIB NAMES "libVulpesRender.a" HINTS "${PROJECT_SOURCE_DIR}/ext/lib")
     FIND_LIBRARY(GLFWLIB NAMES "libglfw3.a" HINTS "download/vulpesrender/src/VulpesRender/ext/lib")
-    TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE "${VPLIB}" "${GLFWLIB}" "dl" "pthread" "X11" "Xi" "Xrandr")
+    TARGET_LINK_LIBRARIES(VulpesSceneKit PUBLIC "${VPLIB}" "${GLFWLIB}" "dl" "pthread" "X11" "Xi" "Xrandr")
 #ELSEIF(WIN32)
 #    LINK_DIRECTORIES(VulpesSceneKit "ext/lib/")
 #    FIND_LIBRARY(VPLIB NAMES "VulpesRender.lib" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib")
@@ -61,3 +61,14 @@ ENDIF()
 
 TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC -DGLM_LANG_STL11_FORCED)
 TARGET_LINK_LIBRARIES(VulpesSceneKit PUBLIC tinyobjloader)
+
+OPTION(BUILD_EX_SCENES "Build example scenes" OFF)
+
+IF(BUILD_EX_SCENES) 
+
+ADD_EXECUTABLE(House "demoscenes/House.cpp")
+TARGET_INCLUDE_DIRECTORIES(House PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
+TARGET_LINK_LIBRARIES(House VulpesSceneKit "${VPLIB}" "${GLFWLIB}" "$ENV{VULKAN_SDK}/lib/libvulkan.so" "dl" "pthread" "X11" "Xi" "Xrandr")
+TARGET_COMPILE_DEFINITIONS(House PUBLIC -DGLM_LANG_STL11_FORCED)
+ENDIF()

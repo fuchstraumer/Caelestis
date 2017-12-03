@@ -1,5 +1,4 @@
-#include "vpr_stdafx.h"
-#include "BaseScene.hpp"
+#include "scene/BaseScene.hpp"
 #include "common/CreateInfoBase.hpp"
 #include "core/Instance.hpp"
 #include "resource/Buffer.hpp"
@@ -12,7 +11,7 @@
 #include "resource/Allocator.hpp"
 #include "resource/PipelineCache.hpp"
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tinyobj/tiny_obj_loader.h"
+#include "../tinyobjloader/tiny_obj_loader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 #include "glm/gtx/hash.hpp"
@@ -22,11 +21,11 @@
 
 INITIALIZE_EASYLOGGINGPP
 
-/** This serves as a super-simple example of how to derive from a vulpes::BaseScene object. It doesn't render a GUI, however, so another 
+/** This serves as a super-simple example of how to derive from a vpr::BaseScene object. It doesn't render a GUI, however, so another 
  *  example is required to show how to use that.
  *  \ingroup Scenes
  */
-class HouseScene : public vulpes::BaseScene {
+class HouseScene : public vpsk::BaseScene {
 public:  
 
     struct vertex_t {
@@ -76,16 +75,16 @@ private:
     void destroy();
     
 
-    std::unique_ptr<vulpes::Texture<vulpes::texture_2d_t>> texture;
-    std::unique_ptr<vulpes::DescriptorPool> descriptorPool;
-    std::unique_ptr<vulpes::Buffer> vbo, ebo;
-    std::unique_ptr<vulpes::DescriptorSet> descriptorSet;
-    std::unique_ptr<vulpes::PipelineLayout> pipelineLayout;
-    std::unique_ptr<vulpes::ShaderModule> vert, frag;
-    std::unique_ptr<vulpes::PipelineCache> pipelineCache;
-    vulpes::GraphicsPipelineInfo pipelineStateInfo;
+    std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
+    std::unique_ptr<vpr::DescriptorPool> descriptorPool;
+    std::unique_ptr<vpr::Buffer> vbo, ebo;
+    std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+    std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
+    std::unique_ptr<vpr::ShaderModule> vert, frag;
+    std::unique_ptr<vpr::PipelineCache> pipelineCache;
+    vpr::GraphicsPipelineInfo pipelineStateInfo;
     VkGraphicsPipelineCreateInfo pipelineCreateInfo;
-    std::unique_ptr<vulpes::GraphicsPipeline> graphicsPipeline;
+    std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
 
     VkViewport viewport;
     VkRect2D scissor;
@@ -101,7 +100,7 @@ namespace std {
     };
 }
 
-HouseScene::HouseScene() : BaseScene(1, 1440, 900), viewport(vulpes::vk_default_viewport), scissor(vulpes::vk_default_viewport_scissor) {
+HouseScene::HouseScene() : BaseScene(1, 1440, 900), viewport(vpr::vk_default_viewport), scissor(vpr::vk_default_viewport_scissor) {
     create();
 }
 
@@ -127,7 +126,7 @@ void HouseScene::RecordCommands() {
         nullptr
     };
 
-    static VkCommandBufferInheritanceInfo secondary_cmd_buffer_inheritance_info = vulpes::vk_command_buffer_inheritance_info_base;
+    static VkCommandBufferInheritanceInfo secondary_cmd_buffer_inheritance_info = vpr::vk_command_buffer_inheritance_info_base;
     secondary_cmd_buffer_inheritance_info.renderPass = renderPass->vkHandle();
     secondary_cmd_buffer_inheritance_info.subpass = 0;
 
@@ -226,7 +225,7 @@ void HouseScene::destroy() {
 
 void HouseScene::loadMeshTexture()  { 
     int texture_width, texture_height, texture_channels;
-    std::string texture_path = SceneConfiguration.ResourcePathPrefixStr + std::string("scenes/scene_resources/chalet.jpg");
+    std::string texture_path = SceneConfiguration.ResourcePathPrefixStr + std::string("demoscenes/scene_resources/chalet.jpg");
     std::cerr << texture_path << "\n";
     stbi_uc* pixels = stbi_load(texture_path.c_str(), &texture_width, &texture_height, &texture_channels, STBI_rgb_alpha);
     assert(pixels != nullptr);
@@ -235,8 +234,8 @@ void HouseScene::loadMeshTexture()  {
 
     LOG(INFO) << "Creating Vulkan objects for Chalet texture...";
     VkBuffer image_staging_buffer;
-    vulpes::Allocation image_staging_alloc;
-    vulpes::Buffer::CreateStagingBuffer(device.get(), image_size, image_staging_buffer, image_staging_alloc);
+    vpr::Allocation image_staging_alloc;
+    vpr::Buffer::CreateStagingBuffer(device.get(), image_size, image_staging_buffer, image_staging_alloc);
 
     void* mapped;
     VkResult err = vkMapMemory(device->vkHandle(), image_staging_alloc.Memory(), 0, image_size, 0, &mapped);
@@ -246,7 +245,7 @@ void HouseScene::loadMeshTexture()  {
     image_staging_alloc.Unmap();
     LOG(INFO) << "Copied texture data successfully to Vulkan mapped memory, creating Texture object...";
 
-    texture = std::make_unique<vulpes::Texture<vulpes::texture_2d_t>>(device.get());
+    texture = std::make_unique<vpr::Texture<vpr::texture_2d_t>>(device.get());
     const VkBufferImageCopy staging_copy_info{ 0, 0, 0, VkImageSubresourceLayers{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, VkOffset3D{ 0, 0, 0 }, VkExtent3D{ 4096, 4096, 1 } };
     LOG(INFO) << "Creating texture backing objects from staging buffer...";
     texture->CreateFromBuffer(std::move(image_staging_buffer), VK_FORMAT_R8G8B8A8_UNORM, { staging_copy_info });
@@ -265,7 +264,7 @@ void HouseScene::loadMeshData()  {
     std::vector<tinyobj::material_t> materials;
     std::string err;
     LOG(INFO) << "Importing .obj file.";
-    std::string obj_path = SceneConfiguration.ResourcePathPrefixStr + "scenes/scene_resources/chalet.obj";
+    std::string obj_path = SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/chalet.obj";
     if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, obj_path.c_str())){
         LOG(ERROR) << "Loading obj file failed: " << err;
         throw std::runtime_error(err.c_str());
@@ -303,8 +302,8 @@ void HouseScene::loadMeshData()  {
 }
     
 void HouseScene::createMeshBuffers()  { 
-    vbo = std::make_unique<vulpes::Buffer>(device.get());
-    ebo = std::make_unique<vulpes::Buffer>(device.get());
+    vbo = std::make_unique<vpr::Buffer>(device.get());
+    ebo = std::make_unique<vpr::Buffer>(device.get());
     LOG(INFO) << "Creating Vulkan buffers for mesh...";
     vbo->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(vertex_t) * meshData.vertices.size());
     ebo->CreateBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint32_t) * meshData.indices.size());
@@ -317,13 +316,13 @@ void HouseScene::createMeshBuffers()  {
 }
 
 void HouseScene::createDescriptorPool()  {
-    descriptorPool = std::make_unique<vulpes::DescriptorPool>(device.get(), 1);
+    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 1);
     descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4);
     descriptorPool->Create();
 }
 
 void HouseScene::createDescriptorSet()  {
-    descriptorSet = std::make_unique<vulpes::DescriptorSet>(device.get());
+    descriptorSet = std::make_unique<vpr::DescriptorSet>(device.get());
     descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
     const VkDescriptorImageInfo descriptor = texture->GetDescriptor();
     descriptorSet->AddDescriptorInfo(descriptor, 0);
@@ -331,18 +330,18 @@ void HouseScene::createDescriptorSet()  {
 }
 
 void HouseScene::createPipelineLayout()  {
-    pipelineLayout = std::make_unique<vulpes::PipelineLayout>(device.get());
+    pipelineLayout = std::make_unique<vpr::PipelineLayout>(device.get());
     pipelineLayout->Create({ descriptorSet->vkLayout() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_ubo) } });
 }
 
 void HouseScene::createShaders() {
-    vert = std::make_unique<vulpes::ShaderModule>(device.get(), SceneConfiguration.ResourcePathPrefixStr + "scenes/scene_resources/shaders/house.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    frag = std::make_unique<vulpes::ShaderModule>(device.get(), SceneConfiguration.ResourcePathPrefixStr + "scenes/scene_resources/shaders/house.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    vert = std::make_unique<vpr::ShaderModule>(device.get(), SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/house.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    frag = std::make_unique<vpr::ShaderModule>(device.get(), SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/house.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void HouseScene::createPipelineCache() {
 
-    pipelineCache = std::make_unique<vulpes::PipelineCache>(device.get(), static_cast<uint16_t>(typeid(HouseScene).hash_code()));
+    pipelineCache = std::make_unique<vpr::PipelineCache>(device.get(), static_cast<uint16_t>(typeid(HouseScene).hash_code()));
 }
 
 void HouseScene::setPipelineStateInfo() {
@@ -379,7 +378,7 @@ void HouseScene::createGraphicsPipeline() {
     pipelineCreateInfo.basePipelineIndex = -1;
     pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
     LOG(INFO) << "Creating graphics pipeline...";
-    graphicsPipeline = std::make_unique<vulpes::GraphicsPipeline>(device.get());
+    graphicsPipeline = std::make_unique<vpr::GraphicsPipeline>(device.get());
     graphicsPipeline->Init(pipelineCreateInfo, pipelineCache->vkHandle());
 
 }
@@ -387,11 +386,11 @@ void HouseScene::createGraphicsPipeline() {
 
 int main() {
     #ifdef __linux__
-    vulpes::BaseScene::SceneConfiguration.ResourcePathPrefixStr = std::string("../");
+    vpsk::BaseScene::SceneConfiguration.ResourcePathPrefixStr = std::string("../");
     #endif
-    vulpes::BaseScene::SceneConfiguration.ApplicationName = std::string("House DemoScene");
-    vulpes::BaseScene::SceneConfiguration.EnableGUI = false;
-    vulpes::BaseScene::SceneConfiguration.EnableMouseLocking = false;
+    vpsk::BaseScene::SceneConfiguration.ApplicationName = std::string("House DemoScene");
+    vpsk::BaseScene::SceneConfiguration.EnableGUI = false;
+    vpsk::BaseScene::SceneConfiguration.EnableMouseLocking = false;
     try {
         HouseScene scene;
         scene.RenderLoop();
