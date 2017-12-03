@@ -150,10 +150,10 @@ namespace vpsk {
             graphicsPipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
         }
 
-        graphicsPipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = 1;
-        graphicsPipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = 1;
-        graphicsPipelineStateInfo.VertexInfo.pVertexBindingDescriptions = &bind_descr;
-        graphicsPipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = &attr_descr;
+        graphicsPipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
+        graphicsPipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
+        graphicsPipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
+        graphicsPipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
 
         graphicsPipelineStateInfo.DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
