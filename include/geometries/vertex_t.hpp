@@ -14,7 +14,7 @@ namespace vpsk {
         vertex_t() = default;
         ~vertex_t() = default;
 
-        vertex_t(const glm::vec3& _pos, const glm::vec3& _norm = glm::vec3(0.0f), const glm::vec2& _uv = glm::vec2(0.0f));
+        vertex_t(const glm::vec3& _pos, const glm::vec3& _norm = glm::vec3(0.0f), const glm::vec3& tangent = glm::vec3(0.0f), const glm::vec2& _uv = glm::vec2(0.0f));
         vertex_t(const vertex_t& other) noexcept;
         vertex_t(vertex_t&& other) noexcept;
 
@@ -23,13 +23,13 @@ namespace vpsk {
         
         glm::vec3 pos = glm::vec3(0.0f);
         glm::vec3 normal = glm::vec3(0.0f);
+        glm::vec3 tangent = glm::vec3(0.0f);
         glm::vec2 uv = glm::vec2(0.0f);
 
         bool operator==(const vertex_t& other) const noexcept;
         
-        static const VkVertexInputBindingDescription bindingDescription;
-
-        static const std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions;
+        static const std::array<VkVertexInputBindingDescription, 2> bindingDescriptions;
+        static const std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions;
     };
 }
 

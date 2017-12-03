@@ -50,9 +50,6 @@ namespace vpsk {
             glm::mat4 projection;
         } uboData;
 
-        const VkVertexInputBindingDescription bind_descr{ 0, sizeof(vertex_t), VK_VERTEX_INPUT_RATE_VERTEX };
-        const VkVertexInputAttributeDescription attr_descr{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
-
         std::unique_ptr<vpr::Texture<gli::texture_cube>> texture;
         std::unique_ptr<vpr::ShaderModule> vert, frag;
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;

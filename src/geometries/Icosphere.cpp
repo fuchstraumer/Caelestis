@@ -61,7 +61,8 @@ namespace vpsk {
     }
 
     Icosphere::~Icosphere() {
-        vbo.reset();
+        DestroyVulkanObjects();
+        FreeCpuData();
         frag.reset();
         vert.reset();
         pipelineLayout.reset();
@@ -148,7 +149,9 @@ namespace vpsk {
     void Icosphere::subdivide(const size_t& subdivision_level) {
 
         indices.assign(initial_indices.cbegin(), initial_indices.cend());
-        vertices.assign(initial_vertices.cbegin(), initial_vertices.cend());
+        for(const auto& vertex : initial_vertices) {
+            AddVertex(vertex);
+        }
 
         for (int j = 0; j < subdivision_level; ++j) {
             const size_t num_triangles = NumIndices() / 3;
@@ -157,7 +160,7 @@ namespace vpsk {
                 uint32_t i1 = indices[i * 3 + 1];
                 uint32_t i2 = indices[i * 3 + 2];
 
-                uint32_t i3 = static_cast<uint32_t>(vertices.size());
+                uint32_t i3 = static_cast<uint32_t>(vertexPositions.size());
                 uint32_t i4 = i3 + 1;
                 uint32_t i5 = i4 + 1;
 
@@ -166,55 +169,25 @@ namespace vpsk {
 
                 indices.insert(indices.cend(), { i3, i1, i4, i5, i3, i4, i5, i4, i2 });
 
-                const glm::vec3 midpoint0 = 0.5f * (vertices[i0].pos + vertices[i1].pos);
-                const glm::vec3 midpoint1 = 0.5f * (vertices[i1].pos + vertices[i2].pos);
-                const glm::vec3 midpoint2 = 0.5f * (vertices[i2].pos + vertices[i0].pos);
+                const glm::vec3 midpoint0 = 0.5f * (vertexPositions[i0] + vertexPositions[i1]);
+                const glm::vec3 midpoint1 = 0.5f * (vertexPositions[i1] + vertexPositions[i2]);
+                const glm::vec3 midpoint2 = 0.5f * (vertexPositions[i2] + vertexPositions[i0]);
 
                 AddVertex(vertex_t{ midpoint0, midpoint0 });
                 AddVertex(vertex_t{ midpoint1, midpoint1 });
                 AddVertex(vertex_t{ midpoint2, midpoint2 });
             }
         }
-       
-        for (auto& vert : vertices) {
-            vert.pos = glm::normalize(vert.pos);
-            vert.normal = glm::normalize(vert.pos);
+        
+        for(size_t i = 0; i < vertexPositions.size(); ++i) {
+            vertexPositions[i] = glm::normalize(vertexPositions[i]);
+            vertexData[i].normal = vertexPositions[i];
         }
+
     }
 
     void Icosphere::calculateUVs() {
-        
-        for(size_t i = 0; i < vertices.size(); ++i) {
-            const glm::vec3& norm = vertices[i].normal;
-            vertices[i].uv.x = 0.5f - 0.5f * glm::atan(norm.x, -norm.z) / FLOAT_PI;
-            vertices[i].uv.y = glm::acos(norm.y) / FLOAT_PI;
-        }
 
-        auto add_vertex_w_uv = [&](const size_t& i, const glm::vec2& uv) {
-            const uint32_t& idx = indices[i];
-            indices[i] = static_cast<uint32_t>(vertices.size());
-            vertices.push_back(vertex_t{ vertices[idx].pos, vertices[idx].normal, uv });
-        };
-
-        /*const size_t num_triangles = indices.size() / 3;
-        for(size_t i = 0; i < num_triangles; ++i) {
-            const glm::vec2& uv0 = vertices[indices[i * 3]].uv;
-            const glm::vec2& uv1 = vertices[indices[i * 3 + 1]].uv;
-            const glm::vec2& uv2 = vertices[indices[i * 3 + 2]].uv;
-
-            const float d1 = uv1.x - uv0.x;
-            const float d2 = uv2.x - uv0.x;
-
-            if(std::abs(d1) > 0.5f && std::abs(d2) > 0.5f){
-                add_vertex_w_uv(i * 3, uv0 + glm::vec2((d1 > 0.0f) ? 1.0f : -1.0f, 0.0f));
-            }
-            else if(std::abs(d1) > 0.5f) {
-                add_vertex_w_uv(i * 3 + 1, uv1 + glm::vec2((d1 < 0.0f) ? 1.0f : -1.0f, 0.0f));
-            }
-            else if(std::abs(d2) > 0.5f) {
-                add_vertex_w_uv(i * 3 + 2, uv2 + glm::vec2((d2 < 0.0f) ? 1.0f : -1.0f, 0.0f));
-            }
-        }*/
     }
 
     void Icosphere::uploadData(TransferPool* transfer_pool) {
@@ -259,8 +232,8 @@ namespace vpsk {
             pipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
         }
 
-        pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = 1;
-        pipelineStateInfo.VertexInfo.pVertexBindingDescriptions = &vertex_t::bindingDescription;
+        pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
+        pipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
         pipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
         pipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
 

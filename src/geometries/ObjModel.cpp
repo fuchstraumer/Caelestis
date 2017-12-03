@@ -128,10 +128,10 @@ namespace vpsk {
             pipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
         }
 
-        pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = 1;
-        pipelineStateInfo.VertexInfo.pVertexBindingDescriptions = &bindDescription;
-        pipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        pipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+        pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
+        pipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
+        pipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
+        pipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
 
     }
 
