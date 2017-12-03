@@ -13,6 +13,39 @@ namespace vpsk {
 
     std::map<std::string, std::unique_ptr<Material>> ObjModel::materialsPool = std::map<std::string, std::unique_ptr<Material>>{};
 
+    void ObjModel::RenderObj(const VkCommandBufferBeginInfo& begin, const VkCommandBuffer& cmd, const VkViewport& vp, const VkRect2D& sc) {
+        vkBeginCommandBuffer(cmd, &begin);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->vkHandle());
+            myMaterial->second->BindMaterial(cmd, pipelineLayout->vkHandle());
+            vkCmdSetViewport(cmd, 0, 1, &vp);
+            vkCmdSetScissor(cmd, 0, 1, &sc);
+            TriangleMesh::Render(cmd);
+        vkEndCommandBuffer(cmd);
+    }
+
+    void ObjModel::LoadModelFromFile(const std::string& obj_f, const std::string& tex_f, TransferPool* transfer_pool) {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> mtls;
+        std::string err;
+
+        if(!tinyobj::LoadObj(&attrib, &shapes, &mtls, &err, obj_f.c_str())) {
+            LOG(ERROR) << "TinyObjLoader failed to load model file " << obj_f << " , exiting.";
+            LOG(ERROR) << "Load failed with error: " << err;
+            throw std::runtime_error(err.c_str());
+        }
+        
+        modelName = shapes.front().name;
+
+        loadMeshes(shapes, attrib, transfer_pool);
+
+        tinyobj::material_t mtl;
+        mtl.diffuse_texname = tex_f;
+        mtls.push_back(std::move(mtl));
+        createMaterials(mtls, transfer_pool);
+
+    }
+
     void ObjModel::LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool) {
         
         tinyobj::attrib_t attrib;
