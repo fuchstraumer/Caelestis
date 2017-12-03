@@ -11,8 +11,9 @@ namespace vpsk {
     }
 
     uint32_t TriangleMesh::AddVertex(vertex_t vertex) noexcept {
-        vertices.push_back(std::move(vertex));
-        return static_cast<uint32_t>(vertices.size() - 1);
+        vertexPositions.push_back(std::move(vertex.pos));
+        vertexData.push_back(std::move(vertex_data_t{ vertex.normal, vertex.tangent, vertex.uv }));
+        return static_cast<uint32_t>(vertexPositions.size() - 1);
     }
 
     void TriangleMesh::AddIndex(uint32_t index) noexcept {
@@ -23,12 +24,21 @@ namespace vpsk {
         indices.insert(indices.cend(), { std::move(i0), std::move(i1), std::move(i2) });
     }
 
-    const vertex_t& TriangleMesh::GetVertex(const uint32_t& index) const {
-        return vertices[index];
+    const glm::vec3& TriangleMesh::GetVertexPosition(const uint32_t& idx) const noexcept {
+        return vertexPositions[idx];
+    }
+
+    const TriangleMesh::vertex_data_t& TriangleMesh::GetVertexData(const uint32_t& idx) const noexcept {
+        return vertexData[idx];
+    }
+
+    vertex_t TriangleMesh::GetVertex(const uint32_t& index) const {
+        return vertex_t{ vertexPositions[index], vertexData[index].normal, vertexData[index].tangent, vertexData[index].uv };
     }
 
     void TriangleMesh::ReserveVertices(const size_t& reserve_amount) noexcept {
-        vertices.reserve(reserve_amount);
+        vertexPositions.reserve(reserve_amount);
+        vertexData.reserve(reserve_amount);
     }
 
     void TriangleMesh::ReserveIndices(const size_t& reserve_amount) noexcept {
@@ -36,8 +46,9 @@ namespace vpsk {
     }
 
     size_t TriangleMesh::NumVertices() const noexcept {
-        if(!vertices.empty()) {
-            return vertices.size();
+        if(!vertexPositions.empty() && !vertexData.empty()) {
+            assert(vertexPositions.size() == vertexData.size());
+            return vertexPositions.size();
         }
         else {
             return numVertices;
@@ -58,20 +69,23 @@ namespace vpsk {
         device = dvc;
 
         // Set these now, as they are "frozen" and might be zero if set after this point.
-        numVertices = static_cast<uint32_t>(vertices.size());
+        numVertices = static_cast<uint32_t>(vertexPositions.size());
         numIndices = static_cast<uint32_t>(indices.size());
 
-        vbo = std::make_unique<Buffer>(device);
+        vbo0 = std::make_unique<Buffer>(device);
+        vbo1 = std::make_unique<Buffer>(device);
         ebo = std::make_unique<Buffer>(device);
 
-        vbo->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(vertex_t) * NumVertices());
+        vbo0->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(glm::vec3) * NumVertices());
+        vbo1->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(vertex_data_t) * NumVertices());
         ebo->CreateBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint32_t) * NumIndices());
         
     }
 
     void TriangleMesh::RecordTransferCommands(const VkCommandBuffer& transfer_cmd) {
         
-        vbo->CopyTo(vertices.data(), transfer_cmd, sizeof(vertex_t) * NumVertices(), 0);
+        vbo0->CopyTo(vertexPositions.data(), transfer_cmd, sizeof(glm::vec3) * NumVertices(), 0);
+        vbo1->CopyTo(vertexData.data(), transfer_cmd, sizeof(vertex_data_t) * NumVertices(), 0);
         ebo->CopyTo(indices.data(), transfer_cmd, sizeof(uint32_t) * NumIndices(), 0);
     
     }
@@ -86,20 +100,23 @@ namespace vpsk {
     void TriangleMesh::DestroyVulkanObjects() {
         
         ebo.reset();
-        vbo.reset();
+        vbo0.reset();
+        vbo1.reset();
 
     }
 
     void TriangleMesh::FreeCpuData() {
 
-        vertices.clear();
-        vertices.shrink_to_fit();
+        vertexPositions.clear();
+        vertexPositions.shrink_to_fit();
+        vertexData.clear();
+        vertexData.shrink_to_fit();
         indices.clear();
         indices.shrink_to_fit();
 
     }
 
-    const glm::mat4& TriangleMesh::GetModelMatrix() noexcept {
+    const glm::mat4& TriangleMesh::GetModelMatrix() const noexcept {
         if (!modelMatrixCached) {
             updateModelMatrix();
         }
@@ -137,7 +154,7 @@ namespace vpsk {
         return rotation;
     }
 
-    void TriangleMesh::updateModelMatrix() {
+    void TriangleMesh::updateModelMatrix() const {
         glm::mat4 scale_matrix = glm::scale(glm::mat4(1.0f), scale);
         glm::mat4 translation_matrix = glm::translate(glm::mat4(1.0f), position);
         glm::mat4 rotation_x_matrix = glm::rotate(glm::mat4(1.0f), rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -149,7 +166,8 @@ namespace vpsk {
 
     void TriangleMesh::bindBuffers(const VkCommandBuffer& draw_cmd) const noexcept {
         constexpr static VkDeviceSize offsets[1] { 0 };
-        vkCmdBindVertexBuffers(draw_cmd, 0, 1, &vbo->vkHandle(), offsets);
+        VkBuffer handles[2]{ vbo0->vkHandle(), vbo1->vkHandle() };
+        vkCmdBindVertexBuffers(draw_cmd, 0, 2, handles, offsets);
         vkCmdBindIndexBuffer(draw_cmd, ebo->vkHandle(), 0, VK_INDEX_TYPE_UINT32);
     }
 

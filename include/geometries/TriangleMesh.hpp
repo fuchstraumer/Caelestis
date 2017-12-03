@@ -23,6 +23,12 @@ namespace vpsk {
         TriangleMesh& operator=(const TriangleMesh&) = delete;
     public:
 
+        struct vertex_data_t {
+            glm::vec3 normal;
+            glm::vec3 tangent;
+            glm::vec2 uv;
+        };
+
         TriangleMesh() = default;
         TriangleMesh(const glm::vec3& _position, const glm::vec3& scale = glm::vec3(1.0f), const glm::vec3& rotation = glm::vec3(0.0f));
         virtual ~TriangleMesh();
@@ -38,7 +44,9 @@ namespace vpsk {
         */
         void AddTriangle(uint32_t i0, uint32_t i1, uint32_t i2) noexcept;
 
-        const vertex_t& GetVertex(const uint32_t& index) const;
+        const glm::vec3& GetVertexPosition(const uint32_t& idx) const noexcept;
+        const vertex_data_t& GetVertexData(const uint32_t& idx) const noexcept;
+        vertex_t GetVertex(const uint32_t& index) const;
 
         void ReserveVertices(const size_t& reserve_amount) noexcept;
         void ReserveIndices(const size_t& reserve_amount) noexcept;
@@ -67,7 +75,7 @@ namespace vpsk {
         /** Calls clear() + shrink_to_fit() on vertex and index containers to free their memory. */
         void FreeCpuData();
 
-        const glm::mat4& GetModelMatrix() noexcept;
+        const glm::mat4& GetModelMatrix() const noexcept;
         virtual void SetModelMatrix(const glm::mat4& updated_model);
 
         void UpdatePosition(const glm::vec3& new_position);
@@ -87,17 +95,18 @@ namespace vpsk {
         *   so it will still function after a call to FreeCpuData. Override for different draw commands or for different VBO setup. 
         */
         virtual void drawIndexed(const VkCommandBuffer& draw_cmd_buffer) const noexcept;
-        void updateModelMatrix();
+        void updateModelMatrix() const;
 
-        glm::mat4 model;
+        mutable glm::mat4 model;
         glm::vec3 position, scale, rotation;
-        bool modelMatrixCached = false;
-        std::vector<vertex_t> vertices;
+        mutable bool modelMatrixCached = false;
+        std::vector<glm::vec3> vertexPositions;
+        std::vector<vertex_data_t> vertexData;
         std::vector<uint32_t> indices;
 
         uint32_t numVertices, numIndices;
 
-        std::unique_ptr<vpr::Buffer> vbo;
+        std::unique_ptr<vpr::Buffer> vbo0, vbo1;
         std::unique_ptr<vpr::Buffer> ebo;
         const vpr::Device* device;
     };
