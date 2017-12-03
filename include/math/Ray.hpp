@@ -27,8 +27,18 @@ namespace vpsk {
         bool CheckTriangleIntersection(const glm::vec3& vert_pos0, const glm::vec3& vert_pos1, const glm::vec3& vert_pos2, float* distance_to_intersection = nullptr) const noexcept;
         bool CheckPlaneIntersection(const glm::vec3& plane_origin, const glm::vec3& plane_normal, float* distance_to_intersection = nullptr) const noexcept;
 
+        const glm::ivec3& GetIdxVector() const noexcept;
+        const glm::vec3& GetSVector() const noexcept;
+        
     protected:
 
+        void setIdxVector() const;
+        void setSVector() const;
+
+        mutable glm::ivec3 idxVector;
+        mutable bool idxVectorSet = false;
+        mutable glm::vec3 sVector;
+        mutable bool sVectorSet = false;
         glm::vec3 origin, direction, invDirection;
         char signX, signY, signZ;
     };

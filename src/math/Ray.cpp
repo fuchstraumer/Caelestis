@@ -3,6 +3,18 @@
 
 namespace vpsk {
 
+    constexpr size_t largest_axis(const glm::vec3& p) {
+        if(p.x > p.y && p.x > p.z) {
+            return 0;
+        }
+        else if (p.y < p.z) {
+            return 1;
+        }
+        else {
+            return 2;
+        }
+    }
+
     Ray::Ray(const glm::vec3 & _origin, const glm::vec3& _dir) : direction(_dir), origin(_origin), invDirection(1.0f / _dir), signX((_dir.x < 0.0f) ? 1 : 0), signY((_dir.y < 0.0f) ? 1 : 0), signZ((_dir.z < 0.0f) ? 1 : 0) {}
 
     const glm::vec3 & Ray::GetOrigin() const noexcept {
@@ -93,4 +105,30 @@ namespace vpsk {
         return false;
     }
 
+    const glm::ivec3& Ray::GetIdxVector() const noexcept {
+        if(!idxVectorSet) {
+            setIdxVector();
+        }
+        return idxVector;
+    }
+
+    const glm::vec3& Ray::GetSVector() const noexcept {
+        if(!sVectorSet) {
+            setSVector();
+        }
+        return sVector;
+    }
+
+    void Ray::setIdxVector() const {
+        idxVector.z = largest_axis(glm::abs(GetDirection()));
+        idxVector.x = idxVector.z + 1 == 3 ? 0 : idxVector.z + 1;
+        idxVector.y = idxVector.x + 1 == 3 ? 0 : idxVector.x + 1; 
+    }
+
+    void Ray::setSVector() const {
+        const auto& d = GetDirection();
+        sVector.x = -d.x / d.z;
+        sVector.y = -d.y / d.z;
+        sVector.z = 1.0f / d.z;
+    }
 }
