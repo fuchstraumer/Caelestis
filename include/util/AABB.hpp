@@ -2,7 +2,7 @@
 #ifndef VULPES_UTIL_AABB_H
 #define VULPES_UTIL_AABB_H
 #include "glm/vec3.hpp"
-
+#include "math/Ray.hpp"
 namespace vpsk {
 
     namespace util {
@@ -32,13 +32,15 @@ namespace vpsk {
             void Include(const glm::vec3& pt);
             void Expand(const float& dist);
             bool Intersection(const glm::vec3& origin, const glm::vec3& ray) const;
-
+            bool Intersection(const Ray& ray, float& t0, float& t1) const;
             glm::vec3 Diagonal() const noexcept;
             float SurfaceArea() const noexcept;
             float Volume() const noexcept;
 
             size_t IdxToLargestAxis() const noexcept;
             glm::vec3 Lerp(const glm::vec3& amt) const noexcept;
+
+            void Transform(const glm::mat4& transformation);
             
         private:
 
