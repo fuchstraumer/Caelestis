@@ -3,3 +3,5 @@ build/
 ext/include/
 ext/lib/
 .vscode/
+
+include/vpsk_stdafx\.h
