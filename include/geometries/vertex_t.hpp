@@ -5,6 +5,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/hash.hpp"
 #include <vulkan/vulkan.h>
+#include <array>
 
 namespace vpsk {
 
@@ -28,8 +29,18 @@ namespace vpsk {
 
         bool operator==(const vertex_t& other) const noexcept;
         
-        static const std::array<VkVertexInputBindingDescription, 2> bindingDescriptions;
-        static const std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions;
+
+        constexpr static std::array<const VkVertexInputBindingDescription, 2> bindingDescriptions {
+            VkVertexInputBindingDescription{ 0, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX },
+            VkVertexInputBindingDescription{ 1, sizeof(glm::vec3) * 2 + sizeof(glm::vec2), VK_VERTEX_INPUT_RATE_VERTEX }
+        };
+
+        constexpr static std::array<const VkVertexInputAttributeDescription, 4> attributeDescriptions {
+            VkVertexInputAttributeDescription{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+            VkVertexInputAttributeDescription{ 1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+            VkVertexInputAttributeDescription{ 2, 1, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3) * 1 },
+            VkVertexInputAttributeDescription{ 3, 1, VK_FORMAT_R32G32_SFLOAT, sizeof(glm::vec3) * 2 }
+        };
     };
 }
 
