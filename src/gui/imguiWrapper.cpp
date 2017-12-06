@@ -1,59 +1,43 @@
-#include "vpr_stdafx.h"
-#include "gui/imguiWrapper.hpp"
-#include "command/TransferPool.hpp"
+#include "gui/ImGuiWrapper.hpp"
 #include "core/Instance.hpp"
+#include "render/GraphicsPipeline.hpp"
+#include "resource/Buffer.hpp"
 #include "resource/ShaderModule.hpp"
+#include "resource/PipelineCache.hpp"
+#include "resource/PipelineLayout.hpp"
+#include "resource/DescriptorSet.hpp"
+#include "resource/DescriptorPool.hpp"
+#include "command/TransferPool.hpp"
 
-namespace vpr {
+using namespace vpr;
+
+namespace vpsk {
 
     static std::array<bool, 3> mouse_pressed{ false, false, false };
 
-    imguiWrapper::~imguiWrapper() {
-        
+    ImGuiWrapper::~ImGuiWrapper() {     
         texture.reset();
-        vkFreeDescriptorSets(device->vkHandle(), descriptorPool, 1, &descriptorSet);
-        vkDestroyDescriptorSetLayout(device->vkHandle(), descriptorSetLayout, nullptr);
-        vkDestroyDescriptorPool(device->vkHandle(), descriptorPool, nullptr);
-        vkDestroyPipelineLayout(device->vkHandle(), pipelineLayout, nullptr);
         cache.reset();
         vbo.reset();
         ebo.reset();
-
     }
 
-    void imguiWrapper::Init(const Device * dvc, const VkRenderPass & renderpass) {
+    void ImGuiWrapper::Init(const Device * dvc, const VkRenderPass & renderpass, vpr::DescriptorPool* descriptor_pool) {
         
         device = dvc;
-        cache = std::make_unique<PipelineCache>(device, static_cast<uint16_t>(typeid(imguiWrapper).hash_code()));
+        cache = std::make_unique<PipelineCache>(device, static_cast<uint16_t>(typeid(ImGuiWrapper).hash_code()));
 
-        createResources();
-        createDescriptorPools();
-        
+        createResources();  
         createFontTexture();
-        
-        createDescriptorLayout();
-        createPipelineLayout();
-        
-        allocateDescriptors();
-        updateDescriptors();
-    
+        createDescriptorLayout(descriptor_pool);
+        createPipelineLayout();       
         setupGraphicsPipelineInfo();
         setupGraphicsPipelineCreateInfo(renderpass);
-
-        // This has to be done here, due to scoping issues and auto-destruction rules.
-        const std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{
-            vert->PipelineInfo(),
-            frag->PipelineInfo()
-        };
-
-        pipelineCreateInfo.pStages = shader_stages.data();
-        
-        pipeline = std::make_unique<GraphicsPipeline>(device);
-        pipeline->Init(pipelineCreateInfo, cache->vkHandle());
+        createGraphicsPipeline();
 
     }
 
-    void imguiWrapper::UploadTextureData(TransferPool * transfer_pool) {
+    void ImGuiWrapper::UploadTextureData(TransferPool * transfer_pool) {
         
         // Transfer image data from transfer buffer onto the device.
         auto cmd = transfer_pool->Begin();
@@ -65,7 +49,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::NewFrame(Instance* instance) {
+    void ImGuiWrapper::NewFrame(Instance* instance) {
 
         auto* window_ptr = instance->GetWindow();
         updateImguiSpecialKeys();
@@ -102,7 +86,7 @@ namespace vpr {
         
     }
 
-    void imguiWrapper::UpdateBuffers() {
+    void ImGuiWrapper::UpdateBuffers() {
         
         validateBuffers();
         updateBufferData();
@@ -110,18 +94,17 @@ namespace vpr {
     }
 
 
-    void imguiWrapper::DrawFrame(VkCommandBuffer & cmd) {
-        auto& io = ImGui::GetIO();
+    void ImGuiWrapper::DrawFrame(VkCommandBuffer & cmd) {
+        const auto& io = ImGui::GetIO();
 
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vkHandle());
-
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout->vkHandle(), 0, 1, &descriptorSet->vkHandle(), 0, nullptr);
         static const VkDeviceSize offsets[1]{ 0 };
         vkCmdBindVertexBuffers(cmd, 0, 1, &vbo->vkHandle(), offsets);
         vkCmdBindIndexBuffer(cmd, ebo->vkHandle(), 0, VK_INDEX_TYPE_UINT16);
 
         glm::vec4 push_constants = glm::vec4(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y, -1.0f, -1.0f);
-        vkCmdPushConstants(cmd, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, &push_constants);
+        vkCmdPushConstants(cmd, layout->vkHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, &push_constants);
 
         VkViewport viewport{ 0, 0, io.DisplaySize.x, io.DisplaySize.y, 0.0f, 1.0f };
         vkCmdSetViewport(cmd, 0, 1, &viewport);
@@ -145,7 +128,7 @@ namespace vpr {
         }
     }
 
-    void imguiWrapper::createResources() {
+    void ImGuiWrapper::createResources() {
         
         vbo = std::make_unique<Buffer>(device);
         ebo = std::make_unique<Buffer>(device);
@@ -155,30 +138,13 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::createDescriptorPools() {
-        
-        std::array<VkDescriptorPoolSize, 1> pool_sizes{
-            VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 },
-        };
-
-        VkDescriptorPoolCreateInfo pool_info = vk_descriptor_pool_create_info_base;
-        pool_info.pPoolSizes = pool_sizes.data();
-        pool_info.poolSizeCount = 1;
-        pool_info.maxSets = 2;
-        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-        VkResult result = vkCreateDescriptorPool(device->vkHandle(), &pool_info, nullptr, &descriptorPool);
-        VkAssert(result);
-
-    }
-
-    size_t imguiWrapper::loadFontTextureData() {
+    size_t ImGuiWrapper::loadFontTextureData() {
         ImGuiIO& io = ImGui::GetIO();
         io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &imgWidth, &imgHeight);
         return imgWidth * imgHeight * 4 * sizeof(char);
     }
 
-    void imguiWrapper::uploadFontTextureData(const size_t& font_texture_size) {
+    void ImGuiWrapper::uploadFontTextureData(const size_t& font_texture_size) {
 
         Allocation staging_alloc;
         Buffer::CreateStagingBuffer(device, font_texture_size, textureStaging, staging_alloc);
@@ -199,7 +165,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::createFontTexture() {
+    void ImGuiWrapper::createFontTexture() {
 
         // Load texture.
         size_t texture_data_size = loadFontTextureData();
@@ -208,64 +174,33 @@ namespace vpr {
         uploadFontTextureData(texture_data_size);
 
         // Create texture
-        texture = std::make_unique<Texture<gli::texture2d>>(device);
-        texture->CreateFromBuffer(std::move(textureStaging), VK_FORMAT_R8G8B8A8_UNORM, std::vector<VkBufferImageCopy>{ stagingToTextureCopy} );
-        fontSampler = texture->Sampler();
-        fontView = texture->View();
+        font = std::make_unique<Texture<texture_2d_t>>(device);
+        font->CreateFromBuffer(std::move(textureStaging), VK_FORMAT_R8G8B8A8_UNORM, std::vector<VkBufferImageCopy>{ stagingToTextureCopy} );
 
     }
 
-    void imguiWrapper::createDescriptorLayout() {
+    void ImGuiWrapper::createDescriptorLayout(vpr::DescriptorPool* descriptor_pool) {
         
-        VkDescriptorSetLayoutBinding layout_binding{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &fontSampler };
-        VkDescriptorSetLayoutCreateInfo layout_info = vk_descriptor_set_layout_create_info_base;
-        layout_info.bindingCount = 1;
-        layout_info.pBindings = &layout_binding;
-        VkResult result = vkCreateDescriptorSetLayout(device->vkHandle(), &layout_info, nullptr, &descriptorSetLayout);
-        VkAssert(result);
+        descriptorSet = std::make_unique<DescriptorSet>(device);
+        descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+        descriptorSet->AddDescriptorInfo(font->GetDescriptor(), 0);
+        descriptorSet->Init(descriptor_pool);
 
     }
 
-    void imguiWrapper::createPipelineLayout() {
+    void ImGuiWrapper::createPipelineLayout() {
 
+        layout = std::make_unique<PipelineLayout>(device);
         VkPushConstantRange push_constant{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4 };
-        VkPipelineLayoutCreateInfo pipeline_info = vk_pipeline_layout_create_info_base;
-        pipeline_info.pushConstantRangeCount = 1;
-        pipeline_info.pPushConstantRanges = &push_constant;
-        pipeline_info.pSetLayouts = &descriptorSetLayout;
-        pipeline_info.setLayoutCount = 1;
-        VkResult result = vkCreatePipelineLayout(device->vkHandle(), &pipeline_info, nullptr, &pipelineLayout);
-        VkAssert(result);
+        layout->Create({ descriptorSet->vkLayout() }, { push_constant });
 
     }
 
-    void imguiWrapper::allocateDescriptors() {
+    void ImGuiWrapper::setupGraphicsPipelineInfo() {
 
-        VkDescriptorSetAllocateInfo set_alloc = vk_descriptor_set_alloc_info_base;
-        set_alloc.descriptorPool = descriptorPool;
-        set_alloc.descriptorSetCount = 1;
-        set_alloc.pSetLayouts = &descriptorSetLayout;
-        VkResult result = vkAllocateDescriptorSets(device->vkHandle(), &set_alloc, &descriptorSet);
-        VkAssert(result);
+        static constexpr VkVertexInputBindingDescription bind_descr{ 0, sizeof(ImDrawVert), VK_VERTEX_INPUT_RATE_VERTEX };
 
-    }
-
-    void imguiWrapper::updateDescriptors() {
-
-        VkDescriptorImageInfo font_info;
-        font_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        font_info.imageView = fontView;
-        font_info.sampler = fontSampler;
-        VkWriteDescriptorSet write_set{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &font_info, nullptr, nullptr };
-        vkUpdateDescriptorSets(device->vkHandle(), 1, &write_set, 0, nullptr);
-
-    }
-
-    void imguiWrapper::setupGraphicsPipelineInfo() {
-
-        static const VkVertexInputBindingDescription bind_descr{ 0, sizeof(ImDrawVert), VK_VERTEX_INPUT_RATE_VERTEX };
-
-        static const std::array<VkVertexInputAttributeDescription, 3> attr_descr{
+        static constexpr std::array<VkVertexInputAttributeDescription, 3> attr_descr{
             VkVertexInputAttributeDescription{ 0, 0, VK_FORMAT_R32G32_SFLOAT, 0 },
             VkVertexInputAttributeDescription{ 1, 0, VK_FORMAT_R32G32_SFLOAT,  sizeof(float) * 2 },
             VkVertexInputAttributeDescription{ 2, 0, VK_FORMAT_R8G8B8A8_UNORM, sizeof(float) * 4 }
@@ -305,7 +240,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::setupGraphicsPipelineCreateInfo(const VkRenderPass& renderpass) {
+    void ImGuiWrapper::setupGraphicsPipelineCreateInfo(const VkRenderPass& renderpass) {
 
         pipelineCreateInfo = vk_graphics_pipeline_create_info_base;
         pipelineCreateInfo.flags = 0;
@@ -319,7 +254,7 @@ namespace vpr {
         pipelineCreateInfo.pDepthStencilState = &pipelineStateInfo.DepthStencilInfo;
         pipelineCreateInfo.pColorBlendState = &pipelineStateInfo.ColorBlendInfo;
         pipelineCreateInfo.pDynamicState = &pipelineStateInfo.DynamicStateInfo;
-        pipelineCreateInfo.layout = pipelineLayout;
+        pipelineCreateInfo.layout = layout->vkHandle();
         pipelineCreateInfo.renderPass = renderpass;
         pipelineCreateInfo.subpass = 0;
         pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -327,7 +262,20 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::updateImguiSpecialKeys() noexcept {
+    void ImGuiWrapper::createGraphicsPipeline() {
+        // This has to be done here, due to scoping issues and auto-destruction rules. 
+        const std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{
+            vert->PipelineInfo(),
+            frag->PipelineInfo()
+        };
+
+        pipelineCreateInfo.pStages = shader_stages.data();
+
+        pipeline = std::make_unique<GraphicsPipeline>(device);
+        pipeline->Init(pipelineCreateInfo, cache->vkHandle());
+    }
+
+    void ImGuiWrapper::updateImguiSpecialKeys() noexcept {
         
         ImGuiIO& io = ImGui::GetIO();
         io.KeysDown[io.KeyMap[ImGuiKey_Tab]] = input_handler::Keys[GLFW_KEY_TAB];
@@ -356,7 +304,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::validateBuffers() {
+    void ImGuiWrapper::validateBuffers() {
         
         ImDrawData* draw_data = ImGui::GetDrawData();
 
@@ -385,7 +333,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::updateBufferData() {
+    void ImGuiWrapper::updateBufferData() {
         
         const ImDrawData* draw_data = ImGui::GetDrawData();
         
@@ -404,7 +352,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::updateFramegraph(const float& frame_time) {
+    void ImGuiWrapper::updateFramegraph(const float& frame_time) {
         
         std::rotate(settings.frameTimes.begin(), settings.frameTimes.begin() + 1, settings.frameTimes.end());
         
@@ -427,7 +375,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::freeMouse(Instance * instance) {
+    void ImGuiWrapper::freeMouse(Instance * instance) {
         
         auto& io = ImGui::GetIO();
         auto* window_ptr = instance->GetWindow();
@@ -440,7 +388,7 @@ namespace vpr {
 
     }
 
-    void imguiWrapper::captureMouse(Instance* instance) {
+    void ImGuiWrapper::captureMouse(Instance* instance) {
 
         auto& io = ImGui::GetIO();
         auto* window_ptr = instance->GetWindow();

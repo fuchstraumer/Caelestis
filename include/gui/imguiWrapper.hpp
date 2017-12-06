@@ -2,15 +2,12 @@
 #ifndef VULPES_VK_IMGUI_WRAPPER_H
 #define VULPES_VK_IMGUI_WRAPPER_H
 #include "vpr_stdafx.h"
-#include "../../imgui/imgui.h"
-#include "../command/TransferPool.hpp"
-#include "../resource/Texture.hpp"
-#include "../resource/Buffer.hpp"
-#include "../render/GraphicsPipeline.hpp"
-#include "../resource/PipelineCache.hpp"
-#include "../resource/ShaderModule.hpp"
+#include "imgui/imgui.h"
+#include "ForwardDecl.hpp"
+#include "resource/Texture.hpp"
+#include "render/GraphicsPipeline.hpp"
 
-namespace vpr {
+namespace vpsk {
 
     struct imguiSettings {
         bool displayMeshes = true;
@@ -19,76 +16,62 @@ namespace vpr {
         float frameTimeMin = 9999.0f, frameTimeMax = 0.0f;
     };
 
-    class imguiWrapper  {
-        imguiWrapper(const imguiWrapper&) = delete;
-        imguiWrapper& operator=(const imguiWrapper&) = delete;
+    class ImGuiWrapper {
+        ImGuiWrapper(const ImGuiWrapper&) = delete;
+        ImGuiWrapper& operator=(const ImGuiWrapper&) = delete;
     public:
 
-        imguiWrapper() = default;
-        ~imguiWrapper();
+        ImGuiWrapper() = default;
+        ~ImGuiWrapper();
 
-        void Init(const Device* dvc, const VkRenderPass& renderpass);
-
-        void UploadTextureData(TransferPool* transfer_pool);
-
-        void NewFrame(Instance* instance);
-
+        void Init(const vpr::Device* dvc, const VkRenderPass& renderpass, vpr::DescriptorPool* descriptor_pool);
+        void UploadTextureData(vpr::TransferPool* transfer_pool);
+        void NewFrame(vpr::Instance* instance);
         void UpdateBuffers();
-
-        void updateMouseActions(Instance* instance);
-
+        void updateMouseActions(vpr::Instance* instance);
         void DrawFrame(VkCommandBuffer& cmd);
-
         imguiSettings settings;
-
         int imgWidth, imgHeight;
 
     private:
 
         void createResources();
-        void createDescriptorPools();
         size_t loadFontTextureData();
         void uploadFontTextureData(const size_t& font_texture_size);
         void createFontTexture();
-        void createDescriptorLayout();
+        void createDescriptorLayout(vpr::DescriptorPool* descriptor_pool);
         void createPipelineLayout();
-        void allocateDescriptors();
-        void updateDescriptors();
         void setupGraphicsPipelineInfo();
         void setupGraphicsPipelineCreateInfo(const VkRenderPass& renderpass);
+        void createGraphicsPipeline();
         void updateImguiSpecialKeys() noexcept;
         void validateBuffers();
         void updateBufferData();
         void updateFramegraph(const float& frame_time);
-        void freeMouse(Instance* instance);
-        void captureMouse(Instance* instance);
+        void freeMouse(vpr::Instance* instance);
+        void captureMouse(vpr::Instance* instance);
 
         static float mouseWheel;
         std::array<bool, 3> mouseClick;
         size_t frameIdx;
         VkCommandBuffer graphicsCmd;
-        const Device* device;
+        const vpr::Device* device;
 
-        unsigned char* fontTextureData;
-        std::shared_ptr<PipelineCache> cache;
-        std::unique_ptr<GraphicsPipeline> pipeline;
-        std::unique_ptr<Buffer> vbo, ebo;
-        std::unique_ptr<Texture<gli::texture2d>> texture;
-        std::unique_ptr<ShaderModule> vert, frag;
+        std::shared_ptr<vpr::PipelineCache> cache;
+        std::unique_ptr<vpr::GraphicsPipeline> pipeline;
+        std::unique_ptr<vpr::Buffer> vbo, ebo;
+        std::unique_ptr<vpr::Texture<gli::texture2d>> texture;
+        std::unique_ptr<vpr::ShaderModule> vert, frag;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> font;
+        std::unique_ptr<vpr::PipelineLayout> layout;
+        std::unique_ptr<vpr::DescriptorSet> descriptorSet;
 
-        GraphicsPipelineInfo pipelineStateInfo;
+        vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
 
-        VkDescriptorPool descriptorPool;
-        VkDescriptorSet descriptorSet;
-        VkDescriptorSetLayout descriptorSetLayout;
-        VkPipelineLayout pipelineLayout;
-
+        unsigned char* fontTextureData;
         VkBuffer textureStaging;
         VkBufferImageCopy stagingToTextureCopy;
-        VkImage fontImage;
-        VkImageView fontView;
-        VkSampler fontSampler;
 
         VkDescriptorImageInfo fontInfo;
         VkWriteDescriptorSet fontWriteSet;

@@ -1,6 +1,7 @@
 #pragma once
-#include "vpr_stdafx.h"
-#include "../../imgui/imgui.h"
+#ifndef VPSK_IMGUI_TABS_HPP
+#define VPSK_IMGUI_TABS_HPP
+#include "imgui/imgui.h"
 
 namespace ImGui {
     /*
@@ -20,3 +21,5 @@ namespace ImGui {
     IMGUI_API bool TabLabels(const char **tabLabels, int tabSize, int &tabIndex, int *tabOrder = NULL);
 
 } // namespace ImGui
+
+#endif // !VPSK_IMGUI_TABS_HPP
