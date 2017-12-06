@@ -1,15 +1,21 @@
+#include "ForwardDecl.hpp"
 #include "scene/BaseScene.hpp"
-#include "common/CreateInfoBase.hpp"
 #include "core/Instance.hpp"
+#include "render/GraphicsPipeline.hpp"
+#include "render/Renderpass.hpp"
+#include "render/Swapchain.hpp"
+#include "command/CommandPool.hpp"
+#include "command/TransferPool.hpp"
 #include "resource/Buffer.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "resource/DescriptorSet.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/ShaderModule.hpp"
-#include "render/GraphicsPipeline.hpp"
 #include "resource/Texture.hpp"
 #include "resource/Allocator.hpp"
 #include "resource/PipelineCache.hpp"
+#include "util/easylogging++.h"
+INITIALIZE_EASYLOGGINGPP
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../tinyobjloader/tiny_obj_loader.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -19,7 +25,7 @@
 #include <string>
 #include <typeinfo>
 
-INITIALIZE_EASYLOGGINGPP
+
 
 /** This serves as a super-simple example of how to derive from a vpr::BaseScene object. It doesn't render a GUI, however, so another 
  *  example is required to show how to use that.
@@ -387,6 +393,8 @@ void HouseScene::createGraphicsPipeline() {
 int main() {
     #ifdef __linux__
     vpsk::BaseScene::SceneConfiguration.ResourcePathPrefixStr = std::string("../");
+    #elif defined _WIN32
+    vpsk::BaseScene::SceneConfiguration.ResourcePathPrefixStr = std::string("../../");
     #endif
     vpsk::BaseScene::SceneConfiguration.ApplicationName = std::string("House DemoScene");
     vpsk::BaseScene::SceneConfiguration.EnableGUI = false;

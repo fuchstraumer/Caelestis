@@ -1,20 +1,9 @@
 #pragma once
 #ifndef VULPES_VK_BASE_SCENE_H
 #define VULPES_VK_BASE_SCENE_H
-
 #include "vpr_stdafx.h"
-
-#include "core/Instance.hpp"
-#include "core/LogicalDevice.hpp"
-#include "core/PhysicalDevice.hpp"
-#include "render/Swapchain.hpp"
-#include "render/Renderpass.hpp"
-#include "render/Framebuffer.hpp"
-#include "gui/imguiWrapper.hpp"
-#include "command/CommandPool.hpp"
-#include "render/DepthStencil.hpp"
-#include "render/Multisampling.hpp"
-#include "resource/PipelineCache.hpp"
+#include "ForwardDecl.hpp"
+#include "gui/ImGuiWrapper.hpp"
 #include "BaseSceneConfig.hpp"
 #include "camera/Camera.hpp"
 #include "camera/Arcball.hpp"
@@ -120,7 +109,7 @@ namespace vpsk {
         virtual void endFrame(const size_t& curr_idx) = 0;
 
         std::unique_ptr<vpr::Multisampling> msaa;
-        std::unique_ptr<vpr::imguiWrapper> gui;
+        std::unique_ptr<vpsk::ImGuiWrapper> gui;
         uint32_t width, height;
         VkSemaphore semaphores[2];
         std::vector<VkSemaphore> renderCompleteSemaphores;
@@ -132,7 +121,7 @@ namespace vpsk {
         std::unique_ptr<vpr::CommandPool> graphicsPool, secondaryPool;
         std::unique_ptr<vpr::TransferPool> transferPool;
         std::unique_ptr<vpr::Renderpass> renderPass;
-
+        std::unique_ptr<vpr::DescriptorPool> descriptorPool;
         std::vector<VkAttachmentDescription> attachmentDescriptions;
         std::vector<VkAttachmentReference> attachmentReferences;
         std::vector<VkSubpassDependency> subpassDependencies;
@@ -158,71 +147,6 @@ namespace vpsk {
         static ArcballCamera arcballCamera;
     };
 
-
-    inline glm::mat4 BaseScene::GetViewMatrix() const noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            return fpsCamera.GetViewMatrix();
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            return arcballCamera.GetViewMatrix();
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            return fpsCamera.GetViewMatrix();
-        }
-    }
-
-    inline glm::mat4 BaseScene::GetProjectionMatrix() const noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            return fpsCamera.GetProjectionMatrix();
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            return arcballCamera.GetProjectionMatrix();
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            return fpsCamera.GetProjectionMatrix();
-        }
-    }
-
-    inline const glm::vec3 & BaseScene::GetCameraPosition() const noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            return fpsCamera.GetEyeLocation();
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            return arcballCamera.GetEyeLocation();
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            return fpsCamera.GetEyeLocation();
-        }
-    }
-
-    inline void BaseScene::SetCameraPosition(const glm::vec3& new_camera_pos) noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.SetEyeLocation(new_camera_pos);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.SetEyeLocation(new_camera_pos);
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            fpsCamera.SetEyeLocation(new_camera_pos);
-        }
-    }
-
-    inline void BaseScene::SetCameraTarget(const glm::vec3& target_pos) {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.LookAtTarget(target_pos);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.LookAtTarget(target_pos);
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            fpsCamera.LookAtTarget(target_pos);
-        }
-    }
 
 }
 

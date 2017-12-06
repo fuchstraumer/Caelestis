@@ -5,6 +5,7 @@
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 #include "core/PhysicalDevice.hpp"
+#include "util/easylogging++.h"
 
 using namespace vpr;
 

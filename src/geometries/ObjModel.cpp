@@ -2,10 +2,12 @@
 #include "geometries/ObjModel.hpp"
 #include "core/Instance.hpp"
 #include "command/TransferPool.hpp"
+#include "util/easylogging++.h"
 #include <unordered_map>
+#include "tiny_obj_loader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
-#include "tiny_obj_loader.h"
+
 
 using namespace vpr;
 

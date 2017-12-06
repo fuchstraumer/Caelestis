@@ -4,12 +4,17 @@
 #include "core/LogicalDevice.hpp"
 #include "core/PhysicalDevice.hpp"
 #include "command/CommandPool.hpp"
+#include "command/TransferPool.hpp"
 #include "render/Framebuffer.hpp"
 #include "render/Renderpass.hpp"
 #include "render/Swapchain.hpp"
 #include "render/DepthStencil.hpp"
-#include "util/AABB.hpp"
-#include <memory>
+#include "render/Multisampling.hpp"
+#include "resource/DescriptorPool.hpp"
+#include "resource/DescriptorSet.hpp"
+#include "resource/PipelineLayout.hpp"
+#include "resource/ShaderModule.hpp"
+#include "util/easylogging++.h"
 #ifdef USE_EXPERIMENTAL_FILESYSTEM
 #include <experimental/filesystem>
 #endif
@@ -102,8 +107,8 @@ namespace vpsk {
             return;
         }
 
-        gui = std::make_unique<imguiWrapper>();
-        gui->Init(device.get(), renderPass->vkHandle());
+        gui = std::make_unique<ImGuiWrapper>();
+        gui->Init(device.get(), renderPass->vkHandle(), descriptorPool.get());
         gui->UploadTextureData(transferPool.get());
 
     }
@@ -279,7 +284,6 @@ namespace vpsk {
         pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         pool_info.flags = device->QueueFamilyIndices.Transfer;
         transferPool = std::make_unique<TransferPool>(device.get());
-        transferPool->AllocateCmdBuffers(1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     }
 
     void BaseScene::createSecondaryCmdPool() {
@@ -670,4 +674,68 @@ namespace vpsk {
         vkEndCommandBuffer(gui_buffer);
     }
 
+    glm::mat4 BaseScene::GetViewMatrix() const noexcept {
+        if (SceneConfiguration.CameraType == cameraType::FPS) {
+            return fpsCamera.GetViewMatrix();
+        }
+        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
+            return arcballCamera.GetViewMatrix();
+        }
+        else {
+            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
+            return fpsCamera.GetViewMatrix();
+        }
+    }
+
+    glm::mat4 BaseScene::GetProjectionMatrix() const noexcept {
+        if (SceneConfiguration.CameraType == cameraType::FPS) {
+            return fpsCamera.GetProjectionMatrix();
+        }
+        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
+            return arcballCamera.GetProjectionMatrix();
+        }
+        else {
+            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
+            return fpsCamera.GetProjectionMatrix();
+        }
+    }
+
+    const glm::vec3 & BaseScene::GetCameraPosition() const noexcept {
+        if (SceneConfiguration.CameraType == cameraType::FPS) {
+            return fpsCamera.GetEyeLocation();
+        }
+        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
+            return arcballCamera.GetEyeLocation();
+        }
+        else {
+            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
+            return fpsCamera.GetEyeLocation();
+        }
+    }
+
+    void BaseScene::SetCameraPosition(const glm::vec3& new_camera_pos) noexcept {
+        if (SceneConfiguration.CameraType == cameraType::FPS) {
+            fpsCamera.SetEyeLocation(new_camera_pos);
+        }
+        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
+            arcballCamera.SetEyeLocation(new_camera_pos);
+        }
+        else {
+            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
+            fpsCamera.SetEyeLocation(new_camera_pos);
+        }
+    }
+
+    void BaseScene::SetCameraTarget(const glm::vec3& target_pos) {
+        if (SceneConfiguration.CameraType == cameraType::FPS) {
+            fpsCamera.LookAtTarget(target_pos);
+        }
+        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
+            arcballCamera.LookAtTarget(target_pos);
+        }
+        else {
+            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
+            fpsCamera.LookAtTarget(target_pos);
+        }
+    }
 }

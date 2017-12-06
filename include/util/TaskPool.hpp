@@ -1,8 +1,8 @@
 #pragma once
 #ifndef VULPES_VK_TASK_POOL_HPP
 #define VULPES_VK_TASK_POOL_HPP
-
-#include "vpr_stdafx.h"
+#include <future>
+#include <deque>
 
 namespace vulpes {
 
