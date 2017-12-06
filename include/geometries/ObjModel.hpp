@@ -29,7 +29,7 @@ namespace vpsk {
         ObjModel(const vpr::Device* dvc);
         ~ObjModel();
 
-        void RenderObj(const VkCommandBufferBeginInfo& begin, const VkCommandBuffer& cmd, const VkViewport& view, const VkRect2D& scissor);
+        void Render(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin, const VkViewport& view, const VkRect2D& scissor);
         void LoadModelFromFile(const std::string& obj_filename, const std::string& diffuse_filename, vpr::TransferPool* transfer_pool);
         void LoadModelFromFile(const std::string& obj_model_filename, vpr::TransferPool* transfer_pool);
         void CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path);

@@ -15,7 +15,7 @@ namespace vpsk {
 
     std::map<std::string, std::unique_ptr<Material>> ObjModel::materialsPool = std::map<std::string, std::unique_ptr<Material>>{};
 
-    void ObjModel::RenderObj(const VkCommandBufferBeginInfo& begin, const VkCommandBuffer& cmd, const VkViewport& vp, const VkRect2D& sc) {
+    void ObjModel::Render(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin, const VkViewport& vp, const VkRect2D& sc) {
         vkBeginCommandBuffer(cmd, &begin);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->vkHandle());
             myMaterial->second->BindMaterial(cmd, pipelineLayout->vkHandle());

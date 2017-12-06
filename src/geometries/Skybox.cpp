@@ -111,8 +111,8 @@ namespace vpsk {
     void Skybox::createShaders() {
 
 
-        vert = std::make_unique<ShaderModule>(device,"rsrc/shaders/skybox/skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-        frag = std::make_unique<ShaderModule>(device,"rsrc/shaders/skybox/skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+        vert = std::make_unique<ShaderModule>(device,"../rsrc/shaders/skybox/skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+        frag = std::make_unique<ShaderModule>(device,"../rsrc/shaders/skybox/skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
     }
 

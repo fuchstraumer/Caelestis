@@ -8,6 +8,7 @@ namespace vpsk {
 
     class Primitive {
     public:
+        Primitive() = default;
         virtual ~Primitive(){};
         virtual void Render(const VkCommandBuffer& cmd_buffer, const VkCommandBufferBeginInfo& begin_info, const VkViewport& curr_viewport, const VkRect2D& curr_scissor) = 0;
     };
