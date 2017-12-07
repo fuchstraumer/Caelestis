@@ -188,7 +188,34 @@ namespace vpsk {
     }
 
     void Icosphere::calculateUVs() {
+        for(size_t i = 0; i < vertexPositions.size(); ++i) {
+            const glm::vec3& norm = vertexData[i].normal;
+            vertexData[i].uv.x = (glm::atan(norm.x, -norm.z) / FLOAT_PI) * 0.5f + 0.5f;
+            vertexData[i].uv.y = -norm.y * 0.5f + 0.5f;
+        }
 
+        auto add_vertex_w_uv = [&](const size_t& i, const glm::vec2& uv) {
+            const uint32_t& idx = indices[i];
+            indices[i] =  AddVertex(vertex_t{ vertexPositions[idx], vertexData[idx].normal, glm::vec3(), uv });
+        };
+
+        const size_t num_triangles = indices.size() / 3;
+        for(size_t i = 0; i < num_triangles; ++i) {
+            const glm::vec2& uv0 = vertexData[indices[i * 3]].uv;
+            const glm::vec2& uv1 = vertexData[indices[i * 3 + 1]].uv;
+            const glm::vec2& uv2 = vertexData[indices[i * 3 + 2]].uv;
+            const float d1 = uv1.x - uv0.x;
+            const float d2 = uv2.x - uv0.x;
+            if(std::abs(d1) > 0.5f && std::abs(d2) > 0.5f){
+                add_vertex_w_uv(i * 3, uv0 + glm::vec2((d1 > 0.0f) ? 1.0f : -1.0f, 0.0f));
+            }
+            else if(std::abs(d1) > 0.5f) {
+                add_vertex_w_uv(i * 3 + 1, uv1 + glm::vec2((d1 < 0.0f) ? 1.0f : -1.0f, 0.0f));
+            }
+            else if(std::abs(d2) > 0.5f) {
+                add_vertex_w_uv(i * 3 + 2, uv2 + glm::vec2((d2 < 0.0f) ? 1.0f : -1.0f, 0.0f));
+            }
+        }
     }
 
     void Icosphere::uploadData(TransferPool* transfer_pool) {
@@ -271,6 +298,10 @@ namespace vpsk {
         if(textureFormat == VK_FORMAT_R8G8B8A8_UNORM) {
             texture = std::make_unique<Texture<texture_2d_t>>(device);
             texture->CreateFromFile(texturePath.c_str());
+            VkSamplerCreateInfo sampler_info = vk_sampler_create_info_base;
+            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            texture->CreateSampler(sampler_info);
         } 
 
     }
