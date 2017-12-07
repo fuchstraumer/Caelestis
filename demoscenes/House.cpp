@@ -14,6 +14,9 @@
 #include "resource/Texture.hpp"
 #include "resource/Allocator.hpp"
 #include "resource/PipelineCache.hpp"
+#include "resource/DescriptorPool.hpp"
+#include "geometries/Skybox.hpp"
+
 #include "util/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -68,6 +71,7 @@ private:
     void updateUBO();
 
     void create();
+    void createSkybox();
     void loadMeshTexture();
     void loadMeshData();
     void createMeshBuffers();
@@ -82,7 +86,6 @@ private:
     
 
     std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
-    std::unique_ptr<vpr::DescriptorPool> descriptorPool;
     std::unique_ptr<vpr::Buffer> vbo, ebo;
     std::unique_ptr<vpr::DescriptorSet> descriptorSet;
     std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
@@ -91,7 +94,7 @@ private:
     vpr::GraphicsPipelineInfo pipelineStateInfo;
     VkGraphicsPipelineCreateInfo pipelineCreateInfo;
     std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
-
+    std::unique_ptr<vpsk::Skybox> skybox;
     VkViewport viewport;
     VkRect2D scissor;
 
@@ -106,7 +109,7 @@ namespace std {
     };
 }
 
-HouseScene::HouseScene() : BaseScene(1, 1440, 900), viewport(vpr::vk_default_viewport), scissor(vpr::vk_default_viewport_scissor) {
+HouseScene::HouseScene() : BaseScene(2, 1440, 900), viewport(vpr::vk_default_viewport), scissor(vpr::vk_default_viewport_scissor) {
     create();
 }
 
@@ -160,7 +163,7 @@ void HouseScene::RecordCommands() {
         VkAssert(err);
 
             vkCmdBeginRenderPass(graphicsPool->GetCmdBuffer(i), &renderPass->BeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-            auto& secondary_cmd_buffer = secondaryPool->GetCmdBuffer(i);
+            auto& secondary_cmd_buffer = secondaryPool->GetCmdBuffer(i * 2);
             vkBeginCommandBuffer(secondary_cmd_buffer, &secondary_cmd_buffer_begin_info);
                 vkCmdBindPipeline(secondary_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->vkHandle());
                 vkCmdSetViewport(secondary_cmd_buffer, 0, 1, &viewport);
@@ -172,8 +175,11 @@ void HouseScene::RecordCommands() {
                 vkCmdBindVertexBuffers(secondary_cmd_buffer, 0, 1, &vbo->vkHandle(), offsets);
                 vkCmdDrawIndexed(secondary_cmd_buffer, static_cast<uint32_t>(meshData.indices.size()), 1, 0, 0, 0);
             vkEndCommandBuffer(secondary_cmd_buffer);
-
-            vkCmdExecuteCommands(graphicsPool->GetCmdBuffer(i), 1, &secondaryPool->GetCmdBuffer(i));
+            skybox->UpdateUBO(glm::lookAt(glm::vec3(2.0f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+            auto& skybox_cmd_buffer = secondaryPool->GetCmdBuffer(i * 2 + 1);
+            skybox->Render(skybox_cmd_buffer, secondary_cmd_buffer_begin_info, viewport, scissor);
+            const VkCommandBuffer* buffers = secondaryPool->GetCommandBuffers(i * 2);
+            vkCmdExecuteCommands(graphicsPool->GetCmdBuffer(i), 2, buffers);
             vkCmdEndRenderPass(graphicsPool->GetCmdBuffer(i));
 
         err = vkEndCommandBuffer(graphicsPool->GetCmdBuffer(i));
@@ -185,8 +191,8 @@ void HouseScene::RecordCommands() {
 
 void HouseScene::endFrame(const size_t& idx) {
     vkResetFences(device->vkHandle(), 1, &presentFences[idx]);
-    secondaryPool->ResetCmdBuffer(idx);
-    graphicsPool->ResetCmdBuffer(idx);
+    secondaryPool->ResetCmdPool();
+    graphicsPool->ResetCmdPool();
 }
 
 void HouseScene::updateUBO() {
@@ -207,6 +213,7 @@ void HouseScene::create() {
     loadMeshData();
     createMeshBuffers();
     createDescriptorPool();
+    createSkybox();
     createDescriptorSet();
     createPipelineLayout();
     createShaders();
@@ -217,6 +224,7 @@ void HouseScene::create() {
 
 void HouseScene::destroy() {
     LOG(INFO) << "Destroying HouseScene objects...";
+    skybox.reset();
     graphicsPipeline.reset();
     texture.reset();
     vbo.reset();
@@ -227,6 +235,12 @@ void HouseScene::destroy() {
     vert.reset();
     frag.reset();
     pipelineCache.reset();
+}
+
+void HouseScene::createSkybox() {
+    skybox = std::make_unique<vpsk::Skybox>(device.get());
+    skybox->CreateTexture("../demoscenes/scene_resources/milkyway_bc3.dds", VK_FORMAT_BC3_UNORM_BLOCK);
+    skybox->Create(GetProjectionMatrix(), renderPass->vkHandle(), transferPool.get(), descriptorPool.get());
 }
 
 void HouseScene::loadMeshTexture()  { 
@@ -322,16 +336,15 @@ void HouseScene::createMeshBuffers()  {
 }
 
 void HouseScene::createDescriptorPool()  {
-    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 1);
-    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4);
+    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 2);
+    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2);
     descriptorPool->Create();
 }
 
 void HouseScene::createDescriptorSet()  {
     descriptorSet = std::make_unique<vpr::DescriptorSet>(device.get());
     descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-    const VkDescriptorImageInfo descriptor = texture->GetDescriptor();
-    descriptorSet->AddDescriptorInfo(descriptor, 0);
+    descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), 0);
     descriptorSet->Init(descriptorPool.get());
 }
 
@@ -394,7 +407,7 @@ int main() {
     #ifdef __linux__
     vpsk::BaseScene::SceneConfiguration.ResourcePathPrefixStr = std::string("../");
     #elif defined _WIN32
-    vpsk::BaseScene::SceneConfiguration.ResourcePathPrefixStr = std::string("../../");
+    vpsk::BaseScene::SceneConfiguration.ResourcePathPrefixStr = std::string("../");
     #endif
     vpsk::BaseScene::SceneConfiguration.ApplicationName = std::string("House DemoScene");
     vpsk::BaseScene::SceneConfiguration.EnableGUI = false;
