@@ -34,7 +34,6 @@ void main() {
     vec3 specular = specular_strength * spec * ubo.lightColor.xyz;
 
     vec4 light_result = vec4(ambient + diffuse + specular, 1.0f);
-    fragColor = texture(textureSampler, vUV) * light_result;
-    fragColor.a = 1.0f;
+    fragColor = texture(textureSampler, vec2(1.0f - vUV.x, vUV.y)) * light_result;
 
 }
