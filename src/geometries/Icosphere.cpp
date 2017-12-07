@@ -70,6 +70,8 @@ namespace vpsk {
         pipelineCache.reset();
         descriptorSet.reset();
         graphicsPipeline.reset();
+        texture.reset();
+        cmpTexture.reset();
     }
 
     void Icosphere::SetTexture(const char* filename) {
@@ -222,8 +224,11 @@ namespace vpsk {
 
         auto& cmd = transfer_pool->Begin();
         RecordTransferCommands(cmd);
-        if(texture) {
+        if(textureFormat == VK_FORMAT_R8G8B8A8_UNORM) {
             texture->TransferToDevice(cmd);
+        }
+        else {
+            cmpTexture->TransferToDevice(cmd);
         }
         transfer_pool->Submit();
 
@@ -236,7 +241,12 @@ namespace vpsk {
     void Icosphere::createDescriptorSet(DescriptorPool* descriptor_pool) {
         descriptorSet = std::make_unique<DescriptorSet>(device);
         descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-        descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), 0);
+        if (textureFormat == VK_FORMAT_R8G8B8A8_UNORM) {
+            descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), 0);
+        }
+        else {
+            descriptorSet->AddDescriptorInfo(cmpTexture->GetDescriptor(), 0);
+        }
         descriptorSet->Init(descriptor_pool);
     }
 
@@ -303,6 +313,16 @@ namespace vpsk {
             sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
             texture->CreateSampler(sampler_info);
         } 
+        else {
+            cmpTexture = std::make_unique<Texture<gli::texture2d>>(device);
+            cmpTexture->CreateFromFile(texturePath.c_str(), textureFormat);
+            VkSamplerCreateInfo sampler_info = vk_sampler_create_info_base;
+            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            sampler_info.anisotropyEnable = VK_TRUE;
+            sampler_info.maxAnisotropy = VK_SAMPLE_COUNT_8_BIT;
+            cmpTexture->CreateSampler(sampler_info);
+        }
 
     }
 

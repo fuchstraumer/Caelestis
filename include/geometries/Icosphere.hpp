@@ -76,7 +76,7 @@ namespace vpsk {
         std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
         std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
-
+        std::unique_ptr<vpr::Texture<gli::texture2d>> cmpTexture;
         vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
         size_t subdivisionLevel;

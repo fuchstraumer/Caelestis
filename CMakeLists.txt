@@ -10,7 +10,9 @@ ExternalProject_Add(VulpesRender
     GIT_REPOSITORY "https://github.com/fuchstraumer/vulpesrender.git"
     CMAKE_ARGS
         "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_SOURCE_DIR}/ext/"
-        "-DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_CURRENT_SOURCE_DIR}/ext/include/")
+        "-DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_CURRENT_SOURCE_DIR}/ext/include/"
+        "-DFORCE_ASSERT=ON"
+        "-DCMAKE_DEBUG_POSTFIX=-gd")
 
 FILE(GLOB GEOMETRIES "${CMAKE_CURRENT_SOURCE_DIR}/include/geometries/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/geometries/*.cpp")
 FILE(GLOB CAMERAS "${CMAKE_CURRENT_SOURCE_DIR}/include/camera/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/camera/*.cpp")
@@ -22,6 +24,7 @@ FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT
 FILE(GLOB IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.cpp")
 FILE(GLOB GUI "${CMAKE_CURRENT_SOURCE_DIR}/include/gui/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/*.cpp")
 FILE(GLOB_RECURSE GUI_ADDONS "${CMAKE_CURRENT_SOURCE_DIR}/include/gui/addons/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/addons/*.cpp")
+FILE(GLOB_RECURSE SHADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.vert" "${CMAKE_CURRENT_SOURCE_DIR}/*.frag" "${CMAKE_CURRENT_SOURCE_DIR}/*.spv")
 
 SOURCE_GROUP("geometries" FILES ${GEOMETRIES})
 SOURCE_GROUP("cameras" FILES ${CAMERAS})
@@ -32,20 +35,20 @@ SOURCE_GROUP("util" FILES ${UTIL})
 SOURCE_GROUP("imgui" FILES ${IMGUI})
 SOURCE_GROUP("gui" FILES ${GUI})
 SOURCE_GROUP("gui addons" FILES ${GUI_ADDONS})
+SOURCE_GROUP("shaders" FILES ${SHADERS})
 
 FIND_PACKAGE(Vulkan REQUIRED)
 ADD_SUBDIRECTORY(tinyobjloader)
-ADD_LIBRARY(VulpesSceneKit STATIC ${GEOMETRIES} ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS})
+ADD_LIBRARY(VulpesSceneKit STATIC ${GEOMETRIES} ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS} ${SHADERS})
 
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE $<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}>)
 TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE ${Vulkan_LIBRARIES})
 
 IF(MSVC)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /Gm")
 ELSEIF(UNIX)
     # Enables more symbols to be loaded when debugging with GDB
     TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC "-DGLIBCXX_DEBUG")
-    # We tend to end up with 64-bit glfw and 32-bit programs, somehow, on unix.
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 ENDIF()
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")
@@ -57,14 +60,16 @@ TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/im
 
 IF(WIN32)
     LINK_DIRECTORIES(VulpesSceneKit "ext/lib/")
-    FIND_LIBRARY(VPLIB NAMES "VulpesRender.lib" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib")
     FIND_LIBRARY(GLFWLIB NAMES "glfw3.lib" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/download/vulpesrender/src/VulpesRender/ext/lib")
-    TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE "${VPLIB}" "${GLFWLIB}")
+    TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE "${GLFWLIB}")
+    SET(VPLIB_DBG "../ext/lib/VulpesRender-gd")
+    SET(VPLIB_REL "../ext/lib/VulpesRender")
 ELSEIF(UNIX)
     LINK_DIRECTORIES(VulpesSceneKit "ext/lib/")
-    FIND_LIBRARY(VPLIB NAMES "libVulpesRender.a" HINTS "${PROJECT_SOURCE_DIR}/ext/lib")
     FIND_LIBRARY(GLFWLIB NAMES "libglfw3.a" HINTS "download/vulpesrender/src/VulpesRender/ext/lib")
-    TARGET_LINK_LIBRARIES(VulpesSceneKit PUBLIC "${VPLIB}" "${GLFWLIB}" "dl" "pthread" "X11" "Xi" "Xrandr")
+    TARGET_LINK_LIBRARIES(VulpesSceneKit PUBLIC "${GLFWLIB}" "dl" "pthread" "X11" "Xi" "Xrandr")
+    SET(VPLIB_DBG "${CMAKE_CURRENT_SORUCE_DIR}/ext/lib/libVulpesRender-gd.a")
+    SET(VPLIB_REL "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/libVulpesRender.a")
 ENDIF()
 
 TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC -DGLM_LANG_STL11_FORCED)
@@ -77,6 +82,23 @@ IF(BUILD_EX_SCENES)
 ADD_EXECUTABLE(House "demoscenes/House.cpp")
 TARGET_INCLUDE_DIRECTORIES(House PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
-TARGET_LINK_LIBRARIES(House VulpesSceneKit "${VPLIB}" "${GLFWLIB}" "$ENV{VULKAN_SDK}/lib/libvulkan.so" "dl" "pthread" "X11" "Xi" "Xrandr")
+TARGET_LINK_LIBRARIES(House VulpesSceneKit "${GLFWLIB}" "${Vulkan_LIBRARIES}")
+TARGET_LINK_LIBRARIES(House debug "${VPLIB_DBG}")
+TARGET_LINK_LIBRARIES(House optimized "${VPLIB_REL}")
+IF(UNIX)
+TARGET_LINK_LIBRARIES(House "dl" "pthread" "X11" "Xi" "Xrandr")
+ENDIF()
 TARGET_COMPILE_DEFINITIONS(House PUBLIC -DGLM_LANG_STL11_FORCED)
+
+ADD_EXECUTABLE(Icosphere "demoscenes/IcosphereScene.cpp")
+TARGET_INCLUDE_DIRECTORIES(Icosphere PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
+TARGET_LINK_LIBRARIES(Icosphere VulpesSceneKit "${GLFWLIB}" "${Vulkan_LIBRARIES}")
+TARGET_LINK_LIBRARIES(Icosphere debug "${VPLIB_DBG}")
+TARGET_LINK_LIBRARIES(Icosphere optimized "${VPLIB_REL}")
+IF(UNIX)
+TARGET_LINK_LIBRARIES(Icosphere "dl" "pthread" "X11" "Xi" "Xrandr")
+ENDIF()
+TARGET_COMPILE_DEFINITIONS(Icosphere PUBLIC -DGLM_LANG_STL11_FORCED)
+
 ENDIF()

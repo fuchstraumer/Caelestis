@@ -94,8 +94,6 @@ namespace vpsk {
             arcballCamera.SetFarClipPlaneDistance(2000.0f);
         }
 
-        setupGUI();
-
         LOG_IF(verbose_logging, INFO) << "BaseScene setup complete.";
 
 
@@ -164,14 +162,13 @@ namespace vpsk {
     
     BaseScene::~BaseScene() {
 
-        destroyGUI();
         depthStencil.reset();
         graphicsPool.reset();
         transferPool.reset();
         secondaryPool.reset();
         swapchain.reset();
         msaa.reset();
-        
+        descriptorPool.reset();
         for (const auto& fbuf : framebuffers) {
             vkDestroyFramebuffer(device->vkHandle(), fbuf, nullptr);
         }

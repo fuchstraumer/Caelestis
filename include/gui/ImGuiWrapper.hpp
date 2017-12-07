@@ -60,7 +60,6 @@ namespace vpsk {
         std::shared_ptr<vpr::PipelineCache> cache;
         std::unique_ptr<vpr::GraphicsPipeline> pipeline;
         std::unique_ptr<vpr::Buffer> vbo, ebo;
-        std::unique_ptr<vpr::Texture<gli::texture2d>> texture;
         std::unique_ptr<vpr::ShaderModule> vert, frag;
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> font;
         std::unique_ptr<vpr::PipelineLayout> layout;

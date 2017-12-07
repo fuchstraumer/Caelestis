@@ -16,7 +16,7 @@ namespace vpsk {
     static std::array<bool, 3> mouse_pressed{ false, false, false };
 
     ImGuiWrapper::~ImGuiWrapper() {     
-        texture.reset();
+        font.reset();
         cache.reset();
         vbo.reset();
         ebo.reset();
@@ -41,10 +41,7 @@ namespace vpsk {
         
         // Transfer image data from transfer buffer onto the device.
         auto cmd = transfer_pool->Begin();
-
-        texture->TransferToDevice(cmd);
-
-        
+        font->TransferToDevice(cmd);
         transfer_pool->Submit();
 
     }
