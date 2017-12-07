@@ -165,7 +165,7 @@ namespace vpsk {
     }
 
     void TriangleMesh::bindBuffers(const VkCommandBuffer& draw_cmd) const noexcept {
-        constexpr static VkDeviceSize offsets[1] { 0 };
+        constexpr static VkDeviceSize offsets[2] { 0, 0 };
         VkBuffer handles[2]{ vbo0->vkHandle(), vbo1->vkHandle() };
         vkCmdBindVertexBuffers(draw_cmd, 0, 2, handles, offsets);
         vkCmdBindIndexBuffer(draw_cmd, ebo->vkHandle(), 0, VK_INDEX_TYPE_UINT32);
