@@ -163,7 +163,7 @@ namespace vpsk {
 #endif
     
     BaseScene::~BaseScene() {
-
+        gui.reset();
         depthStencil.reset();
         graphicsPool.reset();
         transferPool.reset();
@@ -189,7 +189,8 @@ namespace vpsk {
 #ifdef USE_EXPERIMENTAL_FILESYSTEM
         cleanupShaderCacheFiles();
 #endif
-
+        window.reset();
+        renderPass.reset();
     }
     
     
