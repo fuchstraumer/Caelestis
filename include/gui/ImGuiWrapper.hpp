@@ -26,9 +26,8 @@ namespace vpsk {
 
         void Init(const vpr::Device* dvc, const VkRenderPass& renderpass, vpr::DescriptorPool* descriptor_pool);
         void UploadTextureData(vpr::TransferPool* transfer_pool);
-        void NewFrame(vpr::Instance* instance);
+        void NewFrame(GLFWwindow* instance);
         void UpdateBuffers();
-        void updateMouseActions(vpr::Instance* instance);
         void DrawFrame(VkCommandBuffer& cmd);
         imguiSettings settings;
         int imgWidth, imgHeight;
@@ -48,8 +47,8 @@ namespace vpsk {
         void validateBuffers();
         void updateBufferData();
         void updateFramegraph(const float& frame_time);
-        void freeMouse(vpr::Instance* instance);
-        void captureMouse(vpr::Instance* instance);
+        void freeMouse(GLFWwindow* instance);
+        void captureMouse(GLFWwindow* instance);
 
         static float mouseWheel;
         std::array<bool, 3> mouseClick;

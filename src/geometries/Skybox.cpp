@@ -3,7 +3,7 @@
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
-
+#include "scene/BaseScene.hpp"
 using namespace vpr;
 
 namespace vpsk {
@@ -145,9 +145,9 @@ namespace vpsk {
         graphicsPipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
         graphicsPipelineStateInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
 
-        graphicsPipelineStateInfo.MultisampleInfo.sampleShadingEnable = Instance::GraphicsSettings.EnableMSAA;
-        if(Instance::GraphicsSettings.EnableMSAA) {
-            graphicsPipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
+        graphicsPipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
+        if(BaseScene::SceneConfiguration.EnableMSAA) {
+            graphicsPipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
         }
 
         graphicsPipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());

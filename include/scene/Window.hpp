@@ -2,6 +2,11 @@
 #ifndef VULPES_VK_WINDOW_H
 #define VULPES_VK_WINDOW_H
 #include "ForwardDecl.hpp"
+#include <cstdint>
+#include <string>
+#include <memory>
+#include <glm/vec2.hpp>
+#include <GLFW/glfw3.h>
 
 namespace vpsk {
 
@@ -18,7 +23,7 @@ namespace vpsk {
     public:
 
         Window(const uint32_t& width, const uint32_t& height, const std::string& app_name, const bool& fullscreen = false);
-        ~Window();
+        ~Window() = default;
 
         /** !This method attaches any object - usually a scene of some sort - to this window, allowing this class to signal the attached object 
         *   that a window resize or window mode change has occured. This is done to the BaseScene class in the examples for this project.

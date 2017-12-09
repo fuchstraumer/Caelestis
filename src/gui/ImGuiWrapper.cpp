@@ -1,5 +1,4 @@
 #include "gui/ImGuiWrapper.hpp"
-#include "core/Instance.hpp"
 #include "render/GraphicsPipeline.hpp"
 #include "resource/Buffer.hpp"
 #include "resource/ShaderModule.hpp"
@@ -8,6 +7,8 @@
 #include "resource/DescriptorSet.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "command/TransferPool.hpp"
+#include "scene/BaseScene.hpp"
+#include "scene/InputHandler.hpp"
 
 using namespace vpr;
 
@@ -46,30 +47,29 @@ namespace vpsk {
 
     }
 
-    void ImGuiWrapper::NewFrame(Instance* instance) {
+    void ImGuiWrapper::NewFrame(GLFWwindow* instance) {
 
-        auto* window_ptr = instance->GetWindow();
         updateImguiSpecialKeys();
 
         auto& io = ImGui::GetIO();
-        io.ClipboardUserData = reinterpret_cast<void*>(window_ptr); // required for clipboard funcs to work.
+        io.ClipboardUserData = reinterpret_cast<void*>(instance); // required for clipboard funcs to work.
         static double curr_time = 0.0;
 
-        if (Instance::GraphicsSettings.EnableMouseLocking) {
+        if (BaseScene::SceneConfiguration.EnableMouseLocking) {
             if (input_handler::Keys[GLFW_KEY_LEFT_ALT]) {
                 freeMouse(instance);
-                Instance::VulpesState.ShouldMouseLock = true;
+                BaseScene::VPSKState.ShouldMouseLock = true;
             }
             else {
                 captureMouse(instance);
-                Instance::VulpesState.ShouldMouseLock = false;
+                BaseScene::VPSKState.ShouldMouseLock = false;
             }
         }
 
         
 
         for (size_t i = 0; i < 3; ++i) {
-            io.MouseDown[i] = mouse_pressed[i] || glfwGetMouseButton(window_ptr->glfwWindow(), static_cast<int>(i)) != 0;
+            io.MouseDown[i] = mouse_pressed[i] || glfwGetMouseButton(instance, static_cast<int>(i)) != 0;
             mouse_pressed[i] = false;
         }
 
@@ -232,8 +232,8 @@ namespace vpsk {
 
         pipelineStateInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 
-        pipelineStateInfo.MultisampleInfo.rasterizationSamples = Instance::GraphicsSettings.MSAA_SampleCount;
-        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = Instance::GraphicsSettings.EnableMSAA;
+        pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
+        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
 
     }
 
@@ -372,26 +372,24 @@ namespace vpsk {
 
     }
 
-    void ImGuiWrapper::freeMouse(Instance * instance) {
+    void ImGuiWrapper::freeMouse(GLFWwindow * window) {
         
         auto& io = ImGui::GetIO();
-        auto* window_ptr = instance->GetWindow();
 
         double mouse_x, mouse_y;
-        glfwGetCursorPos(window_ptr->glfwWindow(), &mouse_x, &mouse_y);
+        glfwGetCursorPos(window, &mouse_x, &mouse_y);
         io.MousePos = ImVec2(float(mouse_x), float(mouse_y));
-        Instance::VulpesState.ShouldMouseLock = true;
-        glfwSetInputMode(window_ptr->glfwWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        BaseScene::VPSKState.ShouldMouseLock = true;
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     }
 
-    void ImGuiWrapper::captureMouse(Instance* instance) {
+    void ImGuiWrapper::captureMouse(GLFWwindow* window) {
 
         auto& io = ImGui::GetIO();
-        auto* window_ptr = instance->GetWindow();
         io.MousePos = ImVec2(-1, -1);
-        Instance::VulpesState.ShouldMouseLock = false;
-        glfwSetInputMode(window_ptr->glfwWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        BaseScene::VPSKState.ShouldMouseLock = false;
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     }
 

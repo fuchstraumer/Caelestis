@@ -7,6 +7,7 @@
 #include "BaseSceneConfig.hpp"
 #include "camera/Camera.hpp"
 #include "camera/Arcball.hpp"
+#include "Window.hpp"
 
 namespace vpsk {
 
@@ -80,7 +81,7 @@ namespace vpsk {
 
         static bool CameraLock;
         static vulpesSceneConfig SceneConfiguration;
-
+        static vpsk_state_t VPSKState;
     protected:
 
         void setupGUI();
@@ -122,6 +123,7 @@ namespace vpsk {
         std::unique_ptr<vpr::TransferPool> transferPool;
         std::unique_ptr<vpr::Renderpass> renderPass;
         std::unique_ptr<vpr::DescriptorPool> descriptorPool;
+        std::unique_ptr<Window> window;
         std::vector<VkAttachmentDescription> attachmentDescriptions;
         std::vector<VkAttachmentReference> attachmentReferences;
         std::vector<VkSubpassDependency> subpassDependencies;

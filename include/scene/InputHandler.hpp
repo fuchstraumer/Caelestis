@@ -2,6 +2,8 @@
 #ifndef VULPES_VK_INPUT_HANDLER_HPP
 #define VULPES_VK_INPUT_HANDLER_HPP
 #include "ForwardDecl.hpp"
+#include <array>
+#include <GLFW/glfw3.h>
 
 namespace vpsk {
 

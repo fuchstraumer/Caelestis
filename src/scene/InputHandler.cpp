@@ -1,5 +1,6 @@
 #include "scene/InputHandler.hpp"
 #include "scene/Window.hpp"
+#include "scene/BaseScene.hpp"
 #include <imgui/imgui.h>
 
 namespace vpsk {
@@ -24,7 +25,7 @@ namespace vpsk {
         glfwSetMouseButtonCallback(parent->glfwWindow(), MouseButtonCallback);
         glfwSetScrollCallback(parent->glfwWindow(), MouseScrollCallback);
         glfwSetCharCallback(parent->glfwWindow(), CharCallback);
-        if (Instance::GraphicsSettings.EnableMouseLocking) {
+        if (BaseScene::SceneConfiguration.EnableMouseLocking) {
             glfwSetInputMode(parent->glfwWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
         else {

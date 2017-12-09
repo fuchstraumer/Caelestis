@@ -1,5 +1,6 @@
 #include "vpr_stdafx.h"
 #include "scene/BaseScene.hpp"
+#include "scene/InputHandler.hpp"
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "core/PhysicalDevice.hpp"
@@ -27,16 +28,17 @@ namespace vpsk {
     bool BaseScene::CameraLock = false;
     PerspectiveCamera BaseScene::fpsCamera = PerspectiveCamera(1440, 900, 70.0f);
     ArcballCamera BaseScene::arcballCamera = ArcballCamera(1440, 900, 70.9f, UtilitySphere(glm::vec3(0.0f), 7.0f));
+    vpsk_state_t BaseScene::VPSKState = vpsk_state_t();
 
     std::vector<uint16_t> BaseScene::pipelineCacheHandles = std::vector<uint16_t>();
 
     BaseScene::BaseScene(const size_t& num_secondary_buffers, const uint32_t& _width, const uint32_t& _height) : width(_width), height(_height), numSecondaryBuffers(num_secondary_buffers) {
 
         const bool verbose_logging = BaseScene::SceneConfiguration.VerboseLogging;
-
+        window = std::make_unique<Window>(_width, _height, BaseScene::SceneConfiguration.ApplicationName);
         VkInstanceCreateInfo create_info = vk_base_instance_info;
-        instance = std::make_unique<Instance>(create_info, false, _width, _height);
-        instance->GetWindow()->SetWindowUserPointer(this);
+        instance = std::make_unique<Instance>(create_info, window->glfwWindow(), _width, _height);
+        window->SetWindowUserPointer(this);
 
         LOG_IF(verbose_logging, INFO) << "VkInstance created.";
 
@@ -535,7 +537,7 @@ namespace vpsk {
         frameTime = static_cast<float>(BaseScene::SceneConfiguration.FrameTimeMs / 1000.0);
         LOG(INFO) << "Entering rendering loop.";
 
-        while(!glfwWindowShouldClose(instance->GetWindow()->glfwWindow())) {
+        while(!glfwWindowShouldClose(window->glfwWindow())) {
 
             limitFrame();
 
@@ -543,7 +545,7 @@ namespace vpsk {
             
             UpdateMouseActions();
             if(SceneConfiguration.EnableGUI) {
-                gui->NewFrame(instance.get());
+                gui->NewFrame(window->glfwWindow());
             }
 
             UpdateMovement(static_cast<float>(BaseScene::SceneConfiguration.FrameTimeMs));

@@ -82,7 +82,7 @@ namespace vpsk {
                 When disabled, the mouse is never locked into the screen's area. When enabled, the cursor
                 can be broken free by holding LALT
             */
-            bool EnableMouseLocking = true;
+            bool EnableMouseLocking = false;
 
             /*
                 Frame limiting. Enabled by default. Time can be modified too: currently locked to 60fps max.
@@ -113,6 +113,11 @@ namespace vpsk {
 
             bool VerboseLogging = true;
 
+        };
+
+        struct vpsk_state_t {
+            bool ShouldMouseLock = false;
+            bool NeedsRefresh = false;
         };
 
     

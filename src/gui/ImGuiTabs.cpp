@@ -1,5 +1,4 @@
-#include "vpr_stdafx.h"
-#include "util/imguiTabs.hpp"
+#include "gui/ImGuiTabs.hpp"
 
 namespace ImGui {
 

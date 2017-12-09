@@ -1,7 +1,12 @@
 #include "scene/Window.hpp"
 #include "scene/InputHandler.hpp"
 #include <imgui/imgui.h>
-
+#if defined(_WIN32) 
+#undef APIENTRY
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#include "GLFW/glfw3native.h"
+#endif
 namespace vpsk {
 
     Window::Window(const uint32_t& _width, const uint32_t& _height, const std::string& app_name, const bool& fullscreen) : width(_width), height(_height) {
