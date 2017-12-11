@@ -33,6 +33,9 @@ namespace vpsk {
         TriangleMesh(const glm::vec3& _position, const glm::vec3& scale = glm::vec3(1.0f), const glm::vec3& rotation = glm::vec3(0.0f));
         virtual ~TriangleMesh();
 
+        TriangleMesh(TriangleMesh&& other) noexcept;
+        TriangleMesh& operator=(TriangleMesh&& other) noexcept;
+
         /** Adds a vertex, and returns its index. Useful for adding a few vertices, keeping the indices, then adding triangles.
         *   Note: Uses pass by value, but with std::move. The input object will always be copied and is cheap to move, so this
         *   approach results in the compiler using a move whenever possible and a copy whenever not without requiring two separate methods.

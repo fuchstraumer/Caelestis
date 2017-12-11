@@ -33,32 +33,33 @@ namespace vpsk {
 
         Icosphere(const size_t& detail_level, const glm::vec3& position, const glm::vec3& scale = glm::vec3(1.0f), const glm::vec3& rotation = glm::vec3(0.0f));
         ~Icosphere();
+        Icosphere(Icosphere&& other) noexcept;
+        Icosphere& operator=(Icosphere&& other) noexcept;
 
-        void Init(const vpr::Device* dvc, const glm::mat4& projection, const VkRenderPass& renderpass, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool);
+        void Init(const vpr::Device* dvc, const glm::mat4& projection, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool);
         void Render(const VkCommandBuffer& cmd_buffer, const VkCommandBufferBeginInfo& begin_info, const VkViewport& viewport, const VkRect2D& scissor);
         void CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
         void SetTexture(const char* filename);
         void SetTexture(const char* filename, const VkFormat& compressed_texture_format);
-        void createShadersImpl();
+
         void UpdateUBO(const glm::mat4& view, const glm::vec3& viewer_position) noexcept;
         void UpdateLightPosition(const glm::vec3 & new_light_pos) noexcept;
         void SetModelMatrix(const glm::mat4& model) override;
         
     private:
 
-
         void createMesh(const size_t& subdivision_level);
         void uploadData(vpr::TransferPool* transfer_pool);
-        void createPipelineCache();
         void createPipelineLayout();
-        void setPipelineStateInfo();
-        void createGraphicsPipeline(const VkRenderPass& render_pass);
         void createTexture();
         void createDescriptorSet(vpr::DescriptorPool* descriptor_pool);
         void subdivide(const size_t& subdivision_level);
         void calculateUVs();
 
         struct ubo_data_t {
+            ubo_data_t() = default;
+            ubo_data_t(ubo_data_t&& other) noexcept;
+            ubo_data_t& operator=(ubo_data_t&& other) noexcept;
             glm::mat4 model;
             glm::mat4 view;
             glm::mat4 projection;
@@ -67,18 +68,9 @@ namespace vpsk {
             glm::vec4 lightColor = glm::vec4(1.0f);
         } uboData;
 
-        constexpr static VkVertexInputBindingDescription bindingDescription{ 0, sizeof(vertex_t), VK_VERTEX_INPUT_RATE_VERTEX };
-        constexpr static VkVertexInputAttributeDescription attributeDescription{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
-
-        std::unique_ptr<vpr::ShaderModule> vert, frag;
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
-        std::unique_ptr<vpr::PipelineCache> pipelineCache;
-        std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
-        std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
         std::unique_ptr<vpr::Texture<gli::texture2d>> cmpTexture;
-        vpr::GraphicsPipelineInfo pipelineStateInfo;
-        VkGraphicsPipelineCreateInfo pipelineCreateInfo;
         size_t subdivisionLevel;
 
         VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UNORM;

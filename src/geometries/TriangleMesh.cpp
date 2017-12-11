@@ -10,6 +10,30 @@ namespace vpsk {
         DestroyVulkanObjects();
     }
 
+    TriangleMesh::TriangleMesh(TriangleMesh&& other) noexcept : model(std::move(other.model)), position(std::move(other.position)),
+        scale(std::move(other.scale)), rotation(std::move(other.rotation)), modelMatrixCached(std::move(other.modelMatrixCached)),
+        vertexPositions(std::move(other.vertexPositions)), vertexData(std::move(other.vertexData)), indices(std::move(other.indices)),
+        numVertices(std::move(other.numVertices)), numIndices(std::move(other.numIndices)), vbo0(std::move(other.vbo0)),
+        vbo1(std::move(other.vbo1)), ebo(std::move(other.ebo)), device(std::move(other.device)) {}
+
+    TriangleMesh& TriangleMesh::operator=(TriangleMesh&& other) noexcept  {
+        model = std::move(other.model);
+        position = std::move(other.position);
+        scale = std::move(other.scale);
+        rotation = std::move(other.rotation);
+        modelMatrixCached = std::move(other.modelMatrixCached);
+        vertexPositions = std::move(other.vertexPositions);
+        vertexData = std::move(other.vertexData);
+        indices = std::move(other.indices);
+        numVertices = std::move(other.numVertices);
+        numIndices = std::move(other.numIndices);
+        vbo0 = std::move(other.vbo0);
+        vbo1 = std::move(other.vbo1);
+        ebo = std::move(other.ebo);
+        device = std::move(other.device);
+        return *this;
+    }
+
     uint32_t TriangleMesh::AddVertex(vertex_t vertex) noexcept {
         vertexPositions.push_back(std::move(vertex.pos));
         vertexData.push_back(std::move(vertex_data_t{ vertex.normal, vertex.tangent, vertex.uv }));

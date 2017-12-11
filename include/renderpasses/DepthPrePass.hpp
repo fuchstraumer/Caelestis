@@ -1,11 +1,8 @@
 #pragma once
 #ifndef VPSK_DEPTH_PREPASS_HPP
 #define VPSK_DEPTH_PREPASS_HPP
-
-#include "render/Renderpass.hpp"
-#include "render/GraphicsPipeline.hpp"
-#include "resource/ShaderModule.hpp"
-
+#include "ForwardDecl.hpp"
+#include <vulkan/vulkan.h>
 namespace vpsk {
 
     /**
@@ -17,6 +14,10 @@ namespace vpsk {
      * \defgroup Renderpasses
     */ 
 
+
+    /**The DepthPrePass can be used to see what objects and primitives being currently rendered 
+     * are actually visible on the screen.
+     */
     class DepthPrePass {
     public:
         
