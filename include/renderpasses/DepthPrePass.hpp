@@ -3,6 +3,8 @@
 #define VPSK_DEPTH_PREPASS_HPP
 #include "ForwardDecl.hpp"
 #include <vulkan/vulkan.h>
+#include <typeinfo>
+#include <map>
 namespace vpsk {
 
     /**
@@ -36,10 +38,9 @@ namespace vpsk {
         VkAttachmentReference depthRef;
 
         std::unique_ptr<vpr::Renderpass> renderpass;
-        std::unique_ptr<vpr::GraphicsPipeline> pipeline;
         std::unique_ptr<vpr::ShaderModule> vert, frag;
         std::unique_ptr<vpr::PipelineLayout> layout;
-
+        std::map<std::type_index, vpr::GraphicsPipeline> pipelines;
         const vpr::Device* dvc;
     };
 

@@ -6,8 +6,8 @@
 namespace vpsk {
 
     class IcosphereFeatures {
-        IcosphereRenderer(const IcosphereRenderer&) = delete;
-        IcosphereRenderer(const IcosphereRenderer&) = delete;
+        IcosphereFeatures(const IcosphereFeatures&) = delete;
+        IcosphereFeatures& operator=(const IcosphereFeatures&) = delete;
     public:
 
         IcosphereFeatures(const vpr::Device* dvc, const vpr::TransferPool* transfer_pool);
