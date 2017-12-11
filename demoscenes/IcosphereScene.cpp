@@ -9,7 +9,7 @@
 #include "command/TransferPool.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "resource/Allocator.hpp"
-#include "util/utilitySphere.hpp" 
+#include "util/UtilitySphere.hpp" 
 #include "geometries/Icosphere.hpp"
 #include "geometries/Skybox.hpp"
 #include "camera/Camera.hpp"

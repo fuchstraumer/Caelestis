@@ -19,6 +19,7 @@
 #ifdef USE_EXPERIMENTAL_FILESYSTEM
 #include <experimental/filesystem>
 #endif
+#include <thread>
 
 using namespace vpr;
 
