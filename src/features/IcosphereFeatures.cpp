@@ -4,17 +4,18 @@
 #include "resource/PipelineLayout.hpp"
 #include "resource/ShaderModule.hpp"
 #include "scene/BaseScene.hpp"
+#include <mutex>
 using namespace vpr;
 
 namespace vpsk {
 
     IcosphereFeatures::IcosphereFeatures(const Device* dvc, const TransferPool* transfer_pool) : device(dvc), transferPool(transfer_pool) {}
 
-    void IcosphereFeatures::Render(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin, const VkViewport& view, const VkRect2D& sc) {
-        vkBeginCommandBuffer(cmd, &begin);
-            vkCmdSetViewport(cmd, 0, 1, &view);
-            vkCmdSetScissor(cmd, 0, 1, &sc);
-            
+    void IcosphereFeatures::Render(const VkCommandBuffer& cmd) {
+        std::lock_guard<std::mutex> lock(std::mutex());
+        for(auto obj : objects) {
+            obj->Render(cmd, layout->vkHandle());
+        }
     }
 
     void IcosphereFeatures::AddObject(const Icosphere* ico) {

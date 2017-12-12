@@ -13,7 +13,7 @@ namespace vpsk {
         IcosphereFeatures(const vpr::Device* dvc, const vpr::TransferPool* transfer_pool);
         void Init(const glm::mat4& projection);
 
-        void Render(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin, const VkViewport& viewport, const VkRect2D& rect);
+        void Render(const VkCommandBuffer& cmd);
         void AddObject(const Icosphere* object);
 
     private:
