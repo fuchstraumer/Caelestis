@@ -80,14 +80,13 @@ namespace vpsk {
     }
 
     void Icosphere::Init(const glm::mat4& projection, TransferPool* transfer_pool, DescriptorPool* descriptor_pool, vpr::DescriptorSetLayout* set_layout) {
-        
-        device = dvc;
+
         uboData.projection = projection;
         
         createMesh(subdivisionLevel);
         createTexture();
         uploadData(transfer_pool);
-        createDescriptorSet(descriptor_pool);
+        createDescriptorSet(descriptor_pool, set_layout);
         createPipelineLayout();
 
     }
