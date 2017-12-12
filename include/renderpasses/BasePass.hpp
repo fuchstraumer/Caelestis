@@ -17,8 +17,6 @@ namespace vpsk {
         virtual void RegisterFeature(const std::type_index& idx, const vpr::GraphicsPipelineInfo& info, 
             const VkPipelineLayout& layout, render_function_t func) = 0;
     private:
-        // Use this to set the parameters that won't change between registered features.
-        virtual void setBaselineCreateInfo() = 0;
         std::map<std::type_index, std::unique_ptr<vpr::GraphicsPipeline>> pipelines;
         std::map<std::type_index, render_function_t> renderFunctions;
         std::unique_ptr<Renderpass> renderpass;
