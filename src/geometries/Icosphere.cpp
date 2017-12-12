@@ -64,14 +64,9 @@ namespace vpsk {
     Icosphere::~Icosphere() {
         DestroyVulkanObjects();
         FreeCpuData();
-        frag.reset();
-        vert.reset();
-        pipelineLayout.reset();
-        pipelineCache.reset();
         descriptorSet.reset();
-        graphicsPipeline.reset();
-        texture.reset();
         cmpTexture.reset();
+        texture.reset();
     }
 
     void Icosphere::SetTexture(const char* filename) {
@@ -91,12 +86,8 @@ namespace vpsk {
         createMesh(subdivisionLevel);
         createTexture();
         uploadData(transfer_pool);
-        createPipelineCache();
         createDescriptorSet(descriptor_pool);
         createPipelineLayout();
-        createShadersImpl();
-        setPipelineStateInfo();
-        createGraphicsPipeline(renderpass);
 
     }
 
@@ -120,13 +111,6 @@ namespace vpsk {
 
     static inline glm::vec3 midpoint(const vertex_t& v0, const vertex_t v1) noexcept {
         return (v0.pos + v1.pos) / 2.0f;
-    }
-
-    void Icosphere::createShadersImpl() {
-
-        vert = std::make_unique<ShaderModule>(device, vertPath, VK_SHADER_STAGE_VERTEX_BIT);
-        frag = std::make_unique<ShaderModule>(device, fragPath, VK_SHADER_STAGE_FRAGMENT_BIT);
-    
     }
 
     void Icosphere::UpdateUBO(const glm::mat4 & view, const glm::vec3& viewer_position) noexcept {
@@ -234,10 +218,6 @@ namespace vpsk {
 
     }
 
-    void Icosphere::createPipelineCache() {
-        pipelineCache = std::make_unique<PipelineCache>(device, static_cast<uint16_t>(typeid(Icosphere).hash_code()));
-    }
-
     void Icosphere::createDescriptorSet(DescriptorPool* descriptor_pool) {
         descriptorSet = std::make_unique<DescriptorSet>(device);
         descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
@@ -248,59 +228,6 @@ namespace vpsk {
             descriptorSet->AddDescriptorInfo(cmpTexture->GetDescriptor(), 0);
         }
         descriptorSet->Init(descriptor_pool);
-    }
-
-    void Icosphere::createPipelineLayout() {
-        pipelineLayout = std::make_unique<PipelineLayout>(device);
-        static const std::vector<VkPushConstantRange> push_constants{
-            VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4) * 3 },
-            VkPushConstantRange{ VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4) * 3, sizeof(glm::vec4) * 3 }
-        };
-        pipelineLayout->Create({ descriptorSet->vkLayout() }, push_constants);
-    }
-
-    void Icosphere::setPipelineStateInfo() {
-
-        constexpr static VkDynamicState dynamic_states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-        pipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
-        pipelineStateInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
-
-        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
-        if (pipelineStateInfo.MultisampleInfo.sampleShadingEnable) {
-            pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
-        }
-
-        pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
-        pipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
-        pipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
-        pipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
-
-    }
-
-    void Icosphere::createGraphicsPipeline(const VkRenderPass& renderpass) {
-
-        if(!vert || !frag) {
-            LOG(ERROR) << "Didn't specify shaders for an icosphere before attempting initilization!";
-            throw std::runtime_error("No shaders for icosphere object found.");
-        }
-
-        pipelineCreateInfo = pipelineStateInfo.GetPipelineCreateInfo();
-        const std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages {
-            vert->PipelineInfo(), frag->PipelineInfo()
-        };
-
-        pipelineCreateInfo.stageCount = static_cast<uint32_t>(shader_stages.size());
-        pipelineCreateInfo.pStages = shader_stages.data();
-
-        pipelineCreateInfo.layout = pipelineLayout->vkHandle();
-        pipelineCreateInfo.renderPass = renderpass;
-        pipelineCreateInfo.subpass = 0;
-        pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-        pipelineCreateInfo.basePipelineIndex = -1;
-
-        graphicsPipeline = std::make_unique<GraphicsPipeline>(device);
-        graphicsPipeline->Init(pipelineCreateInfo, pipelineCache->vkHandle());
-
     }
 
     void Icosphere::createTexture() {
