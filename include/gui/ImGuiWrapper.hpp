@@ -38,6 +38,7 @@ namespace vpsk {
         size_t loadFontTextureData();
         void uploadFontTextureData(const size_t& font_texture_size);
         void createFontTexture();
+        void createDescriptorSetLayout();
         void createDescriptorLayout(vpr::DescriptorPool* descriptor_pool);
         void createPipelineLayout();
         void setupGraphicsPipelineInfo();
@@ -63,7 +64,7 @@ namespace vpsk {
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> font;
         std::unique_ptr<vpr::PipelineLayout> layout;
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
-
+        std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
         vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
 

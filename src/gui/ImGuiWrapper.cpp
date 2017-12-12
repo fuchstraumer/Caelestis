@@ -5,6 +5,7 @@
 #include "resource/PipelineCache.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "resource/DescriptorSetLayout.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "command/TransferPool.hpp"
 #include "scene/BaseScene.hpp"
@@ -176,12 +177,16 @@ namespace vpsk {
 
     }
 
+    void ImGuiWrapper::createDescriptorSetLayout() {
+        setLayout = std::make_unique<DescriptorSetLayout>(device);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+    }
+
     void ImGuiWrapper::createDescriptorLayout(vpr::DescriptorPool* descriptor_pool) {
         
         descriptorSet = std::make_unique<DescriptorSet>(device);
-        descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-        descriptorSet->AddDescriptorInfo(font->GetDescriptor(), 0);
-        descriptorSet->Init(descriptor_pool);
+        descriptorSet->AddDescriptorInfo(font->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0);
+        descriptorSet->Init(descriptor_pool, setLayout.get());
 
     }
 
@@ -189,7 +194,7 @@ namespace vpsk {
 
         layout = std::make_unique<PipelineLayout>(device);
         VkPushConstantRange push_constant{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4 };
-        layout->Create({ descriptorSet->vkLayout() }, { push_constant });
+        layout->Create({ setLayout->vkHandle() }, { push_constant });
 
     }
 
