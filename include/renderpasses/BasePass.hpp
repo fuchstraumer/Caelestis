@@ -20,6 +20,7 @@ namespace vpsk {
         std::map<std::type_index, std::unique_ptr<vpr::GraphicsPipeline>> pipelines;
         std::map<std::type_index, render_function_t> renderFunctions;
         std::unique_ptr<Renderpass> renderpass;
+        std::unique_ptr<PipelineCache> cache;
         VkGraphicsPipelineCreateInfo createInfo;
     };
 
