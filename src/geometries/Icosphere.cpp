@@ -57,7 +57,8 @@ namespace vpsk {
         9, 8, 1 
     };
 
-    Icosphere::Icosphere(const size_t& subdivision_level, const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& rotation) : TriangleMesh(pos, scale, rotation), subdivisionLevel(subdivision_level) {
+    Icosphere::Icosphere(const vpr::Device* _dvc, const size_t& subdivision_level, const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& rotation) : TriangleMesh(pos, scale, rotation), subdivisionLevel(subdivision_level) {
+        device = _dvc;
         updateModelMatrix();
     }
 
@@ -78,7 +79,7 @@ namespace vpsk {
         textureFormat = compressed_texture_format;
     }
 
-    void Icosphere::Init(const Device* dvc, const glm::mat4& projection, const VkRenderPass& renderpass, TransferPool* transfer_pool, DescriptorPool* descriptor_pool) {
+    void Icosphere::Init(const glm::mat4& projection, TransferPool* transfer_pool, DescriptorPool* descriptor_pool, vpr::DescriptorSetLayout* set_layout) {
         
         device = dvc;
         uboData.projection = projection;
@@ -91,17 +92,12 @@ namespace vpsk {
 
     }
 
-    void Icosphere::Render(const VkCommandBuffer& cmd_buffer, const VkCommandBufferBeginInfo& begin_info, const VkViewport& viewport, const VkRect2D& scissor) {
-        vkBeginCommandBuffer(cmd_buffer, &begin_info);
-            vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->vkHandle());
-            vkCmdSetViewport(cmd_buffer, 0, 1, &viewport);
-            vkCmdSetScissor(cmd_buffer, 0, 1, &scissor);
-            vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout->vkHandle(), 0, 1, &descriptorSet->vkHandle(), 0, nullptr);
-            vkCmdPushConstants(cmd_buffer, pipelineLayout->vkHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4) * 3, &uboData);
-            // pass pointer to first member, taken as offset into ubodata.
-            vkCmdPushConstants(cmd_buffer, pipelineLayout->vkHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4) * 3, sizeof(glm::vec4) * 3, &uboData.lightPosition); 
-            TriangleMesh::Render(cmd_buffer);
-        vkEndCommandBuffer(cmd_buffer);
+    void Icosphere::Render(const VkCommandBuffer& cmd_buffer, const VkPipelineLayout& layout) {
+        vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descriptorSet->vkHandle(), 0, nullptr);
+        const glm::mat4 mvp = uboData.projection * uboData.view * uboData.model;
+        vkCmdPushConstants(cmd_buffer, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), glm::value_ptr(mvp));
+        vkCmdPushConstants(cmd_buffer, layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(glm::vec4) * 3, &uboData.lightPosition); 
+        TriangleMesh::Render(cmd_buffer);
     }
 
     void Icosphere::CreateShaders(const std::string & vertex_shader_path, const std::string & fragment_shader_path) {
@@ -218,16 +214,15 @@ namespace vpsk {
 
     }
 
-    void Icosphere::createDescriptorSet(DescriptorPool* descriptor_pool) {
+    void Icosphere::createDescriptorSet(DescriptorPool* descriptor_pool, vpr::DescriptorSetLayout* set_layout) {
         descriptorSet = std::make_unique<DescriptorSet>(device);
-        descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
         if (textureFormat == VK_FORMAT_R8G8B8A8_UNORM) {
-            descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), 0);
+            descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0);
         }
         else {
-            descriptorSet->AddDescriptorInfo(cmpTexture->GetDescriptor(), 0);
+            descriptorSet->AddDescriptorInfo(cmpTexture->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0);
         }
-        descriptorSet->Init(descriptor_pool);
+        descriptorSet->Init(descriptor_pool, set_layout);
     }
 
     void Icosphere::createTexture() {

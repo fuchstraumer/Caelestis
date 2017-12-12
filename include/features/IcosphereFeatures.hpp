@@ -14,11 +14,15 @@ namespace vpsk {
         void Init(const glm::mat4& projection);
 
         void Render(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin, const VkViewport& viewport, const VkRect2D& rect);
-        void AddObject(Icosphere&& icosphere);
+        void AddObject(const Icosphere* object);
 
     private:
 
-        void setupDescriptorPool();
+
+        void createDescriptorPool();
+        void createSetLayout();
+        void createPipelineLayout();
+        void createShaders();
         constexpr static VkVertexInputBindingDescription bindingDescription{ 0, sizeof(vertex_t), VK_VERTEX_INPUT_RATE_VERTEX };
         constexpr static VkVertexInputAttributeDescription attributeDescription{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
         bool initialized = false;
@@ -28,7 +32,7 @@ namespace vpsk {
         std::unique_ptr<DescriptorSetLayout> setLayout;
         std::unique_ptr<PipelineLayout> layout;
         std::unique_ptr<ShaderModule> vert, frag;
-        std::vector<Icosphere> objects;
+        std::vector<const Icosphere*> objects;
     };
 
 }

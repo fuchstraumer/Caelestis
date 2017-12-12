@@ -31,13 +31,13 @@ namespace vpsk {
         Icosphere& operator=(const Icosphere&) = delete;
     public:
 
-        Icosphere(const size_t& detail_level, const glm::vec3& position, const glm::vec3& scale = glm::vec3(1.0f), const glm::vec3& rotation = glm::vec3(0.0f));
+        Icosphere(const vpr::Device* _dvc, const size_t& detail_level, const glm::vec3& position, const glm::vec3& scale = glm::vec3(1.0f), const glm::vec3& rotation = glm::vec3(0.0f));
         ~Icosphere();
         Icosphere(Icosphere&& other) noexcept;
         Icosphere& operator=(Icosphere&& other) noexcept;
 
-        void Init(const vpr::Device* dvc, const glm::mat4& projection, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool);
-        void Render(const VkCommandBuffer& cmd_buffer, const VkCommandBufferBeginInfo& begin_info, const VkViewport& viewport, const VkRect2D& scissor);
+        void Init(const glm::mat4& projection, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool, vpr::DescriptorSetLayout* set_layout);
+        void Render(const VkCommandBuffer& cmd_buffer, const VkPipelineLayout& layout);
         void CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
         void SetTexture(const char* filename);
         void SetTexture(const char* filename, const VkFormat& compressed_texture_format);
@@ -47,15 +47,7 @@ namespace vpsk {
         void SetModelMatrix(const glm::mat4& model) override;
         
     private:
-
-        void createMesh(const size_t& subdivision_level);
-        void uploadData(vpr::TransferPool* transfer_pool);
-        void createPipelineLayout();
-        void createTexture();
-        void createDescriptorSet(vpr::DescriptorPool* descriptor_pool);
-        void subdivide(const size_t& subdivision_level);
-        void calculateUVs();
-
+    
         struct ubo_data_t {
             ubo_data_t() = default;
             ubo_data_t(ubo_data_t&& other) noexcept;
@@ -67,6 +59,14 @@ namespace vpsk {
             glm::vec4 viewerPosition = glm::vec4(0.0f);
             glm::vec4 lightColor = glm::vec4(1.0f);
         } uboData;
+
+        void createMesh(const size_t& subdivision_level);
+        void uploadData(vpr::TransferPool* transfer_pool);
+        void createPipelineLayout();
+        void createTexture();
+        void createDescriptorSet(vpr::DescriptorPool* descriptor_pool, vpr::DescriptorSetLayout* set_layout);
+        void subdivide(const size_t& subdivision_level);
+        void calculateUVs();
 
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
