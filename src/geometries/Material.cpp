@@ -2,13 +2,16 @@
 #include "geometries/Material.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
-
+#include "resource/DescriptorSetLayout.hpp"
+#include "resource/Texture.hpp"
+#include "resource/DescriptorSet.hpp"
+#include "resource/Buffer.hpp"
 using namespace vpr;
 
 namespace vpsk {
 
     Material::Material(Material&& other) noexcept : ambient(std::move(other.ambient)), diffuse(std::move(other.diffuse)), specular(std::move(other.specular)), specularHighlight(std::move(other.specularHighlight)), bumpMap(std::move(other.bumpMap)), displacementMap(std::move(other.displacementMap)),
-        alpha(std::move(other.alpha)), reflection(std::move(other.reflection)), ubo(std::move(other.ubo)), uboData(std::move(other.uboData)), descriptorSet(std::move(other.descriptorSet)), pbrTextures(std::move(other.pbrTextures)), activeTextures(std::move(other.activeTextures)) {}
+        alpha(std::move(other.alpha)), reflection(std::move(other.reflection)), ubo(std::move(other.ubo)), uboData(std::move(other.uboData)), setLayout(std::move(other.setLayout)), descriptorSet(std::move(other.descriptorSet)), pbrTextures(std::move(other.pbrTextures)), activeTextures(std::move(other.activeTextures)) {}
 
     Material & Material::operator=(Material && other) noexcept {
         ambient = std::move(other.ambient);
@@ -24,13 +27,14 @@ namespace vpsk {
         descriptorSet = std::move(other.descriptorSet);
         pbrTextures = std::move(other.pbrTextures);
         activeTextures = std::move(other.activeTextures);
+        setLayout = std::move(other.setLayout);
         return *this;
     }
     void Material::Create(const tinyobj::material_t& material_, const Device* device, DescriptorPool* descriptor_pool) {
 
         createUBO(material_);
         createTextures(material_);
-        descriptorSet->Init(descriptor_pool);
+        descriptorSet->Init(descriptor_pool, setLayout.get());
 
     }
 
@@ -55,8 +59,8 @@ namespace vpsk {
 
         ubo = std::make_unique<Buffer>(device);
         ubo->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uboData));
-        descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-        descriptorSet->AddDescriptorInfo(ubo->GetDescriptor(), 0);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+        descriptorSet->AddDescriptorInfo(ubo->GetDescriptor(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0);
 
     }
 
@@ -68,8 +72,8 @@ namespace vpsk {
             ambient = std::make_unique<Texture<texture_2d_t>>(device);
             ambient->CreateFromFile(material_.ambient_texname.c_str());
             activeTextures.push_back(ambient.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(ambient->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(ambient->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -77,8 +81,8 @@ namespace vpsk {
             diffuse = std::make_unique<Texture<texture_2d_t>>(device);
             diffuse->CreateFromFile(material_.diffuse_texname.c_str());
             activeTextures.push_back(diffuse.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(diffuse->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(diffuse->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -86,8 +90,8 @@ namespace vpsk {
             specular = std::make_unique<Texture<texture_2d_t>>(device);
             specular->CreateFromFile(material_.specular_texname.c_str());
             activeTextures.push_back(specular.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(specular->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(specular->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -95,8 +99,8 @@ namespace vpsk {
             specularHighlight = std::make_unique<Texture<texture_2d_t>>(device);
             specularHighlight->CreateFromFile(material_.specular_highlight_texname.c_str());
             activeTextures.push_back(specularHighlight.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(specularHighlight->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(specularHighlight->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -104,8 +108,8 @@ namespace vpsk {
             bumpMap = std::make_unique<Texture<texture_2d_t>>(device);
             bumpMap->CreateFromFile(material_.bump_texname.c_str());
             activeTextures.push_back(bumpMap.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(bumpMap->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(bumpMap->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -113,8 +117,8 @@ namespace vpsk {
             displacementMap = std::make_unique<Texture<texture_2d_t>>(device);
             displacementMap->CreateFromFile(material_.displacement_texname.c_str());
             activeTextures.push_back(displacementMap.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(displacementMap->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(displacementMap->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -122,8 +126,8 @@ namespace vpsk {
             alpha = std::make_unique<Texture<texture_2d_t>>(device);
             alpha->CreateFromFile(material_.alpha_texname.c_str());
             activeTextures.push_back(alpha.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(alpha->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(alpha->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -131,8 +135,8 @@ namespace vpsk {
             reflection = std::make_unique<Texture<texture_2d_t>>(device);
             reflection->CreateFromFile(material_.reflection_texname.c_str());
             activeTextures.push_back(reflection.get());
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(reflection->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(reflection->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
         }
 
@@ -157,16 +161,16 @@ namespace vpsk {
             pbrTextures->uboData.anisotropy_rotation = material_.anisotropy;
             pbrTextures->ubo = std::make_unique<Buffer>(device);
             pbrTextures->ubo->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(pbrTextures->uboData));
-            descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-            descriptorSet->AddDescriptorInfo(pbrTextures->ubo->GetDescriptor(), curr_binding_idx);
+            setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+            descriptorSet->AddDescriptorInfo(pbrTextures->ubo->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
             ++curr_binding_idx;
 
             if(!material_.roughness_texname.empty()) {
                 pbrTextures->Roughness = std::make_unique<Texture<texture_2d_t>>(device);
                 pbrTextures->Roughness->CreateFromFile(material_.roughness_texname.c_str());
                 activeTextures.push_back(pbrTextures->Roughness.get());
-                descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-                descriptorSet->AddDescriptorInfo(pbrTextures->Roughness->GetDescriptor(), curr_binding_idx);
+                setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+                descriptorSet->AddDescriptorInfo(pbrTextures->Roughness->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
                 ++curr_binding_idx;
             }
 
@@ -174,8 +178,8 @@ namespace vpsk {
                 pbrTextures->Metallic = std::make_unique<Texture<texture_2d_t>>(device);
                 pbrTextures->Metallic->CreateFromFile(material_.metallic_texname.c_str());
                 activeTextures.push_back(pbrTextures->Metallic.get());
-                descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-                descriptorSet->AddDescriptorInfo(pbrTextures->Metallic->GetDescriptor(), curr_binding_idx);
+                setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+                descriptorSet->AddDescriptorInfo(pbrTextures->Metallic->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
                 ++curr_binding_idx;
             }
 
@@ -183,8 +187,8 @@ namespace vpsk {
                 pbrTextures->Sheen = std::make_unique<Texture<texture_2d_t>>(device);
                 pbrTextures->Sheen->CreateFromFile(material_.metallic_texname.c_str());
                 activeTextures.push_back(pbrTextures->Sheen.get());
-                descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-                descriptorSet->AddDescriptorInfo(pbrTextures->Sheen->GetDescriptor(), curr_binding_idx);
+                setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+                descriptorSet->AddDescriptorInfo(pbrTextures->Sheen->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
                 ++curr_binding_idx;
             }
 
@@ -192,8 +196,8 @@ namespace vpsk {
                 pbrTextures->Emissive = std::make_unique<Texture<texture_2d_t>>(device);
                 pbrTextures->Emissive->CreateFromFile(material_.emissive_texname.c_str());
                 activeTextures.push_back(pbrTextures->Emissive.get());
-                descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-                descriptorSet->AddDescriptorInfo(pbrTextures->Emissive->GetDescriptor(), curr_binding_idx);
+                setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+                descriptorSet->AddDescriptorInfo(pbrTextures->Emissive->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
                 ++curr_binding_idx;
             }
 
@@ -201,8 +205,8 @@ namespace vpsk {
                 pbrTextures->NormalMap = std::make_unique<Texture<texture_2d_t>>(device);
                 pbrTextures->NormalMap->CreateFromFile(material_.normal_texname.c_str());
                 activeTextures.push_back(pbrTextures->NormalMap.get());
-                descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
-                descriptorSet->AddDescriptorInfo(pbrTextures->NormalMap->GetDescriptor(), curr_binding_idx);
+                setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, curr_binding_idx);
+                descriptorSet->AddDescriptorInfo(pbrTextures->NormalMap->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, curr_binding_idx);
                 ++curr_binding_idx;
             }
             
@@ -243,12 +247,12 @@ namespace vpsk {
     }
 
     VkDescriptorSetLayout Material::GetSetLayout() const noexcept {
-        return descriptorSet->vkLayout();
+        return setLayout->vkHandle();
     }
 
     VkDescriptorSetLayout Material::GetPbrSetLayout() const noexcept {
         if (pbrTextures) {
-            return pbrTextures->descriptorSet->vkLayout();
+            return pbrTextures->setLayout->vkHandle();
         }
         else {
             return VK_NULL_HANDLE;

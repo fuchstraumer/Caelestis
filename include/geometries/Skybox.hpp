@@ -40,6 +40,7 @@ namespace vpsk {
         void createTexture(const std::string& filename, const VkFormat& file_format);
         void createShaders();
         void createPipelineCache();
+        void createSetLayout();
         void setupDescriptorSet(vpr::DescriptorPool* descriptor_pool);
         void setupPipelineLayout();
         void setPipelineStateInfo();
@@ -56,7 +57,7 @@ namespace vpsk {
         std::unique_ptr<vpr::PipelineCache> pipelineCache;
         std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
         std::unique_ptr<vpr::GraphicsPipeline> graphicsPipeline;
-
+        std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
         vpr::GraphicsPipelineInfo graphicsPipelineStateInfo;
         VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo;
 

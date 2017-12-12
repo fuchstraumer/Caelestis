@@ -2,9 +2,7 @@
 #ifndef VULPESRENDER_MATERIALS_HPP
 #define VULPESRENDER_MATERIALS_HPP
 
-#include "resource/Texture.hpp"
-#include "resource/DescriptorSet.hpp"
-#include "resource/Buffer.hpp"
+#include "ForwardDecl.hpp"
 #include "tiny_obj_loader.h"
 
 namespace vpsk {
@@ -77,6 +75,7 @@ namespace vpsk {
         std::unique_ptr<vpr::Buffer> ubo;
         material_ubo_t uboData;
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
         // OPTIONAL
         std::unique_ptr<pbrTexturePack> pbrTextures;
 

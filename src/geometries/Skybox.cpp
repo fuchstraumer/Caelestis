@@ -3,6 +3,7 @@
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
+#include "resource/DescriptorSetLayout.hpp"
 #include "scene/BaseScene.hpp"
 using namespace vpr;
 
@@ -122,19 +123,23 @@ namespace vpsk {
 
     }
 
+    void Skybox::createSetLayout() {
+        setLayout = std::make_unique<DescriptorSetLayout>(device);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+    }
+
     void Skybox::setupDescriptorSet(DescriptorPool* descriptor_pool) {
         
         descriptorSet = std::make_unique<DescriptorSet>(device);
-        descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-        descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), 0);
-        descriptorSet->Init(descriptor_pool);
+        descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0);
+        descriptorSet->Init(descriptor_pool, setLayout.get());
 
     }
 
     void Skybox::setupPipelineLayout() {
 
         pipelineLayout = std::make_unique<PipelineLayout>(device);
-        pipelineLayout->Create({ descriptorSet->vkLayout() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ubo_data_t) }});
+        pipelineLayout->Create({ setLayout->vkHandle() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ubo_data_t) }});
 
     }
 
