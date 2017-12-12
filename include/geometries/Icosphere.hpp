@@ -37,7 +37,7 @@ namespace vpsk {
         Icosphere& operator=(Icosphere&& other) noexcept;
 
         void Init(const glm::mat4& projection, vpr::TransferPool* transfer_pool, vpr::DescriptorPool* descriptor_pool, vpr::DescriptorSetLayout* set_layout);
-        void Render(const VkCommandBuffer& cmd_buffer, const VkPipelineLayout& layout);
+        void Render(const VkCommandBuffer& cmd_buffer, const VkPipelineLayout& layout) const;
         void CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
         void SetTexture(const char* filename);
         void SetTexture(const char* filename, const VkFormat& compressed_texture_format);

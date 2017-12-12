@@ -91,7 +91,7 @@ namespace vpsk {
 
     }
 
-    void Icosphere::Render(const VkCommandBuffer& cmd_buffer, const VkPipelineLayout& layout) {
+    void Icosphere::Render(const VkCommandBuffer& cmd_buffer, const VkPipelineLayout& layout) const {
         vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descriptorSet->vkHandle(), 0, nullptr);
         const glm::mat4 mvp = uboData.projection * uboData.view * uboData.model;
         vkCmdPushConstants(cmd_buffer, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), glm::value_ptr(mvp));
