@@ -1,24 +1,11 @@
 #pragma once
 #ifndef VPSK_DEPTH_PREPASS_HPP
 #define VPSK_DEPTH_PREPASS_HPP
-#include "ForwardDecl.hpp"
-#include <vulkan/vulkan.h>
-#include <typeinfo>
-#include <map>
+#include "BasePass.hpp"
 namespace vpsk {
 
-    /**
-     * The renderpasses group covers fully setup renderpass wrapper structs 
-     * entailing different kinds of rendering passes performed during the process
-     * of rendering a frame. This can include things like the DepthPrepass for 
-     * lighting and culling assistance, or the more complete PBR/G-buffer related
-     * pass setups.
-     * \defgroup Renderpasses
-    */ 
-
-
     /**The DepthPrePass can be used to see what objects and primitives being currently rendered 
-     * are actually visible on the screen.
+     * are actually visible on the screen. The output is saved and can be accessed at a later time.
      */
     class DepthPrePass {
     public:
