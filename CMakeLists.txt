@@ -14,6 +14,22 @@ ExternalProject_Add(VulpesRender
         "-DFORCE_ASSERT=ON"
         "-DCMAKE_DEBUG_POSTFIX=-gd")
 
+ExternalProject_Add(shaderc
+    PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/download/shaderc"
+    GIT_REPOSITORY "https://github.com/google/shaderc.git"
+    CMAKE_ARGS
+        "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_SOURCE_DIR}/ext/"
+        "-DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_CURRENT_SOURCE_DIR}/ext/include"
+)
+
+ExternalProject_Add(spirv-cross
+    PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/download/spirvcross"
+    GIT_REPOSITORY "https://github.com/KhronosGroup/SPIRV-Cross.git"
+    CMAKE_ARGS 
+        "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_SOURCE_DIR}/ext/"
+        "-DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_CURRENT_SOURCE_DIR}/ext/include"
+)
+
 FILE(GLOB GEOMETRIES "${CMAKE_CURRENT_SOURCE_DIR}/include/geometries/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/geometries/*.cpp")
 FILE(GLOB CAMERAS "${CMAKE_CURRENT_SOURCE_DIR}/include/camera/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/camera/*.cpp")
 FILE(GLOB LIGHTS "${CMAKE_CURRENT_SOURCE_DIR}/include/lights/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/lights/*.cpp")
@@ -43,6 +59,7 @@ ADD_LIBRARY(VulpesSceneKit STATIC ${GEOMETRIES} ${CAMERAS} ${LIGHTS} ${MATH} ${S
 
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE $<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}>)
 TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE ${Vulkan_LIBRARIES})
+TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/shaderc" "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/SPIRV-Cross")
 
 IF(MSVC)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /Gm")
