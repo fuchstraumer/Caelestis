@@ -15,8 +15,10 @@ ExternalProject_Add(VulpesRender
         "-DCMAKE_DEBUG_POSTFIX=-gd")
 
 SET(SHADERC_SKIP_TESTS ON)
-ADD_SUBDIRECTORY(shaderc)
-ADD_SUBDIRECTORY(SPIRV-Cross)
+SET(SHADERC_THIRD_PARTY_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/submodules" CACHE STRING "Third party path" FORCE)
+SET(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/submodules/spirv-headers" CACHE STRING "SPIRV-Headers path")
+ADD_SUBDIRECTORY(submodules/shaderc)
+ADD_SUBDIRECTORY(submodules/SPIRV-Cross)
 
 FILE(GLOB GEOMETRIES "${CMAKE_CURRENT_SOURCE_DIR}/include/geometries/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/geometries/*.cpp")
 FILE(GLOB CAMERAS "${CMAKE_CURRENT_SOURCE_DIR}/include/camera/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/camera/*.cpp")
