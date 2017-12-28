@@ -1,8 +1,16 @@
 #include "geometries/Billboard.hpp"
+#include "resource/Texture.hpp"
+#include "resource/Buffer.hpp"
+#include "resource/ShaderModule.hpp"
+#include "resource/DescriptorSet.hpp"
+#include "resource/PipelineLayout.hpp"
+#include "resource/PipelineCache.hpp"
+#include "render/GraphicsPipeline.hpp"
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 #include "scene/BaseScene.hpp"
+
 using namespace vpr;
 
 namespace vpsk {

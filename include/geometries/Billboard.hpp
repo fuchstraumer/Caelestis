@@ -1,14 +1,11 @@
 #pragma once
 #ifndef VULPESRENDER_BILLBOARD_OBJECT_HPP
 #define VULPESRENDER_BILLBOARD_OBJECT_HPP
-
-#include "resource/Texture.hpp"
-#include "resource/Buffer.hpp"
-#include "resource/ShaderModule.hpp"
-#include "resource/DescriptorSet.hpp"
-#include "resource/PipelineLayout.hpp"
-#include "resource/PipelineCache.hpp"
-#include "render/GraphicsPipeline.hpp"
+#include "ForwardDecl.hpp"
+#include <memory>
+#include <vulkan/vulkan.h>
+#include "glm/vec3.hpp"
+#include "render/ShaderGroup.hpp"
 
 namespace vpsk {
     
@@ -58,7 +55,7 @@ namespace vpsk {
         std::unique_ptr<vpr::ShaderModule> vert, frag;
         std::unique_ptr<vpr::GraphicsPipeline> pipeline;
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
-
+        ShaderGroup shaderGroup;
         vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
 
