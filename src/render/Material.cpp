@@ -258,4 +258,18 @@ namespace vpsk {
             return VK_NULL_HANDLE;
         }
     }
+
+    void Material::createHashCode() {
+
+        if (ambient != nullptr) {
+
+        }
+
+        if (diffuse != nullptr) {
+
+        }
+
+        if ( )
+    }
+
 }

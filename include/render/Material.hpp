@@ -59,20 +59,21 @@ namespace vpsk {
 
     private:
 
+        void createHashCode();
         void createUBO(const tinyobj::material_t& material_);
         void createTextures(const tinyobj::material_t& material_);
         void createPbrTexturePack(const tinyobj::material_t& material_, const uint32_t& curr_binding_idx);
     
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> ambient;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> diffuse;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> specular;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> specularHighlight;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> bumpMap;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> displacementMap;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> alpha;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> reflection;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> ambient = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> diffuse = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> specular = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> specularHighlight = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> bumpMap = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> displacementMap = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> alpha = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> reflection = nullptr;
 
-        std::unique_ptr<vpr::Buffer> ubo;
+        std::unique_ptr<vpr::Buffer> ubo = nullptr;
         material_ubo_t uboData;
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
         std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
@@ -80,7 +81,7 @@ namespace vpsk {
         std::unique_ptr<pbrTexturePack> pbrTextures;
 
         const vpr::Device* device;
-
+        uint64_t hashCode;
         std::list<vpr::Texture<vpr::texture_2d_t>*> activeTextures;
 
     };
@@ -101,12 +102,12 @@ namespace vpsk {
         pbrTexturePack() = default;
         ~pbrTexturePack() = default;
 
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Roughness;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Metallic;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Sheen;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Emissive;
-        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> NormalMap;
-        std::unique_ptr<vpr::Buffer> ubo;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Roughness = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Metallic = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Sheen = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> Emissive = nullptr;
+        std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> NormalMap = nullptr;
+        std::unique_ptr<vpr::Buffer> ubo = nullptr;
         pbr_ubo_t uboData;
 
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
