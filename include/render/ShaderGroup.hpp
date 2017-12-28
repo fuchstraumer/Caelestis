@@ -13,11 +13,13 @@ namespace vpsk {
         void AddShader(const std::string& compiled_shader_path, const VkShaderStageFlags& stages);
         const std::vector<uint32_t>& CompileAndAddShader(const std::string& uncompiled_shader_path, const VkShaderStageFlags& stages);
 
-
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>> GetAllBindings() const;
+        std::vector<VkPushConstantRange> GetPushConstants() const;
+        
     private:
 
         st::BindingGenerator bindings;
-        st::ShaderCompiler compiler;
+        static st::ShaderCompiler compiler;
 
     };
 
