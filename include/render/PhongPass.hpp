@@ -25,6 +25,7 @@ namespace vpsk {
         void createResolveAttachment();
         void createMultisampleDepthAttachment();
         void createResolveDepthAttachment();
+        void createAttachmentReferences();
         VkSubpassDescription createSubpassDescription();
         void createSubpassDependencies();
         void createRenderpass();
