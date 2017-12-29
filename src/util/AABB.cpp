@@ -4,7 +4,6 @@
 
 namespace vpsk {
 
-    namespace util {
 
         const float lerp(const float& s, const float& v0, const float& v1) {
             return std::fma(s, v1, std::fma(-s, v0, v0));
@@ -133,7 +132,13 @@ namespace vpsk {
                              lerp(p.y, min.y, max.y),
                              lerp(p.z, min.z, max.z));
         }
-    }
+
+        glm::vec3 AABB::GetCorner(const size_t i) const noexcept {
+            float x = i & 1 ? max.x : min.x;
+            float y = i & 2 ? max.y : min.y;
+            float z = i & 4 ? max.z : min.z;
+            return glm::vec3(x,y,z);
+        }
 
 }
 
