@@ -7,6 +7,15 @@
 #include <unordered_set>
 namespace vpsk {
 
+    struct AttachmentInfo {
+        float ScaleX = 1.0f;
+        float ScaleY = 1.0f;
+        VkFormat Format = VK_FORMAT_UNDEFINED;
+        size_t Samples = 1;
+        size_t Layers = 1;
+        size_t Levels = 1;
+    };
+
     class RenderResource {
     public:
         RenderResource(const size_t& idx, const std::string& _name = std::string());
@@ -47,6 +56,9 @@ namespace vpsk {
 
     class BufferResource : public RenderResource {
     public:
+
+        VkBufferUsageFlags Usage() const noexcept;
+        VkDeviceSize Size() const noexcept;
 
     private:
         vpr::Buffer* object;

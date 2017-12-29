@@ -1,5 +1,5 @@
 #include "render/RenderResource.hpp"
-
+#include "resource/Buffer.hpp"
 namespace vpsk {
 
     RenderResource::RenderResource(const size_t & _idx, const std::string & _name) : idx(_idx), name(_name) {}
@@ -54,6 +54,10 @@ namespace vpsk {
 
     void RenderResource::AddStage(const VkPipelineStageFlags & flags) noexcept {
         usedInStages |= flags;
+    }
+
+    VkBufferUsageFlags BufferResource::Usage() const noexcept {
+        return object->Usage();
     }
 
 }
