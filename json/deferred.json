@@ -1,0 +1,92 @@
+{
+    "deferred-renderpass" : {
+        "color-attachments" : {
+            "attachment-0" : {
+                "name" : "backbuffer",
+                "idx" : 0,
+                "format" : "SWAPCHAIN_FORMAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp" : "STORE",
+                "finalLayout" : "PRESENT_SRC"
+            },
+            "attachment-1" : {
+                "name" : "positions",
+                "idx" : 1,
+                "format" : "R16G16B16A16_SFLOAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp" : "DONT_CARE",
+                "finalLayout" : "COLOR_ATTACHMENT"
+            },
+            "attachment-2" : {
+                "name" : "normals",
+                "idx" : 2,
+                "format" : "R16G16B16A16_SFLOAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp": "DONT_CARE",
+                "finalLayout" : "COLOR_ATTACHMENT"
+            },
+            "attachment-3" : {
+                "name" : "albedo",
+                "idx" : 3,
+                "format" : "R8G8B8A8_UNORM",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp": "DONT_CARE",
+                "finalLayout" : "COLOR_ATTACHMENT"
+            },
+            "attachment-4" : {
+                "name" : "depth-stencil",
+                "idx" : 4,
+                "format" : "DEPTH_FORMAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp": "DONT_CARE",
+                "finalLayout" : "DEPTH_STENCIL_ATTACHMENT"
+            }
+        },
+        "default-color-clear-value" : [ 0.0, 0.0, 0.0, 0.0 ],
+        "subpass-0" : {
+            "name" : "gbuffer",
+            "idx" : 0,
+            "colorAttachmentCount" : 4,
+            "colorReferences" : {
+                "ref-0" : [ "backbuffer", "COLOR_ATTACHMENT" ],
+                "ref-1" : [ "positions", "COLOR_ATTACHMENT"],
+                "ref-2" : [ "normals", "COLOR_ATTACHMENT"],
+                "ref-3" : [ "albedo", "COLOR_ATTACHMENT"]
+            },
+            "depthReference" : [ "depth-stencil", "DEPTH_STENCIL_ATTACHMENT" ]
+        },
+        "subpass-1" : {
+            "name" : "composition",
+            "idx" : 1,
+            "colorAttachmentCount" : 1,
+            "colorReferences" : {
+                "ref-0" : [ "backbuffer", "COLOR_ATTACHMENT" ]
+            },
+            "inputAttachmentCount" : 3,
+            "inputReferences" : {
+                "ref-0" : [ "positions", "SHADER_READ" ],
+                "ref-1" : [ "normals", "SHADER_READ" ],
+                "ref-2" : [ "albedo", "SHADER_READ" ]
+            },
+            "depthReference" : [ "depth-stencil", "DEPTH_STENCIL_ATTACHMENT" ]
+        },
+        "subpass-2" : {
+            "name" : "forward-transparency",
+            "idx" : 2,
+            "colorAttachmentCount" : 1,
+            "colorReferences" : {
+                "ref-0" : [ "positions", "SHADER_READ" ]
+            },
+            "inputAttachmentCount" : 1,
+            "inputReferences" : {
+                "ref-0" : [ "positions", "SHADER_READ" ]
+            },
+            "depthReference" : [ "depth-stencil", "DEPTH_STENCIL_ATTACHMENT" ]
+        }
+    }
+}

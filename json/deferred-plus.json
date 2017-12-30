@@ -1,0 +1,78 @@
+{
+    "deferred-plus-renderpass" : {
+        "color-attachments" : {
+            "attachment-0" : {
+                "idx" : 0,
+                "name" : "backbuffer",
+                "format" : "SWAPCHAIN_FORMAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp" : "STORE",
+                "finalLayout" : "PRESENT_SRC"
+            },
+            "attachment-1" : {
+                "idx" : 1,
+                "name" : "gbuffer-positions",
+                "format" : "R16G16B16A16_SFLOAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp" : "DONT_CARE",
+                "finalLayout" : "COLOR_ATTACHMENT"
+            },
+            "attachment-2" : {
+                "idx" : 2,
+                "name" : "gbuffer-normals",
+                "format" : "R16G16B16A16_SFLOAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp": "DONT_CARE",
+                "finalLayout" : "COLOR_ATTACHMENT"
+            },
+            "attachment-3" : {
+                "idx" : 3,
+                "name" : "albedo",
+                "format" : "R8G8B8A8_UNORM",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp": "DONT_CARE",
+                "finalLayout" : "COLOR_ATTACHMENT"
+            },
+            "attachment-5" : {
+                "idx" : 5,
+                "name" : "depth-stencil",
+                "format" : "DEPTH_FORMAT",
+                "samples" : 1,
+                "loadOp" : "CLEAR",
+                "storeOp": "DONT_CARE",
+                "finalLayout" : "DEPTH_STENCIL_ATTACHMENT"
+            }
+        },
+        "subpass-0" : {
+            "name" : "depth-prepass",
+            "idx" : 0,
+            "colorAttachmentCount" : 0,
+            "inputAttachmentCount" : 0,
+            "depthResource" : "depth-stencil" 
+        },
+        "subpass-1" : {
+            "name" : "gbuffer",
+            "idx" : 1,
+            "colorAttachmentCount" : 4,
+            "colorReferences" : {
+
+            }
+        },
+        "subpass-2" : {
+            "name" : "lighting",
+            "idx" : 2
+        },
+        "subpass-3" : {
+            "name" : "transparency",
+            "idx" : 3
+        },
+        "subpass-4" : {
+            "name" : "composite",
+            "idx" : 4
+        }
+    }
+}

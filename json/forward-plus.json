@@ -1,0 +1,22 @@
+{
+    "forward-plus-renderpass" : {
+        "image-resources" : {
+
+        },
+        "compute-pass-0" : {
+            "name" : "light-culling",
+            "idx" : "",
+            "shaders" : [ "light_culling.comp" ],
+            "inputAttachmentCount" : 1,
+            "inputReferences" : [ "depth-stencil" ],
+            "bufferResources" : [ "point-lights", "light-visibility" ],
+            "push-constants" : {
+                "tile-info" : {
+                    "members" : [ "ivec2", "ivec2" ],
+                    "stage" : "COMPUTE",
+                    "offset" : 0
+                }
+            }
+        }
+    }
+}
