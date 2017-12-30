@@ -1,5 +1,6 @@
 #include "render/RenderResource.hpp"
 #include "resource/Buffer.hpp"
+#include "resource/Image.hpp"
 namespace vpsk {
 
     RenderResource::RenderResource(const size_t & _idx, const std::string & _name) : idx(_idx), name(_name) {}
@@ -58,6 +59,14 @@ namespace vpsk {
 
     VkBufferUsageFlags BufferResource::Usage() const noexcept {
         return object->Usage();
+    }
+
+    bool BufferResource::operator==(const BufferResource& other) const noexcept  {
+        return object->vkHandle() == other.object->vkHandle();
+    }
+
+    bool ImageResource::operator==(const ImageResource& other) const noexcept {
+        return object->vkHandle() == other.object->vkHandle();
     }
 
 }

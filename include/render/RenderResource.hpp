@@ -3,8 +3,8 @@
 #define VPSK_RENDER_RESOURCE_HPP
 #include "ForwardDecl.hpp"
 #include <vulkan/vulkan.h>
-#include <variant>
 #include <unordered_set>
+#include <variant>
 namespace vpsk {
 
     struct AttachmentInfo {
@@ -60,12 +60,16 @@ namespace vpsk {
         VkBufferUsageFlags Usage() const noexcept;
         VkDeviceSize Size() const noexcept;
 
+        bool operator==(const BufferResource& other) const noexcept;
+
     private:
         vpr::Buffer* object;
     };
 
     class ImageResource : public RenderResource {
     public:
+        
+        bool operator==(const ImageResource& other) const noexcept;
         
     private:
         vpr::Image* img;
