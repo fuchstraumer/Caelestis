@@ -5,3 +5,5 @@ ext/lib/
 .vscode/
 
 include/vpsk_stdafx\.h
+
+ext/share/doc/tinyobjloader/LICENSE
