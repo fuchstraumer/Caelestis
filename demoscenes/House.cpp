@@ -192,9 +192,7 @@ void HouseScene::RecordCommands() {
 }
 
 void HouseScene::endFrame(const size_t& idx) {
-    vkResetFences(device->vkHandle(), 1, &presentFences[idx]);
-    secondaryPool->ResetCmdPool();
-    graphicsPool->ResetCmdPool();
+
 }
 
 void HouseScene::updateUBO() {
