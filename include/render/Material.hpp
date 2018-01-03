@@ -1,10 +1,12 @@
 #pragma once
 #ifndef VULPESRENDER_MATERIALS_HPP
 #define VULPESRENDER_MATERIALS_HPP
-
 #include "ForwardDecl.hpp"
+#include <vulkan/vulkan.h>
+#include <memory>
 #include "tiny_obj_loader.h"
-
+#include "glm/vec4.hpp"
+#include "resource/Texture.hpp"
 namespace vpsk {
 
     struct pbrTexturePack;
@@ -111,6 +113,7 @@ namespace vpsk {
         pbr_ubo_t uboData;
 
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
 
     };
 

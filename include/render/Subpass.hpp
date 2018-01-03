@@ -9,7 +9,7 @@
 
 namespace vpsk {
 
-    class Renderpass;
+    class RenderPass;
 
     class Subpass {
         Subpass(const Subpass&) = delete;
@@ -22,7 +22,7 @@ namespace vpsk {
         bool GetDepthClearValue(VkClearDepthStencilValue* dest = nullptr);
         
         std::string Name;
-        const Renderpass* ParentRenderpass = nullptr;
+        const RenderPass* ParentRenderpass = nullptr;
         ImageResource* DepthInput = nullptr;
         ImageResource* DepthOutput = nullptr;
 

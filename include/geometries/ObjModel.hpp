@@ -10,7 +10,7 @@
 #include "resource/PipelineLayout.hpp"
 #include "resource/PipelineCache.hpp"
 #include "render/GraphicsPipeline.hpp"
-#include "Material.hpp"
+#include "render/Material.hpp"
 
 namespace vpsk {
 

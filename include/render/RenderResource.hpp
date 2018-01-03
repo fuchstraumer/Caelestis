@@ -72,7 +72,7 @@ namespace vpsk {
         bool operator==(const ImageResource& other) const noexcept;
         
     private:
-        vpr::Image* img;
+        vpr::Image* object;
     };
 
     /**To avoid tracking of resource subtype via enum, and to let us store things 

@@ -1,12 +1,12 @@
 #pragma once
 #ifndef VULPES_VK_IMGUI_WRAPPER_H
 #define VULPES_VK_IMGUI_WRAPPER_H
-#include "vpr_stdafx.h"
-#include "imgui/imgui.h"
 #include "ForwardDecl.hpp"
+#include "imgui/imgui.h"
+#include "GLFW/glfw3.h"
+#include <array>
 #include "resource/Texture.hpp"
 #include "render/GraphicsPipeline.hpp"
-
 namespace vpsk {
 
     struct imguiSettings {
@@ -65,9 +65,8 @@ namespace vpsk {
         std::unique_ptr<vpr::PipelineLayout> layout;
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
         std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
-        vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
-
+        vpr::GraphicsPipelineInfo pipelineStateInfo;
         unsigned char* fontTextureData;
         VkBuffer textureStaging;
         VkBufferImageCopy stagingToTextureCopy;

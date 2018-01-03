@@ -5,7 +5,9 @@
 #include <memory>
 #include <vulkan/vulkan.h>
 #include "glm/vec3.hpp"
-#include "render/ShaderGroup.hpp"
+#include "glm/mat4x4.hpp"
+#include "render/GraphicsPipeline.hpp"
+#include "resource/Texture.hpp"
 
 namespace vpsk {
     
@@ -50,12 +52,13 @@ namespace vpsk {
 
         std::unique_ptr<vpr::Buffer> vbo;
         std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+        std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
         std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
         std::unique_ptr<vpr::PipelineCache> pipelineCache;
         std::unique_ptr<vpr::ShaderModule> vert, frag;
         std::unique_ptr<vpr::GraphicsPipeline> pipeline;
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
-        ShaderGroup shaderGroup;
+
         vpr::GraphicsPipelineInfo pipelineStateInfo;
         VkGraphicsPipelineCreateInfo pipelineCreateInfo;
 

@@ -23,8 +23,8 @@
 #define IMGUI_DEFINE_PLACEMENT_NEW
 /*#undef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS*/
-#include <imgui.h>
-#include <imgui_internal.h>
+#include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
 //-----------------------------------------------------------------------------------------------------------------
 
 

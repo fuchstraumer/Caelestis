@@ -3,6 +3,7 @@
 #include "resource/Buffer.hpp"
 #include "resource/ShaderModule.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "resource/DescriptorSetLayout.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/PipelineCache.hpp"
 #include "render/GraphicsPipeline.hpp"
@@ -101,17 +102,20 @@ namespace vpsk {
 
     void Billboard::createDescriptorSet(DescriptorPool* descriptor_pool) {
 
+        setLayout = std::make_unique<DescriptorSetLayout>(device);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+
         descriptorSet = std::make_unique<DescriptorSet>(device);
-        descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_VERTEX_BIT, 0);
-        descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), 0);
-        descriptorSet->Init(descriptor_pool);
+
+        descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0);
+        descriptorSet->Init(descriptor_pool, setLayout.get());
 
     }
 
     void Billboard::createPipelineLayout() {
 
         pipelineLayout = std::make_unique<PipelineLayout>(device);
-        pipelineLayout->Create( { descriptorSet->vkLayout() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(billboard_ubo_data_t) } });
+        pipelineLayout->Create( { setLayout->vkHandle() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(billboard_ubo_data_t) } });
     
     }
 

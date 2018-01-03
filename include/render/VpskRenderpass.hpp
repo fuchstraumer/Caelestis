@@ -9,12 +9,12 @@
 
 namespace vpsk {
 
-    class Renderpass {
-        Renderpass(const Renderpass&) = delete;
-        Renderpass& operator=(const Renderpass&) = delete;
+    class RenderPass {
+        RenderPass(const RenderPass&) = delete;
+        RenderPass& operator=(const RenderPass&) = delete;
     public:
 
-        Renderpass(const vpr::Device* dvc);
+        RenderPass(const vpr::Device* dvc);
 
         Subpass& AddSubpass(const std::string& name, VkPipelineStageFlags stages);
 
@@ -27,7 +27,7 @@ namespace vpsk {
         // Subpass 0 uses group 0, 1 uses 1, etc
         std::vector<ShaderGroup> shaders;
         std::unordered_map<std::string, subpass_resource_t> resources;
-        std::unordered_map<std::string, size_t> subpassNameIdxMap
+        std::unordered_map<std::string, size_t> subpassNameIdxMap;
     };
 
 }

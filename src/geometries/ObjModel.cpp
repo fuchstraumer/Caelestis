@@ -2,6 +2,7 @@
 #include "geometries/ObjModel.hpp"
 #include "command/TransferPool.hpp"
 #include "scene/BaseScene.hpp"
+#include "resource/DescriptorSetLayout.hpp"
 #include "util/easylogging++.h"
 #include <unordered_map>
 #include "tiny_obj_loader.h"

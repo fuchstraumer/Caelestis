@@ -1,9 +1,8 @@
 
-#include "geometries/Material.hpp"
+#include "render/Material.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 #include "resource/DescriptorSetLayout.hpp"
-#include "resource/Texture.hpp"
 #include "resource/DescriptorSet.hpp"
 #include "resource/Buffer.hpp"
 using namespace vpr;
@@ -269,7 +268,6 @@ namespace vpsk {
 
         }
 
-        if ( )
     }
 
 }

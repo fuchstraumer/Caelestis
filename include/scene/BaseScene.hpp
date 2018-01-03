@@ -1,15 +1,16 @@
 #pragma once
 #ifndef VULPES_VK_BASE_SCENE_H
 #define VULPES_VK_BASE_SCENE_H
-#include "vpr_stdafx.h"
 #include "ForwardDecl.hpp"
 #include "gui/ImGuiWrapper.hpp"
 #include "BaseSceneConfig.hpp"
 #include "camera/Camera.hpp"
 #include "camera/Arcball.hpp"
-#include "Window.hpp"
+#include "glm/mat4x4.hpp"
 
 namespace vpsk {
+
+    class Window;
 
     /** Scenes combine the various modules and objects of this library to create a fully renderable scene. Currently only the BaseScene class has been specified,
      *  but this class will simplify much of the setup work required and is extremely easy to extend and use. There is also currently a mostly-untested house demo
@@ -26,6 +27,8 @@ namespace vpsk {
      *  \todo Find a way to remove the requirement of initializing the renderpass and framebuffers in derived classes, to avoid confusion. 
      */
     class BaseScene {
+        BaseScene(const BaseScene&) = delete;
+        BaseScene& operator=(const BaseScene&) = delete;
     public:
 
         /** Creates a new BaseScene, initializing and setting up all but the Framebuffers and the Renderpass. 

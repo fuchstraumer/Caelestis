@@ -43,6 +43,7 @@ namespace vpsk {
         createMesh();
         uploadData(transfer_pool);
         createShaders();
+        createSetLayout();
         setupDescriptorSet(descriptor_pool);
         createPipelineCache();
         setupPipelineLayout();
