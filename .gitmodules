@@ -7,3 +7,6 @@
 [submodule "shadertools"]
 	path = shadertools
 	url = https://github.com/fuchstraumer/ShaderTools
+[submodule "vulpesrender"]
+	path = vulpesrender
+	url = https://github.com/fuchstraumer/vulpesrender.git
