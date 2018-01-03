@@ -5,14 +5,7 @@ PROJECT(VulpesSceneKit)
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-ExternalProject_Add(VulpesRender 
-    PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/download/vulpesrender"
-    GIT_REPOSITORY "https://github.com/fuchstraumer/vulpesrender.git"
-    CMAKE_ARGS
-        "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_SOURCE_DIR}/ext/"
-        "-DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_CURRENT_SOURCE_DIR}/ext/include/"
-        "-DFORCE_ASSERT=ON"
-        "-DCMAKE_DEBUG_POSTFIX=-gd")
+SET(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/ext/")
 
 FILE(GLOB GEOMETRIES "${CMAKE_CURRENT_SOURCE_DIR}/include/geometries/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/geometries/*.cpp")
 FILE(GLOB CAMERAS "${CMAKE_CURRENT_SOURCE_DIR}/include/camera/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/camera/*.cpp")
@@ -21,7 +14,6 @@ FILE(GLOB MATH "${CMAKE_CURRENT_SOURCE_DIR}/include/math/*.hpp" "${CMAKE_CURRENT
 FILE(GLOB SCENE "${CMAKE_CURRENT_SOURCE_DIR}/include/scene/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/scene/*.cpp")
 FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.h"
                "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cc")
-FILE(GLOB SHADER_TOOLS "${CMAKE_CURRENT_SOURCE_DIR}/include/util/shadertools/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/shadertools/*.cpp")
 FILE(GLOB IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.cpp")
 FILE(GLOB GUI "${CMAKE_CURRENT_SOURCE_DIR}/include/gui/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/*.cpp")
 FILE(GLOB_RECURSE GUI_ADDONS "${CMAKE_CURRENT_SOURCE_DIR}/include/gui/addons/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/addons/*.cpp")
@@ -42,44 +34,30 @@ SOURCE_GROUP("shaders" FILES ${SHADERS})
 SOURCE_GROUP("shader tools" FILES ${SHADER_TOOLS})
 
 FIND_PACKAGE(Vulkan REQUIRED)
-ADD_SUBDIRECTORY(tinyobjloader)
+SET(TINYOBJLOADER_LIBRARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/")
+ADD_SUBDIRECTORY("tinyobjloader")
+ADD_SUBDIRECTORY("vulpesrender")
 ADD_LIBRARY(VulpesSceneKit STATIC ${GEOMETRIES} ${SHADER_TOOLS} ${RENDER} ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS} ${SHADERS})
 
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE $<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}>)
-TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE ${Vulkan_LIBRARIES})
-TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE shaderc SPIRV-Cross)
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/submodules/")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC $<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}>)
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE ${Vulkan_LIBRARIES})
+
 IF(MSVC)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /Gm")
 ELSEIF(UNIX)
     # Enables more symbols to be loaded when debugging with GDB
     TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC "-DGLIBCXX_DEBUG")
+    # Somehow, GLFW gets made x64 but this and VPR can get made as x86
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 ENDIF()
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vulpesrender/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "$ENV{VULKAN_SDK}/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/imgui")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-IF(WIN32)
-    #LINK_DIRECTORIES(VulpesSceneKit "ext/lib/")
-    #FIND_LIBRARY(GLFWLIB NAMES "glfw3.lib" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/download/vulpesrender/src/VulpesRender/ext/lib")
-    #TARGET_LINK_LIBRARIES(VulpesSceneKit PRIVATE "${GLFWLIB}")
-    #SET(VPLIB_DBG "../ext/lib/VulpesRender-gd")
-    #SET(VPLIB_REL "../ext/lib/VulpesRender")
-ELSEIF(UNIX)
-    LINK_DIRECTORIES(VulpesSceneKit "ext/lib/")
-    FIND_LIBRARY(GLFWLIB NAMES "libglfw3.a" HINTS "download/vulpesrender/src/VulpesRender/ext/lib")
-    TARGET_LINK_LIBRARIES(VulpesSceneKit PUBLIC "${GLFWLIB}" "dl" "pthread" "X11" "Xi" "Xrandr")
-    SET(VPLIB_DBG "${CMAKE_CURRENT_SORUCE_DIR}/ext/lib/libVulpesRender-gd.a")
-    SET(VPLIB_REL "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/libVulpesRender.a")
-ENDIF()
-
 TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC -DGLM_LANG_STL11_FORCED)
-TARGET_LINK_LIBRARIES(VulpesSceneKit PUBLIC tinyobjloader)
 
 OPTION(BUILD_EX_SCENES "Build example scenes" OFF)
 
@@ -87,22 +65,15 @@ IF(BUILD_EX_SCENES)
 
 ADD_EXECUTABLE(House "demoscenes/House.cpp")
 TARGET_INCLUDE_DIRECTORIES(House PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
-TARGET_LINK_LIBRARIES(House VulpesSceneKit "${GLFWLIB}" "${Vulkan_LIBRARIES}")
-TARGET_LINK_LIBRARIES(House "${VPLIB_REL}")
-IF(UNIX)
-TARGET_LINK_LIBRARIES(House "dl" "pthread" "X11" "Xi" "Xrandr")
-ENDIF()
+"${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
+TARGET_LINK_LIBRARIES(House PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
+ADD_DEPENDENCIES(House VulpesSceneKit)
 TARGET_COMPILE_DEFINITIONS(House PUBLIC -DGLM_LANG_STL11_FORCED)
 
 ADD_EXECUTABLE(Icosphere "demoscenes/IcosphereScene.cpp")
 TARGET_INCLUDE_DIRECTORIES(Icosphere PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
-TARGET_LINK_LIBRARIES(Icosphere VulpesSceneKit "${GLFWLIB}" "${Vulkan_LIBRARIES}")
-TARGET_LINK_LIBRARIES(Icosphere "${VPLIB_REL}")
-IF(UNIX)
-TARGET_LINK_LIBRARIES(Icosphere "dl" "pthread" "X11" "Xi" "Xrandr")
-ENDIF()
+TARGET_LINK_LIBRARIES(House PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
 TARGET_COMPILE_DEFINITIONS(Icosphere PUBLIC -DGLM_LANG_STL11_FORCED)
 
 ENDIF()
