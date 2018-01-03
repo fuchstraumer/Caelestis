@@ -9,6 +9,7 @@
 #include "resource/Buffer.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "resource/DescriptorSetLayout.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/ShaderModule.hpp"
 #include "resource/Texture.hpp"
@@ -76,6 +77,7 @@ private:
     void loadMeshData();
     void createMeshBuffers();
     void createDescriptorPool();
+    void createSetLayout();
     void createDescriptorSet();
     void createPipelineLayout();
     void createShaders();
@@ -88,6 +90,7 @@ private:
     std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> texture;
     std::unique_ptr<vpr::Buffer> vbo, ebo;
     std::unique_ptr<vpr::DescriptorSet> descriptorSet;
+    std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
     std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
     std::unique_ptr<vpr::ShaderModule> vert, frag;
     std::unique_ptr<vpr::PipelineCache> pipelineCache;
@@ -214,6 +217,7 @@ void HouseScene::create() {
     createMeshBuffers();
     createDescriptorPool();
     createSkybox();
+    createSetLayout();
     createDescriptorSet();
     createPipelineLayout();
     createShaders();
@@ -341,16 +345,21 @@ void HouseScene::createDescriptorPool()  {
     descriptorPool->Create();
 }
 
+void HouseScene::createSetLayout() {
+
+    setLayout = std::make_unique<vpr::DescriptorSetLayout>(device.get());
+    setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+}
+
 void HouseScene::createDescriptorSet()  {
     descriptorSet = std::make_unique<vpr::DescriptorSet>(device.get());
-    descriptorSet->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-    descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), 0);
-    descriptorSet->Init(descriptorPool.get());
+    descriptorSet->AddDescriptorInfo(texture->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0);
+    descriptorSet->Init(descriptorPool.get(), setLayout.get());
 }
 
 void HouseScene::createPipelineLayout()  {
     pipelineLayout = std::make_unique<vpr::PipelineLayout>(device.get());
-    pipelineLayout->Create({ descriptorSet->vkLayout() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_ubo) } });
+    pipelineLayout->Create({ setLayout->vkHandle() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vs_ubo) } });
 }
 
 void HouseScene::createShaders() {
