@@ -558,6 +558,7 @@ namespace vpsk {
             RecordCommands();
             auto idx = submitFrame();
             submitExtra(idx);
+            waitForFrameComplete(idx);
             endFrame(idx);
 
             vkResetCommandPool(device->vkHandle(), secondaryPool->vkHandle(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
@@ -599,8 +600,9 @@ namespace vpsk {
 
     }
 
-    uint32_t BaseScene::submitExtra(const uint32_t & frame_idx) {
-        return frame_idx;
+    void BaseScene::submitExtra(const uint32_t frame_idx) {
+
+        return;
     }
 
     uint32_t BaseScene::submitFrame() {
@@ -630,22 +632,30 @@ namespace vpsk {
                 break;
         }
 
+        presentFrame(image_idx);
+
+        return image_idx;
+    }
+
+    void BaseScene::presentFrame(const uint32_t idx) {
         VkPresentInfoKHR present_info{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         present_info.waitSemaphoreCount = 1;
         present_info.pWaitSemaphores = &renderCompleteSemaphores[0];
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain->vkHandle();
-        present_info.pImageIndices = &image_idx;
+        present_info.pImageIndices = &idx;
         present_info.pResults = nullptr;
-
-        result = vkQueuePresentKHR(device->GraphicsQueue(), &present_info);
+        VkResult result = vkQueuePresentKHR(device->GraphicsQueue(), &present_info);
         VkAssert(result);
-        result = vkWaitForFences(device->vkHandle(), 1, &presentFences[image_idx], VK_TRUE, vk_default_fence_timeout);
+    }
+
+    void BaseScene::waitForFrameComplete(const uint32_t idx) {
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &presentFences[idx], VK_TRUE, vk_default_fence_timeout);
         VkAssert(result);
         result = vkResetFences(device->vkHandle(), 1, &acquireFence);
         VkAssert(result);
-
-        return image_idx;
+        result = vkResetFences(device->vkHandle(), 1, &presentFences[idx]);
+        VkAssert(result);
     }
 
     void BaseScene::renderGUI(VkCommandBuffer& gui_buffer, const VkCommandBufferBeginInfo& begin_info, const size_t& frame_idx) const {

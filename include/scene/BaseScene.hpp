@@ -101,9 +101,12 @@ namespace vpsk {
 
         virtual void limitFrame();
         // override in derived classes to perform extra work per frame. Does nothing by default.
-        virtual uint32_t submitExtra(const uint32_t& frame_idx);
+        virtual void submitExtra(const uint32_t frame_idx);
         virtual uint32_t submitFrame();
-        // Call ImGui drawing functions (like ImGui::ShowMainMenuBar(), etc) here.
+        void presentFrame(const uint32_t idx);
+        // Uses fences to wait for frame completion. Called after submitExtra.
+        void waitForFrameComplete(const uint32_t idx);
+        // Call ImGui drawing functions (like ImGui::ShowMainMenuBar(), etc) here. Synchronize using contained semaphores.
         virtual void renderGUI(VkCommandBuffer& gui_buffer, const VkCommandBufferBeginInfo& begin_info, const size_t& frame_idx) const;
         
         /** This method is called from the RenderLoop() method as well, before resetting the command pools and continuing to the next frame. Use this
