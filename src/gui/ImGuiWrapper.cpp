@@ -24,6 +24,12 @@ namespace vpsk {
         cache.reset();
         vbo.reset();
         ebo.reset();
+        setLayout.reset();
+        vert.reset();
+        frag.reset();
+        pipeline.reset();
+        descriptorSet.reset();
+        layout.reset();
     }
 
     void ImGuiWrapper::Init(const Device * dvc, const VkRenderPass & renderpass, vpr::DescriptorPool* descriptor_pool) {
