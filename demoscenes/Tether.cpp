@@ -116,7 +116,7 @@ constexpr static std::array<float, 12> element_vertices {
      0.5f, 0.5f, 0.0f
 };
 
-TetherScene::TetherScene(const fs::path& path) : BaseScene(1, 1440, 900), offsetData(11) {
+TetherScene::TetherScene(const fs::path& path) : BaseScene(2, 1440, 900), offsetData(11) {
     offsetData.SetData(path);
     createVBO();
     createIBO();
