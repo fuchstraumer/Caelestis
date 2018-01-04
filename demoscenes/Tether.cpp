@@ -88,6 +88,8 @@ private:
     void setVertexData();
     void createPipeline();
 
+    void createDescriptorPool();
+
     void updateIBO();
     void updateUBO();
 
@@ -120,9 +122,16 @@ TetherScene::TetherScene(const fs::path& path) : BaseScene(1, 1440, 900), offset
     createIBO();
     uploadBuffers();
     createShaders();
+    createDescriptorPool();
     createPipelineLayout();
     createPipelineCache();
     ubo.projection = GetProjectionMatrix();
+    setVertexData();
+    setPipelineState();
+    createPipeline();
+    setupGUI();
+    viewport = VkViewport{ 0.0f,0.0f,1440.0f,900.0f,0.0f,1.0f };
+    scissor.offset = VkOffset2D{ 0, 0 };
 }
 
 TetherScene::~TetherScene()
@@ -158,6 +167,12 @@ void TetherScene::RecordCommands() {
     };
 
     updateUBO();
+
+    viewport.width = static_cast<float>(swapchain->Extent.width);
+    viewport.height = static_cast<float>(swapchain->Extent.height);
+
+    scissor.extent.width = swapchain->Extent.width;
+    scissor.extent.height = swapchain->Extent.height;
 
     ImGui::Begin("Static Visualization");
     ImGui::ProgressBar(static_cast<float>(currStep) / static_cast<float>(offsetData.stepCount));
@@ -212,19 +227,16 @@ void TetherScene::endFrame(const size_t & idx) {
 
 void TetherScene::timestep_offsets_t::SetData(const fs::path& path) {
     std::string data;
-    try {
+
         std::ifstream _file(path, std::ios::in);
-        _file.exceptions(std::ios::failbit | std::ios::badbit);
         data = std::string{ std::istreambuf_iterator<char>(_file), std::istreambuf_iterator<char>() };
         std::string line;
-        
+        _file.seekg(0);
         while (std::getline(_file, line)) {
             ++stepCount;
         }
-    }
-    catch (const std::exception& e) {
-        throw e;
-    }
+    
+
 
     std::string_view data_view(data);
 
@@ -256,7 +268,7 @@ void TetherScene::timestep_offsets_t::SetData(const fs::path& path) {
 
 void TetherScene::createVBO() {
     vbo = std::make_unique<vpr::Buffer>(device.get());
-    vbo->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(float) * 12);   
+    vbo->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(float) * 12);   
 }
 
 void TetherScene::createIBO() {
@@ -266,14 +278,15 @@ void TetherScene::createIBO() {
 
 void TetherScene::uploadBuffers() {
     const auto& cmd = transferPool->Begin();
+    offsetData.curr = offsetData.offsets.cbegin();
     ibo->CopyTo(offsetData.CurrentAddress(), cmd, sizeof(glm::vec3) * 12, 0);
     vbo->CopyTo(element_vertices.data(), cmd, sizeof(float) * 12, 0);
     transferPool->Submit();
 }
 
 void TetherScene::createShaders() {
-    vert = std::make_unique<vpr::ShaderModule>(device.get(), "rsrc/shaders/tether/tether.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    frag = std::make_unique<vpr::ShaderModule>(device.get(), "rsrc/shaders/tether/tether.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    vert = std::make_unique<vpr::ShaderModule>(device.get(), "../rsrc/shaders/tether/tether.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    frag = std::make_unique<vpr::ShaderModule>(device.get(), "../rsrc/shaders/tether/tether.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void TetherScene::createPipelineLayout() {
@@ -343,6 +356,12 @@ void TetherScene::createPipeline() {
 
 }
 
+void TetherScene::createDescriptorPool() {
+    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 1);
+    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+    descriptorPool->Create();
+}
+
 void TetherScene::updateIBO() {
     const auto& cmd = transferPool->Begin();
     ibo->Update(cmd, sizeof(glm::vec3) * offsetData.NumElements, 0, offsetData.CurrentAddress());
@@ -359,4 +378,5 @@ void main(int argc, char* argv[]) {
     }
 
     TetherScene scene(in_path);
+    scene.RenderLoop();
 }
