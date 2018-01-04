@@ -670,17 +670,7 @@ namespace vpsk {
         gui->UpdateBuffers();
 
         vkBeginCommandBuffer(gui_buffer, &begin_info);
-
-        if (device->MarkersEnabled) {
-            device->vkCmdBeginDebugMarkerRegion(gui_buffer, "Draw GUI", glm::vec4(0.6f, 0.7f, 0.0f, 1.0f));
-        }
-
         gui->DrawFrame(gui_buffer);
-
-        if (device->MarkersEnabled) {
-            device->vkCmdEndDebugMarkerRegion(gui_buffer);
-        }
-
         vkEndCommandBuffer(gui_buffer);
     }
 
