@@ -501,9 +501,9 @@ namespace vpsk {
         renderPass.reset();
 
         device->vkAllocator->Recreate();
-
+        instance->RecreateSurface();
         swapchain->Recreate();
-        
+
 
         /*
             Done destroying resources, recreate resources and objects now
