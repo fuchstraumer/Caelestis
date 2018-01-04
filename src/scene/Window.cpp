@@ -1,5 +1,6 @@
 #include "scene/Window.hpp"
 #include "scene/InputHandler.hpp"
+#include "scene/BaseScene.hpp"
 #include <imgui/imgui.h>
 #if defined(_WIN32) 
 #undef APIENTRY
@@ -65,6 +66,9 @@ namespace vpsk {
         else {
             io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
         }
+
+        void* uptr = glfwGetWindowUserPointer(window);
+        reinterpret_cast<BaseScene*>(uptr)->RecreateSwapchain();
 
     }
 

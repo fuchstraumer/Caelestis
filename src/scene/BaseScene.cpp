@@ -527,10 +527,10 @@ namespace vpsk {
 
         CreateCommandPools();
         SetupRenderpass(BaseScene::SceneConfiguration.MSAA_SampleCount);
-        setupGUI();
         SetupDepthStencil();
         SetupFramebuffers();
         RecreateObjects();
+        setupGUI();
         vkDeviceWaitIdle(device->vkHandle());
 
         LOG_IF(BaseScene::SceneConfiguration.VerboseLogging, INFO) << "Swapchain recreation successful.";
