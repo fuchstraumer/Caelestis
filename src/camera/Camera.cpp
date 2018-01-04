@@ -305,7 +305,7 @@ namespace vpsk {
         float far_dist = 4000.0f;
         float aspect = static_cast<float>(pixel_width) / static_cast<float>(pixel_height);
         SetPerspective(field_of_view, aspect, near_dist, far_dist);
-        LookTowardsTarget(glm::vec3(0.0f, 10.0f, 20.0f), glm::vec3(0.0f));
+        LookTowardsTarget(glm::vec3(0.0f, 0.0f, 20.0f), glm::vec3(0.0f));
     }
 
     void PerspectiveCamera::SetPerspective(const float & vertical_fov_in_degrees, const float & aspect_ratio, const float & near_plane, const float & far_plane) {
