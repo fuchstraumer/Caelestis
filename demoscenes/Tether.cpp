@@ -212,6 +212,8 @@ void TetherScene::renderTether(VkCommandBuffer scb, const VkCommandBufferBeginIn
         vkCmdSetViewport(scb, 0, 1, &viewport);
         vkCmdSetScissor(scb, 0, 1, &scissor);
         vkCmdPushConstants(scb, pipelineLayout->vkHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vertex_shader_ubo_t), &ubo);
+        static const glm::vec4 color(0.1f, 1.0f, 0.05f, 1.0f);
+        vkCmdPushConstants(scb, pipelineLayout->vkHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vertex_shader_ubo_t), sizeof(glm::vec4), glm::value_ptr(color));
         const VkBuffer vbos[2]{ vbo->vkHandle(), ibo->vkHandle() };
         static constexpr VkDeviceSize offsets[2]{ 0, 0 };
         vkCmdBindVertexBuffers(scb, 0, 2, vbos, offsets);
@@ -291,7 +293,7 @@ void TetherScene::createShaders() {
 
 void TetherScene::createPipelineLayout() {
     pipelineLayout = std::make_unique<vpr::PipelineLayout>(device.get());
-    pipelineLayout->Create({ VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vertex_shader_ubo_t) } });
+    pipelineLayout->Create({ VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vertex_shader_ubo_t) }, VkPushConstantRange{ VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vertex_shader_ubo_t), sizeof(glm::vec4) } });
 }
 
 void TetherScene::createPipelineCache() {
