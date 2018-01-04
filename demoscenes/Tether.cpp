@@ -74,7 +74,8 @@ private:
         
         std::vector<glm::vec3> offsets;
         std::vector<glm::vec3>::const_iterator curr;
-        size_t NumElements;
+        size_t NumElements = 0;
+        size_t stepCount = 0;
     } offsetData;
 
     void createVBO();
@@ -102,6 +103,8 @@ private:
     VkRect2D scissor;
     std::array<VkVertexInputAttributeDescription, 2> attr;
     std::array<VkVertexInputBindingDescription, 2> bindings;
+    size_t currStep = 0;
+    bool paused = false;
 };
 
 constexpr static std::array<float, 12> element_vertices {
@@ -156,6 +159,15 @@ void TetherScene::RecordCommands() {
 
     updateUBO();
 
+    ImGui::Begin("Static Visualization");
+    ImGui::ProgressBar(static_cast<float>(currStep) / static_cast<float>(offsetData.stepCount));
+    if (ImGui::Button("Pause")) {
+        paused = true;
+        ImGui::SameLine(); 
+        ImGui::Text("Visualization paused...");
+    }
+    ImGui::End();
+
     for (size_t i = 0; i < graphicsPool->size(); ++i) {
         
         secondary_cmd_buffer_inheritance_info.framebuffer = framebuffers[i];
@@ -195,6 +207,7 @@ void TetherScene::renderTether(VkCommandBuffer scb, const VkCommandBufferBeginIn
 void TetherScene::endFrame(const size_t & idx) {
     offsetData.Step();
     updateIBO();
+    ++currStep;
 }
 
 void TetherScene::timestep_offsets_t::SetData(const fs::path& path) {
@@ -203,6 +216,11 @@ void TetherScene::timestep_offsets_t::SetData(const fs::path& path) {
         std::ifstream _file(path, std::ios::in);
         _file.exceptions(std::ios::failbit | std::ios::badbit);
         data = std::string{ std::istreambuf_iterator<char>(_file), std::istreambuf_iterator<char>() };
+        std::string line;
+        
+        while (std::getline(_file, line)) {
+            ++stepCount;
+        }
     }
     catch (const std::exception& e) {
         throw e;
@@ -210,7 +228,7 @@ void TetherScene::timestep_offsets_t::SetData(const fs::path& path) {
 
     std::string_view data_view(data);
 
-    offsets.reserve((data.size() / 830) * 12);
+    offsets.reserve(stepCount * 12);
 
     while(!data_view.empty()) {
         glm::vec3 p;
@@ -235,7 +253,6 @@ void TetherScene::timestep_offsets_t::SetData(const fs::path& path) {
 
     offsets.shrink_to_fit();
 }
-
 
 void TetherScene::createVBO() {
     vbo = std::make_unique<vpr::Buffer>(device.get());
@@ -268,6 +285,22 @@ void TetherScene::createPipelineCache() {
     cache = std::make_unique<vpr::PipelineCache>(device.get(), static_cast<uint16_t>(typeid(decltype(*this)).hash_code()));
 }
 
+void TetherScene::setPipelineState() {
+
+    pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
+    pipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attr.size());
+    pipelineStateInfo.VertexInfo.pVertexBindingDescriptions = bindings.data();
+    pipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = attr.data();
+    pipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
+    constexpr static VkDynamicState states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    pipelineStateInfo.DynamicStateInfo.pDynamicStates = states;
+    if (BaseScene::SceneConfiguration.EnableMSAA) {
+        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
+        pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
+    }
+
+}
+
 void TetherScene::setVertexData() {
 
     bindings[0] = VkVertexInputBindingDescription{
@@ -290,6 +323,23 @@ void TetherScene::setVertexData() {
 
 void TetherScene::createPipeline() {
 
+    pipelineCreateInfo = pipelineStateInfo.GetPipelineCreateInfo();
+    pipelineCreateInfo.layout = pipelineLayout->vkHandle();
+    pipelineCreateInfo.renderPass = renderPass->vkHandle();
+
+    const VkPipelineShaderStageCreateInfo stages[2]{
+        vert->PipelineInfo(),
+        frag->PipelineInfo()
+    };
+
+    pipelineCreateInfo.stageCount = 2;
+    pipelineCreateInfo.pStages = stages;
+    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineCreateInfo.basePipelineIndex = -1;
+    pipelineCreateInfo.subpass = 0;
+
+    pipeline = std::make_unique<vpr::GraphicsPipeline>(device.get());
+    pipeline->Init(pipelineCreateInfo, cache->vkHandle());
 
 }
 
