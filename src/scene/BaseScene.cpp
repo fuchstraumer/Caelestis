@@ -666,10 +666,6 @@ namespace vpsk {
         }
 
         ImGui::Render();
-            
-        if (device->MarkersEnabled) {
-            device->vkCmdInsertDebugMarker(graphicsPool->GetCmdBuffer(frame_idx), "Update GUI", glm::vec4(0.6f, 0.6f, 0.0f, 1.0f));
-        }
 
         gui->UpdateBuffers();
 
