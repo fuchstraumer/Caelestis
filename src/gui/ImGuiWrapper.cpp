@@ -33,6 +33,7 @@ namespace vpsk {
 
         createResources();  
         createFontTexture();
+        createDescriptorSetLayout();
         createDescriptorLayout(descriptor_pool);
         createPipelineLayout();       
         setupGraphicsPipelineInfo();
