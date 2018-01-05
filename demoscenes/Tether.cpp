@@ -670,7 +670,7 @@ void TetherScene::updateIBO() {
     transferPool->Submit();
 }
 
-void main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
     const std::vector<std::string> args(argv + 1, argv + argc);
     const std::string& input = args.front();
     fs::path in_path(input);
@@ -681,4 +681,5 @@ void main(int argc, char* argv[]) {
 
     TetherScene scene(in_path);
     scene.RenderLoop();
+    return 0;
 }
