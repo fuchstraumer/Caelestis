@@ -51,37 +51,9 @@ public:
 private:
 
     void endFrame(const size_t& idx) final;
-
-    struct instance_data_t {
-        glm::vec3 Offset;
-    };
-
-    struct vertex_shader_ubo_t {
-        glm::mat4 view, projection;
-    } ubo;
-
-    struct timestep_offsets_t {
-        timestep_offsets_t(const size_t& num_elements) : NumElements(num_elements) {}
-        
-        void SetData(const fs::path& file);
-
-        void Step() {
-            curr += NumElements;
-        }
-
-        const void* CurrentAddress() const noexcept {
-            return &(*curr);
-        }
-
-        
-        std::vector<glm::vec3> offsets;
-        std::vector<glm::vec3>::const_iterator curr;
-        size_t NumElements = 0;
-        size_t stepCount = 0;
-    } offsetData;
-
     void loadTetherData(const fs::path& tether_data_path = fs::path("tether.dat"));
     void createVBO();
+    void createUBO();
     void createMeshData();
     void createInstanceData();
     void createIBO();
@@ -92,30 +64,73 @@ private:
     void setPipelineState();
     void setVertexPipelineData();
     void createPipeline();
-
+    void createDescriptorSetLayout();
+    void createDescriptorSet();
     void createDescriptorPool();
-
-    void updateIBO();
+    void updatePushConstantData();
     void updateUBO();
+    uint16_t addVertex(glm::vec3 p, glm::vec3 n);
+    void construct();
+    void destroy();
+
+ 
+
+    struct vertex_shader_ubo_t {
+        glm::mat4 view, projection;
+    } pushConstantData;
+
+    struct timestep_offsets_t {
+        timestep_offsets_t(const size_t& num_elements) : NumElements(num_elements) {}
+
+        void SetData(const fs::path& file);
+
+        void Step() {
+            curr += NumElements;
+        }
+
+        const void* CurrentAddress() const noexcept {
+            return &(*curr);
+        }
+
+
+        std::vector<glm::vec3> offsets;
+        std::vector<glm::vec3>::const_iterator curr;
+        size_t NumElements = 0;
+        size_t stepCount = 0;
+    } offsetData;
+
+    struct instance_data_t {
+        std::vector<glm::vec4> Offsets;
+        instance_data_t(size_t num_elems) {
+            Offsets.resize(num_elems);
+        }
+        void setData(const timestep_offsets_t& vals);
+    } uboData;
+
+    struct f_ubo_data_t {
+        glm::vec4 viewPos;
+        glm::vec4 lightPos;
+    } fragmentUboData;
 
     std::unique_ptr<vpr::Buffer> vbo;
-    std::unique_ptr<vpr::Buffer> iboOffsets;
     std::unique_ptr<vpr::Buffer> iboColors;
+    std::unique_ptr<vpr::Buffer> ubo, fragmentUBO;
     std::unique_ptr<vpr::Buffer> ebo;
     std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
     std::unique_ptr<vpr::GraphicsPipeline> pipeline;
     std::unique_ptr<vpr::PipelineCache> cache;
     std::unique_ptr<vpr::ShaderModule> vert, frag;
+    std::unique_ptr<vpr::DescriptorSet> descriptor;
+    std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
     VkGraphicsPipelineCreateInfo pipelineCreateInfo;
     vpr::GraphicsPipelineInfo pipelineStateInfo;
     VkViewport viewport;
     VkRect2D scissor;
-    std::array<VkVertexInputAttributeDescription, 4> attr;
-    std::array<VkVertexInputBindingDescription, 3> bindings;
+    std::array<VkVertexInputAttributeDescription, 3> attr;
+    std::array<VkVertexInputBindingDescription, 2> bindings;
     size_t currStep = 0;
     bool paused = false;
-    void construct();
-    void destroy();
+
     std::vector<uint16_t> indices;
     std::vector<glm::vec3> meshData;
     std::vector<float> instanceData;
@@ -144,7 +159,6 @@ private:
         }
     } tetherBuffer;
 
-    uint16_t addVertex(glm::vec3 p, glm::vec3 n);
 
     int stepsPerFrame = 1;
 };
@@ -236,7 +250,7 @@ const static std::array<const std::initializer_list<uint16_t>, 6> indices_ilist 
     std::initializer_list<uint16_t>{ 7, 6, 5, 5, 4, 7 },
 };
 
-TetherScene::TetherScene(const fs::path& path) : BaseScene(2, 1440, 900), offsetData(11) {
+TetherScene::TetherScene(const fs::path& path) : BaseScene(2, 1440, 900), offsetData(11), uboData(11) {
     offsetData.SetData(path);
     loadTetherData();
     construct();
@@ -246,12 +260,15 @@ void TetherScene::construct() {
     createMeshData();
     createVBO();
     createIBO();
+    createUBO();
     uploadBuffers();
     createShaders();
+    createDescriptorSetLayout();
     createDescriptorPool();
+    createDescriptorSet();
     createPipelineLayout();
     createPipelineCache();
-    ubo.projection = GetProjectionMatrix();
+    pushConstantData.projection = GetProjectionMatrix();
     setVertexPipelineData();
     setPipelineState();
     createPipeline();
@@ -261,9 +278,13 @@ void TetherScene::construct() {
 }
 
 void TetherScene::destroy() {
+    gui.reset();
+    ubo.reset();
+    fragmentUBO.reset();
+    descriptor.reset();
+    setLayout.reset();
     vbo.reset();
     ebo.reset();
-    iboOffsets.reset();
     iboColors.reset();
     pipelineLayout.reset();
     descriptorPool.reset();
@@ -271,7 +292,6 @@ void TetherScene::destroy() {
     cache.reset();
     vert.reset();
     frag.reset();
-    gui.reset();
 }
 
 uint16_t TetherScene::addVertex(glm::vec3 p, glm::vec3 n) {
@@ -362,7 +382,7 @@ void TetherScene::RecordCommands() {
         &secondary_cmd_buffer_inheritance_info
     };
 
-    updateUBO();
+    updatePushConstantData();
 
     viewport.width = static_cast<float>(swapchain->Extent.width);
     viewport.height = static_cast<float>(swapchain->Extent.height);
@@ -405,18 +425,24 @@ void TetherScene::RecordCommands() {
     }
 }
 
-void TetherScene::updateUBO() {
-    ubo.view = GetViewMatrix();
+void TetherScene::updatePushConstantData() {
+    pushConstantData.view = GetViewMatrix();
+}
+
+void TetherScene:: updateUBO() {
+    ubo->CopyToMapped(uboData.Offsets.data(), sizeof(glm::vec4) * uboData.Offsets.size(), 0);
+    fragmentUBO->CopyToMapped(&fragmentUboData, sizeof(glm::vec4) * 2, 0);
 }
 
 void TetherScene::renderTether(VkCommandBuffer scb, const VkCommandBufferBeginInfo& begin) {
     vkBeginCommandBuffer(scb, &begin);
         vkCmdBindPipeline(scb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vkHandle());
+        vkCmdBindDescriptorSets(scb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout->vkHandle(), 0, 1, &descriptor->vkHandle(), 0, nullptr);
         vkCmdSetViewport(scb, 0, 1, &viewport);
         vkCmdSetScissor(scb, 0, 1, &scissor);
-        vkCmdPushConstants(scb, pipelineLayout->vkHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vertex_shader_ubo_t), &ubo);
-        const std::vector<VkBuffer> buffers{ vbo->vkHandle(), iboOffsets->vkHandle(), iboColors->vkHandle() };
-        static constexpr VkDeviceSize offsets[3]{ 0, 0, 0 };
+        vkCmdPushConstants(scb, pipelineLayout->vkHandle(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vertex_shader_ubo_t), &pushConstantData);
+        const std::vector<VkBuffer> buffers{ vbo->vkHandle(), iboColors->vkHandle() };
+        static constexpr VkDeviceSize offsets[2]{ 0, 0 };
         vkCmdBindVertexBuffers(scb, 0, static_cast<uint32_t>(buffers.size()), buffers.data(), offsets);
         vkCmdBindIndexBuffer(scb, ebo->vkHandle(), 0, VK_INDEX_TYPE_UINT16);
         vkCmdDrawIndexed(scb, indices.size(), offsetData.NumElements, 0, 0, 0);
@@ -426,7 +452,12 @@ void TetherScene::renderTether(VkCommandBuffer scb, const VkCommandBufferBeginIn
 void TetherScene::endFrame(const size_t & idx) {
     if (!paused) {
         offsetData.Step();
-        updateIBO();
+        uboData.setData(offsetData);
+        fragmentUboData.lightPos = glm::vec4(0.0f, 50.0f, 0.0f, 1.0f);
+        const glm::vec3 cpos = GetCameraPosition();
+        fragmentUboData.viewPos = glm::vec4(cpos.x, cpos.y, cpos.z, 1.0f);
+        updateUBO();
+        updatePushConstantData();
         currStep += static_cast<size_t>(stepsPerFrame);
     }
 }
@@ -538,6 +569,13 @@ void TetherScene::createVBO() {
     ebo->CreateBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint16_t) * indices.size());
 }
 
+void TetherScene::createUBO() {
+    ubo = std::make_unique<vpr::Buffer>(device.get());
+    ubo->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, offsetData.NumElements * sizeof(glm::vec4));
+    fragmentUBO = std::make_unique<vpr::Buffer>(device.get());
+    fragmentUBO->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, sizeof(glm::vec4) * 2);
+}
+
 void TetherScene::createMeshData() {
     for (size_t i = 0; i < 6; ++i) {
         glm::vec3 v0, v1, v2, v3;
@@ -552,13 +590,7 @@ void TetherScene::createMeshData() {
     }
 }
 
-void TetherScene::createInstanceData() {
-
-}
-
 void TetherScene::createIBO() {
-    iboOffsets = std::make_unique<vpr::Buffer>(device.get());
-    iboOffsets->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(glm::vec3) * offsetData.NumElements);
     iboColors = std::make_unique<vpr::Buffer>(device.get());
     iboColors->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(glm::vec3) * offsetData.NumElements);
 }
@@ -566,7 +598,7 @@ void TetherScene::createIBO() {
 void TetherScene::uploadBuffers() {
     const auto& cmd = transferPool->Begin();
     offsetData.curr = offsetData.offsets.cbegin();
-    iboOffsets->CopyTo(offsetData.CurrentAddress(), cmd, sizeof(glm::vec3) * offsetData.NumElements, 0);
+    
     iboColors->CopyTo(colors.data(), cmd, sizeof(glm::vec3) * offsetData.NumElements, 0);
     vbo->CopyTo(meshData.data(), cmd, sizeof(glm::vec3) * meshData.size(), 0);
     ebo->CopyTo(indices.data(), cmd, sizeof(uint16_t) * indices.size(), 0);
@@ -580,7 +612,7 @@ void TetherScene::createShaders() {
 
 void TetherScene::createPipelineLayout() {
     pipelineLayout = std::make_unique<vpr::PipelineLayout>(device.get());
-    pipelineLayout->Create({ VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vertex_shader_ubo_t) } });
+    pipelineLayout->Create({ setLayout->vkHandle() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vertex_shader_ubo_t) } });
 }
 
 void TetherScene::createPipelineCache() {
@@ -614,10 +646,6 @@ void TetherScene::setVertexPipelineData() {
         1, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_INSTANCE
     };
 
-    bindings[2] = VkVertexInputBindingDescription{
-        2, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_INSTANCE
-    };
-
     attr[0] = VkVertexInputAttributeDescription{
         0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0
     };
@@ -628,10 +656,6 @@ void TetherScene::setVertexPipelineData() {
 
     attr[2] = VkVertexInputAttributeDescription{
         2, 1, VK_FORMAT_R32G32B32_SFLOAT, 0
-    };
-
-    attr[3] = VkVertexInputAttributeDescription{
-        3, 2, VK_FORMAT_R32G32B32_SFLOAT, 0
     };
 
 }
@@ -658,16 +682,38 @@ void TetherScene::createPipeline() {
 
 }
 
+void TetherScene::createDescriptorSetLayout() {
+    setLayout = std::make_unique<vpr::DescriptorSetLayout>(device.get());
+    setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+    setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+}
+
+void TetherScene::createDescriptorSet() {
+    descriptor = std::make_unique<vpr::DescriptorSet>(device.get());
+    descriptor->AddDescriptorInfo(ubo->GetDescriptor(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0);
+    descriptor->AddDescriptorInfo(fragmentUBO->GetDescriptor(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
+    descriptor->Init(descriptorPool.get(), setLayout.get());
+}
+
 void TetherScene::createDescriptorPool() {
-    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 1);
+    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 2);
     descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2);
     descriptorPool->Create();
 }
 
-void TetherScene::updateIBO() {
-    const auto& cmd = transferPool->Begin();
-    iboOffsets->Update(cmd, sizeof(glm::vec3) * offsetData.NumElements, 0, offsetData.CurrentAddress());
-    transferPool->Submit();
+
+void TetherScene::instance_data_t::setData(const timestep_offsets_t & vals) {
+
+    auto vec_iter = Offsets.begin();
+    for (auto iter = vals.curr; iter != vals.curr + vals.NumElements; ++iter) {
+        vec_iter->x = iter->x;
+        vec_iter->y = iter->y;
+        vec_iter->z = iter->z;
+        vec_iter->w = 0.0f;
+        ++vec_iter;
+    }
+
 }
 
 int main(int argc, char* argv[]) {
@@ -678,8 +724,12 @@ int main(int argc, char* argv[]) {
         std::cerr << "Invalid path.\n";
         throw std::runtime_error("Invalid path.");
     }
-
+    vpsk::BaseScene::SceneConfiguration.CameraType = vpsk::cameraType::ARCBALL;
+    vpsk::BaseScene::SceneConfiguration.ApplicationName = "TetherSim Static Tether Visualization";
+    vpsk::BaseScene::SceneConfiguration.EnableMSAA = true;
+    vpsk::BaseScene::SceneConfiguration.MSAA_SampleCount = VK_SAMPLE_COUNT_4_BIT;
     TetherScene scene(in_path);
     scene.RenderLoop();
     return 0;
 }
+
