@@ -19,16 +19,16 @@ namespace vpsk {
 
     static std::array<bool, 3> mouse_pressed{ false, false, false };
 
-    ImGuiWrapper::~ImGuiWrapper() {     
+    ImGuiWrapper::~ImGuiWrapper() {  
+        setLayout.reset();
+        descriptorSet.reset();
         font.reset();
         cache.reset();
         vbo.reset();
         ebo.reset();
-        setLayout.reset();
         vert.reset();
         frag.reset();
         pipeline.reset();
-        descriptorSet.reset();
         layout.reset();
     }
 
