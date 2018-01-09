@@ -94,7 +94,7 @@ namespace vpsk {
                 Movement speed affects camera speed in FPS/FREE camera modes.
             */
             float MouseSensitivity = 0.5f;
-            float MovementSpeed = 25.0f;
+            float MovementSpeed = 0.5f;
 
             /*
                 Enable the usage of 3D mouse picking by using data read back from the renderpass. Writes data about primitives

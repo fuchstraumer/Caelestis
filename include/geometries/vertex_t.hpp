@@ -2,7 +2,6 @@
 #ifndef VULPES_VERTEX_T_HPP
 #define VULPES_VERTEX_T_HPP
 #include "glm/vec3.hpp"
-#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/hash.hpp"
 #include <vulkan/vulkan.h>
 #include <array>

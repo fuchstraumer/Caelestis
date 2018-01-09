@@ -40,8 +40,16 @@ namespace vpsk {
 
         const bool verbose_logging = BaseScene::SceneConfiguration.VerboseLogging;
         window = std::make_unique<Window>(_width, _height, BaseScene::SceneConfiguration.ApplicationName);
-        VkInstanceCreateInfo create_info = vk_base_instance_info;
-        instance = std::make_unique<Instance>(create_info, window->glfwWindow(), _width, _height);
+        const VkApplicationInfo app_info{
+            VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            nullptr,
+            BaseScene::SceneConfiguration.ApplicationName.c_str(),
+            VK_MAKE_VERSION(0,1,0),
+            BaseScene::SceneConfiguration.EngineName.c_str(),
+            VK_MAKE_VERSION(0,1,0),
+            VK_API_VERSION_1_0
+        };
+        instance = std::make_unique<Instance>(false, &app_info, window->glfwWindow());
         window->SetWindowUserPointer(this);
 
         LOG_IF(verbose_logging, INFO) << "VkInstance created.";
@@ -441,8 +449,8 @@ namespace vpsk {
         LOG_IF(BaseScene::SceneConfiguration.VerboseLogging, INFO) << "Renderpass created.";
         
         static const std::vector<VkClearValue> clear_values {
-            { 0.025f, 0.025f, 0.065f, 1.0f },
-            { 0.025f, 0.025f, 0.065f, 1.0f },
+            { 0.25f, 0.25f, 0.55f, 1.0f },
+            { 0.25f, 0.25f, 0.55f, 1.0f },
             { 1.0f, 0 }
         };
 
@@ -453,8 +461,7 @@ namespace vpsk {
     void BaseScene::SetupDepthStencil() {
 
         LOG(INFO) << "Creating depth stencil...";
-        VkQueue depth_queue = device->GraphicsQueue(0);
-        depthStencil = std::make_unique<DepthStencil>(device.get(), VkExtent3D{ swapchain->Extent.width, swapchain->Extent.height, 1 }, graphicsPool.get(), depth_queue);
+        depthStencil = std::make_unique<DepthStencil>(device.get(), VkExtent3D{ swapchain->Extent.width, swapchain->Extent.height, 1 });
 
     }
 
@@ -501,10 +508,9 @@ namespace vpsk {
         renderPass.reset();
 
         device->vkAllocator->Recreate();
-        instance->RecreateSurface();
-        swapchain->Recreate();
 
-
+        vpr::RecreateSwapchainAndSurface(instance.get(), swapchain.get());
+        device->VerifyPresentationSupport();
         /*
             Done destroying resources, recreate resources and objects now
         */
@@ -577,6 +583,30 @@ namespace vpsk {
 
         if (io.WantCaptureKeyboard) {
             return;
+        }
+
+        if (input_handler::Keys[GLFW_KEY_W]) {
+            if (SceneConfiguration.CameraType == cameraType::FPS) {
+                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() + SceneConfiguration.MovementSpeed * fpsCamera.GetViewDirection() * 0.1f);
+            }
+        }
+
+        if (input_handler::Keys[GLFW_KEY_A]) {
+            if (SceneConfiguration.CameraType == cameraType::FPS) {
+                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() - SceneConfiguration.MovementSpeed * fpsCamera.GetRightDirection() * 0.1f);
+            }
+        }
+
+        if (input_handler::Keys[GLFW_KEY_D]) {
+            if (SceneConfiguration.CameraType == cameraType::FPS) {
+                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() + SceneConfiguration.MovementSpeed * fpsCamera.GetRightDirection() * 0.1f);
+            }
+        }
+
+        if (input_handler::Keys[GLFW_KEY_S]) {
+            if (SceneConfiguration.CameraType == cameraType::FPS) {
+                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() - SceneConfiguration.MovementSpeed * fpsCamera.GetViewDirection() * 0.1f);
+            }
         }
 
     }
