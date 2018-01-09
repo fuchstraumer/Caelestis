@@ -18,7 +18,7 @@ layout(push_constant) uniform _ubo {
 
 layout (constant_id = 0) const uint INSTANCE_COUNT = 11;
 
-layout(location = 0) uniform ubo2 {
+layout(set = 0, location = 0) uniform ubo2 {
     vec4 p[INSTANCE_COUNT];
 } offsets;
 
@@ -27,7 +27,7 @@ out gl_PerVertex {
 };
 
 void main() {
-    vec4 final_pos = vec4(position,1.0f) + offsets.p[gl_InstanceIndex];
+    vec4 final_pos = vec4(position,1.0f) + (offsets.p[gl_InstanceIndex] * 10.0f);
     gl_Position = ubo.projection * ubo.view * final_pos;
     vColor = color;
     vPos = final_pos.xyz;

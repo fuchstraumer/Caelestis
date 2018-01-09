@@ -43,6 +43,7 @@ public:
 
     void WindowResized() final;
     void RecreateObjects() final;
+    void updatePlots();
     void drawPlots();
     void RecordCommands() final;
 
@@ -312,7 +313,7 @@ void TetherScene::RecreateObjects() {
     construct();
 }
 
-void TetherScene::drawPlots() {
+void TetherScene::updatePlots() {
     if (!paused) {
         tetherBuffer.rotate();
         tetherBuffer.Dist.back() = &tetherData.RadialDistance[currStep];
@@ -320,6 +321,10 @@ void TetherScene::drawPlots() {
         tetherBuffer.OOPL.back() = &tetherData.OutOfPlaneLibration[currStep];
         tetherBuffer.T.back() = &tetherData.Tension[currStep];
     }
+}
+
+void TetherScene::drawPlots() {
+    
     if (currStep < 2000) {
         ImGui::ProgressBar(static_cast<float>(currStep) / 2000.0f, ImVec2(ImGui::GetContentRegionAvailWidth(), 30), "Preloading plot data...");
         ImGui::TextDisabled("(?)");
@@ -343,20 +348,29 @@ void TetherScene::drawPlots() {
             plot_height = 10.0f;
         }
         float avail_width = ImGui::GetContentRegionAvailWidth();
+        ImGui::Separator();
         ImGui::Checkbox("Plot Tension", &plotT); ImGui::SameLine();
         ImGui::Checkbox("Plot IPL", &plotIPL); ImGui::SameLine();
         ImGui::Checkbox("Plot OOPL", &plotOOPL); ImGui::SameLine();
         ImGui::Checkbox("Plot R. Dist.", &plotDist);
         if (plotT) {
+            ImGui::Separator();
+            ImGui::Text("Tension in Tether");
             ImGui::PlotLines("Tension", tetherBuffer.T[0], static_cast<int>(2000), 0, "", tetherData.MinTension, tetherData.MaxTension, ImVec2(ImGui::GetContentRegionAvailWidth(), plot_height));
         }
         if (plotIPL) {
+            ImGui::Separator();
+            ImGui::Text("In Plane Libration");
             ImGui::PlotLines("In Plane Libration", tetherBuffer.IPL[0], static_cast<int>(2000), 0, "", tetherData.MinIPL, tetherData.MaxIPL, ImVec2(ImGui::GetContentRegionAvailWidth(), plot_height));
         }
         if (plotOOPL) {
+            ImGui::Separator();
+            ImGui::Text("Out of Plane Libration");
             ImGui::PlotLines("Out of Plane Libration", tetherBuffer.OOPL[0], static_cast<int>(2000), 0, "", tetherData.MinOOPL, tetherData.MaxOOPL, ImVec2(ImGui::GetContentRegionAvailWidth(), plot_height));
         }
         if (plotDist) {
+            ImGui::Separator();
+            ImGui::Text("Radial Distance");
             ImGui::PlotLines("Radial Distance", tetherBuffer.Dist[0], static_cast<int>(2000), 0, "", tetherData.MinDist, tetherData.MaxDist, ImVec2(ImGui::GetContentRegionAvailWidth(), plot_height));
         }
     }
@@ -403,6 +417,24 @@ void TetherScene::RecordCommands() {
         ImGui::SameLine();
         ImGui::Text("Visualization paused...");
     }
+    ImGui::Separator();
+    ImGui::Checkbox("Lock mouse to screen", &BaseScene::SceneConfiguration.EnableMouseLocking);
+    ImGui::SameLine(); ImGui::InputInt("Data steps per frame", &stepsPerFrame); ImGui::Separator();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(450.0f);
+        ImGui::TextUnformatted("This lets you adjust the speed of the simulation, by changing the number of steps (by line) through the input data file per frame rendered. Large values will appear to stutter, potentially.");
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+    if (stepsPerFrame < 1) {
+        stepsPerFrame = 1;
+    }
+    else if (stepsPerFrame > 4) {
+        stepsPerFrame = 4;
+    }
+
     drawPlots();
     ImGui::End();
 
@@ -451,14 +483,17 @@ void TetherScene::renderTether(VkCommandBuffer scb, const VkCommandBufferBeginIn
 
 void TetherScene::endFrame(const size_t & idx) {
     if (!paused) {
-        offsetData.Step();
+        for (size_t i = 0; i < static_cast<size_t>(stepsPerFrame); ++i) {
+            offsetData.Step();
+            updatePlots();
+            ++currStep;
+        }
         uboData.setData(offsetData);
         fragmentUboData.lightPos = glm::vec4(0.0f, 50.0f, 0.0f, 1.0f);
         const glm::vec3 cpos = GetCameraPosition();
         fragmentUboData.viewPos = glm::vec4(cpos.x, cpos.y, cpos.z, 1.0f);
         updateUBO();
         updatePushConstantData();
-        currStep += static_cast<size_t>(stepsPerFrame);
     }
 }
 
@@ -724,10 +759,12 @@ int main(int argc, char* argv[]) {
         std::cerr << "Invalid path.\n";
         throw std::runtime_error("Invalid path.");
     }
-    vpsk::BaseScene::SceneConfiguration.CameraType = vpsk::cameraType::ARCBALL;
+    vpsk::BaseScene::SceneConfiguration.CameraType = vpsk::cameraType::FPS;
     vpsk::BaseScene::SceneConfiguration.ApplicationName = "TetherSim Static Tether Visualization";
     vpsk::BaseScene::SceneConfiguration.EnableMSAA = true;
     vpsk::BaseScene::SceneConfiguration.MSAA_SampleCount = VK_SAMPLE_COUNT_4_BIT;
+    vpsk::BaseScene::SceneConfiguration.EnableGUI = true;
+    vpsk::BaseScene::SceneConfiguration.EnableMouseLocking = false;
     TetherScene scene(in_path);
     scene.RenderLoop();
     return 0;
