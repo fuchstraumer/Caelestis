@@ -1,5 +1,4 @@
 #include "math/MatrixUtils.hpp"
-#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/norm.hpp"
 #include "glm/vec3.hpp"
 #include "glm/gtc/type_ptr.hpp"

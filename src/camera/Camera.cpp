@@ -29,6 +29,10 @@ namespace vpsk {
         return viewDirection;
     }
 
+    const glm::vec3 & cameraBase::GetRightDirection() const noexcept {
+        return right;
+    }
+
     void cameraBase::SetViewDirection(const glm::vec3 & new_view_dir) {
         viewDirection = glm::normalize(new_view_dir);
         orientation = glm::rotation(viewDirection, glm::vec3(0.0f, 0.0f, -1.0f));

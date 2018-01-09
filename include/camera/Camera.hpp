@@ -36,6 +36,7 @@ namespace vpsk {
         const glm::vec3& GetEyeLocation() const noexcept;
         void SetEyeLocation(const glm::vec3& new_eye_position);
         const glm::vec3& GetViewDirection() const noexcept;
+        const glm::vec3& GetRightDirection() const noexcept;
         void SetViewDirection(const glm::vec3& new_view_dir);
         void LookAtTarget(const glm::vec3& target_position);
         void LookTowardsTarget(const glm::vec3& viewer_position, const glm::vec3& target_position, const glm::vec3& new_up_vec = glm::vec3(0.0f));

@@ -1,6 +1,6 @@
 #include "vpr_stdafx.h"
 #include "math/MathUtils.hpp"
-
+#include "glm/glm.hpp"
 namespace vpsk {
 
     using glm_index_t = glm::length_t;

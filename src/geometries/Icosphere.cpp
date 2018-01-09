@@ -6,7 +6,8 @@
 #include "scene/BaseScene.hpp"
 #include <unordered_map>
 #include "util/easylogging++.h"
-
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 using namespace vpr;
 
 namespace vpsk {
