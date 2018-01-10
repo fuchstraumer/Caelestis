@@ -18,13 +18,14 @@
 #include "resource/PipelineCache.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "resource/Semaphore.hpp"
-#include "geometries/Skybox.hpp"
 #include "util/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 #include "../tinyobjloader/tiny_obj_loader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 #include "glm/gtx/hash.hpp"
+#include "geometries/Skybox.hpp"
+#include "geometries/Icosphere.hpp"
 #include <unordered_map>
 #include <string>
 #include <typeinfo>
@@ -74,6 +75,8 @@ private:
     void construct();
     void destroy();
 
+    void createSkybox();
+    void createMoon();
  
 
     struct vertex_shader_ubo_t {
@@ -122,7 +125,7 @@ private:
     std::unique_ptr<vpr::PipelineCache> cache;
     std::unique_ptr<vpr::ShaderModule> vert, frag;
     std::unique_ptr<vpr::DescriptorSet> descriptor;
-    std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
+    std::unique_ptr<vpr::DescriptorSetLayout> setLayout, moonLayout;
     VkGraphicsPipelineCreateInfo pipelineCreateInfo;
     vpr::GraphicsPipelineInfo pipelineStateInfo;
     VkViewport viewport;
@@ -135,6 +138,9 @@ private:
     std::vector<uint16_t> indices;
     std::vector<glm::vec3> meshData;
     std::vector<float> instanceData;
+
+    std::unique_ptr<vpsk::Skybox> skybox;
+    std::unique_ptr<vpsk::Icosphere> moon;
     
     struct tether_data_t {
         std::vector<float> RadialDistance;
@@ -251,7 +257,7 @@ const static std::array<const std::initializer_list<uint16_t>, 6> indices_ilist 
     std::initializer_list<uint16_t>{ 7, 6, 5, 5, 4, 7 },
 };
 
-TetherScene::TetherScene(const fs::path& path) : BaseScene(2, 1440, 900), offsetData(11), uboData(11) {
+TetherScene::TetherScene(const fs::path& path) : BaseScene(4, 1440, 900), offsetData(11), uboData(11) {
     offsetData.SetData(path);
     loadTetherData();
     construct();
@@ -262,6 +268,8 @@ void TetherScene::construct() {
     createVBO();
     createIBO();
     createUBO();
+    createSkybox();
+    createMoon();
     uploadBuffers();
     createShaders();
     createDescriptorSetLayout();
@@ -279,6 +287,8 @@ void TetherScene::construct() {
 }
 
 void TetherScene::destroy() {
+    skybox.reset();
+    moon.reset();
     gui.reset();
     ubo.reset();
     fragmentUBO.reset();
@@ -293,6 +303,19 @@ void TetherScene::destroy() {
     cache.reset();
     vert.reset();
     frag.reset();
+}
+
+void TetherScene::createSkybox() {
+    skybox = std::make_unique<vpsk::Skybox>(device.get());
+    skybox->CreateTexture("../demoscenes/scene_resources/milkway_bc3.dds", VK_FORMAT_BC3_UNORM_BLOCK);
+    skybox->Create(GetProjectionMatrix(), renderPass->vkHandle(), transferPool.get(), descriptorPool.get());
+}
+
+void TetherScene::createMoon() {
+    moon = std::make_unique<vpsk::Icosphere>(5, glm::vec3(0.0f), glm::vec3(1.0f));
+    moon->CreateShaders(std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.vert.spv"), std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.frag.spv"));
+    moon->SetTexture("../demoscenes/scene_resources/moon-texture-BC3.dds", VK_FORMAT_BC3_UNORM_BLOCK);
+    moon->Init(GetProjectionMatrix(), transferPool.get(), descriptorPool.get(), moonLayout.get());
 }
 
 uint16_t TetherScene::addVertex(glm::vec3 p, glm::vec3 n) {
@@ -721,6 +744,8 @@ void TetherScene::createDescriptorSetLayout() {
     setLayout = std::make_unique<vpr::DescriptorSetLayout>(device.get());
     setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
     setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+    moonLayout = std::make_unique<vpr::DescriptorSetLayout>(device.get());
+    moonLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
 }
 
 void TetherScene::createDescriptorSet() {
@@ -731,8 +756,8 @@ void TetherScene::createDescriptorSet() {
 }
 
 void TetherScene::createDescriptorPool() {
-    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 2);
-    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+    descriptorPool = std::make_unique<vpr::DescriptorPool>(device.get(), 5);
+    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3);
     descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2);
     descriptorPool->Create();
 }

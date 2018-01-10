@@ -18,6 +18,7 @@
 #include "resource/DescriptorSetLayout.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/ShaderModule.hpp"
+#include "alloc/Allocator.hpp"
 #include "util/easylogging++.h"
 #ifdef USE_EXPERIMENTAL_FILESYSTEM
 #include <experimental/filesystem>

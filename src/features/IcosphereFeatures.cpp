@@ -24,6 +24,7 @@ namespace vpsk {
 
     void IcosphereFeatures::Render(const VkCommandBuffer& cmd) const {
         std::lock_guard<std::mutex> lock(std::mutex());
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vkHandle());
         for(auto obj : objects) {
             obj->Render(cmd, layout->vkHandle());
         }
@@ -79,4 +80,5 @@ namespace vpsk {
         pipelineInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
 
     }
+
 }
