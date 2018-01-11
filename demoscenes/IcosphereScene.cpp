@@ -162,14 +162,14 @@ INITIALIZE_EASYLOGGINGPP
         earthSphere = std::make_unique<Icosphere>(4, glm::vec3(0.0f), glm::vec3(1.0f));
         earthSphere->CreateShaders(std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.vert.spv"), std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.frag.spv"));
         earthSphere->SetTexture(std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/earth_surface.dds").c_str(), VK_FORMAT_BC3_UNORM_BLOCK);
-        earthSphere->Init(device.get(), GetProjectionMatrix(), renderPass->vkHandle(), transferPool.get(), descriptorPool.get());
+        earthSphere->Init(GetProjectionMatrix(), renderPass->vkHandle(), transferPool.get(), descriptorPool.get());
     }
 
     void IcosphereScene::createCloudSphere() {
         cloudSphere = std::make_unique<Icosphere>(4, glm::vec3(0.0f), glm::vec3(1.02f));
         cloudSphere->CreateShaders(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.vert.spv", BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.frag.spv");
         cloudSphere->SetTexture(std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/earth_clouds.dds").c_str(), VK_FORMAT_BC3_UNORM_BLOCK);
-        cloudSphere->Init(device.get(), GetProjectionMatrix(), renderPass->vkHandle(), transferPool.get(), descriptorPool.get());
+        cloudSphere->Init(GetProjectionMatrix(), renderPass->vkHandle(), transferPool.get(), descriptorPool.get());
     }
 
     void IcosphereScene::createDescriptorPool() {

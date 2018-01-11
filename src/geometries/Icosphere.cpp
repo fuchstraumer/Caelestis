@@ -88,7 +88,6 @@ namespace vpsk {
         createTexture();
         uploadData(transfer_pool);
         createDescriptorSet(descriptor_pool, set_layout);
-        createPipelineLayout();
 
     }
 

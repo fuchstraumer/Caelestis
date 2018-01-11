@@ -27,7 +27,7 @@ out gl_PerVertex {
 };
 
 void main() {
-    vec4 final_pos = vec4(position,1.0f) + (offsets.p[gl_InstanceIndex] * 10.0f);
+    vec4 final_pos = vec4(position,1.0f) + (offsets.p[gl_InstanceIndex] * 2.0f);
     gl_Position = ubo.projection * ubo.view * final_pos;
     vColor = color;
     vPos = final_pos.xyz;

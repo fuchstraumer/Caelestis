@@ -18,6 +18,7 @@
 #include "resource/PipelineCache.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "resource/Semaphore.hpp"
+#include "scene/Window.hpp"
 #include "util/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 #include "../tinyobjloader/tiny_obj_loader.h"
@@ -268,8 +269,6 @@ void TetherScene::construct() {
     createVBO();
     createIBO();
     createUBO();
-    createSkybox();
-    createMoon();
     uploadBuffers();
     createShaders();
     createDescriptorSetLayout();
@@ -288,7 +287,6 @@ void TetherScene::construct() {
 
 void TetherScene::destroy() {
     skybox.reset();
-    moon.reset();
     gui.reset();
     ubo.reset();
     fragmentUBO.reset();
@@ -307,12 +305,17 @@ void TetherScene::destroy() {
 
 void TetherScene::createSkybox() {
     skybox = std::make_unique<vpsk::Skybox>(device.get());
-    skybox->CreateTexture("../demoscenes/scene_resources/milkway_bc3.dds", VK_FORMAT_BC3_UNORM_BLOCK);
+    namespace fs = std::experimental::filesystem;
+    fs::path texture("../demoscenes/scene_resources/milkyway_bc3.dds");
+    if (!fs::exists(texture)) {
+        throw std::runtime_error("Oops.");
+    }
+    skybox->CreateTexture("../rsrc/milkway_bc3.dds", VK_FORMAT_BC3_UNORM_BLOCK);
     skybox->Create(GetProjectionMatrix(), renderPass->vkHandle(), transferPool.get(), descriptorPool.get());
 }
 
 void TetherScene::createMoon() {
-    moon = std::make_unique<vpsk::Icosphere>(5, glm::vec3(0.0f), glm::vec3(1.0f));
+    moon = std::make_unique<vpsk::Icosphere>(device.get(), 5, glm::vec3(0.0f), glm::vec3(1.0f));
     moon->CreateShaders(std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.vert.spv"), std::string(BaseScene::SceneConfiguration.ResourcePathPrefixStr + "demoscenes/scene_resources/shaders/earthsphere.frag.spv"));
     moon->SetTexture("../demoscenes/scene_resources/moon-texture-BC3.dds", VK_FORMAT_BC3_UNORM_BLOCK);
     moon->Init(GetProjectionMatrix(), transferPool.get(), descriptorPool.get(), moonLayout.get());
@@ -421,11 +424,20 @@ void TetherScene::RecordCommands() {
 
     updatePushConstantData();
 
-    viewport.width = static_cast<float>(swapchain->Extent.width);
-    viewport.height = static_cast<float>(swapchain->Extent.height);
+    ImGuiIO& io = ImGui::GetIO();
 
-    scissor.extent.width = swapchain->Extent.width;
-    scissor.extent.height = swapchain->Extent.height;
+    if ((io.DisplaySize.x != swapchain->Extent.width) || (io.DisplaySize.y != swapchain->Extent.height)) {
+        viewport.width = io.DisplaySize.x;
+        viewport.height = io.DisplaySize.y;
+        scissor.extent.width = static_cast<uint32_t>(io.DisplaySize.x);
+        scissor.extent.height = static_cast<uint32_t>(io.DisplaySize.y);
+    }
+    else {
+        viewport.width = static_cast<float>(swapchain->Extent.width);
+        viewport.height = static_cast<float>(swapchain->Extent.height);
+        scissor.extent.width = swapchain->Extent.width;
+        scissor.extent.height = swapchain->Extent.height;
+    }
 
     ImGui::Begin("Static Visualization");
     ImGui::ProgressBar(static_cast<float>(currStep) / static_cast<float>(offsetData.stepCount), ImVec2(ImGui::GetContentRegionAvailWidth(), 30), "Simulation Progess");
@@ -469,10 +481,10 @@ void TetherScene::RecordCommands() {
         VkResult err = vkBeginCommandBuffer(graphicsPool->GetCmdBuffer(i), &primary_cmd_buffer_begin_info);
         VkAssert(err);
             vkCmdBeginRenderPass(graphicsPool->GetCmdBuffer(i), &renderPass->BeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-                auto& scb = secondaryPool->GetCmdBuffer(i * 2);
+                auto& scb = secondaryPool->GetCmdBuffer(i * 3);
                 renderTether(scb, secondary_cmd_buffer_begin_info);
-                renderGUI(secondaryPool->GetCmdBuffer((i * 2) + 1), secondary_cmd_buffer_begin_info, i);
-            vkCmdExecuteCommands(graphicsPool->GetCmdBuffer(i), 2, &secondaryPool->GetCmdBuffer(i * 2));
+                renderGUI(secondaryPool->GetCmdBuffer((i * 3) + 1), secondary_cmd_buffer_begin_info, i);
+            vkCmdExecuteCommands(graphicsPool->GetCmdBuffer(i), 3, &secondaryPool->GetCmdBuffer(i * 3));
             vkCmdEndRenderPass(graphicsPool->GetCmdBuffer(i));
         err = vkEndCommandBuffer(graphicsPool->GetCmdBuffer(i));
         VkAssert(err);

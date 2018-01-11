@@ -62,7 +62,6 @@ namespace vpsk {
 
         void createMesh(const size_t& subdivision_level);
         void uploadData(vpr::TransferPool* transfer_pool);
-        void createPipelineLayout();
         void createTexture();
         void createDescriptorSet(vpr::DescriptorPool* descriptor_pool, vpr::DescriptorSetLayout* set_layout);
         void subdivide(const size_t& subdivision_level);
