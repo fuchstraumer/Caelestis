@@ -8,6 +8,8 @@
 #include "camera/Arcball.hpp"
 #include "glm/mat4x4.hpp"
 #include <chrono>
+#include <atomic>
+
 namespace vpsk {
 
     class Window;
@@ -85,6 +87,7 @@ namespace vpsk {
         static bool CameraLock;
         static vulpesSceneConfig SceneConfiguration;
         static vpsk_state_t VPSKState;
+        static std::atomic<bool> ShouldResize;
     protected:
 
         void setupGUI();

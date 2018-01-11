@@ -34,6 +34,7 @@ namespace vpsk {
     PerspectiveCamera BaseScene::fpsCamera = PerspectiveCamera(1440, 900, 70.0f);
     ArcballCamera BaseScene::arcballCamera = ArcballCamera(1440, 900, 70.9f, UtilitySphere(glm::vec3(0.0f), 7.0f));
     vpsk_state_t BaseScene::VPSKState = vpsk_state_t();
+    std::atomic<bool> BaseScene::ShouldResize(false);
 
     std::vector<uint16_t> BaseScene::pipelineCacheHandles = std::vector<uint16_t>();
 
@@ -551,10 +552,14 @@ namespace vpsk {
 
         while(!glfwWindowShouldClose(window->glfwWindow())) {
 
+            glfwPollEvents();
+
+            if (ShouldResize.exchange(false)) {
+                RecreateSwapchain();
+            }
+
             limitFrame();
 
-            glfwPollEvents();
-            
             UpdateMouseActions();
             if(SceneConfiguration.EnableGUI) {
                 gui->NewFrame(window->glfwWindow());

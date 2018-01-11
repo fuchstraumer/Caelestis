@@ -67,8 +67,7 @@ namespace vpsk {
             io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
         }
 
-        void* uptr = glfwGetWindowUserPointer(window);
-        reinterpret_cast<BaseScene*>(uptr)->RecreateSwapchain();
+        BaseScene::ShouldResize = true;
 
     }
 
