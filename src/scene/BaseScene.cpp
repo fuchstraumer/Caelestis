@@ -569,6 +569,9 @@ namespace vpsk {
             
             RecordCommands();
             auto idx = submitFrame();
+            if (idx == std::numeric_limits<uint32_t>::max()) {
+                continue;
+            }
             submitExtra(idx);
             waitForFrameComplete(idx);
             endFrame(idx);
@@ -645,6 +648,14 @@ namespace vpsk {
 
         uint32_t image_idx;
         VkResult result = vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), std::numeric_limits<uint64_t>::max(), semaphores[0], acquireFence, &image_idx);
+        switch (result) {
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            RecreateSwapchain();
+            return std::numeric_limits<uint32_t>::max();
+        default:
+            VkAssert(result);
+            break;
+        }
         VkAssert(result);
         result = vkWaitForFences(device->vkHandle(), 1, &acquireFence, VK_TRUE, vk_default_fence_timeout);
         VkAssert(result);
