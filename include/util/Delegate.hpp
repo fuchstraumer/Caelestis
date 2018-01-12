@@ -1,6 +1,8 @@
 #pragma once
 #ifndef VPSK_DELEGATE_HPP
 #define VPSK_DELEGATE_HPP
+#include <functional>
+#include <list>
 
 namespace vpsk {
 
@@ -50,19 +52,27 @@ namespace vpsk {
     template<typename T>
     class delegate_t;
 
+    template<typename T>
+    class multicast_delegate_t;
+
     template<typename Result, typename...Args>
-    class delegate_t<Result(Args...)> : private base_delegate_t<Result(Args...)> {
+    class delegate_t<Result(Args...)> final : private base_delegate_t<Result(Args...)> {
     private:
+        friend class multicast_delegate_t<Result(Args...)>;
         typename base_delegate_t<Result(Args...)>::invocation_element_t invocation;
     public:
         
         delegate_t() = default;
+   
+        bool IsEmpty() const noexcept {
+            return invocation.stub == nullptr;
+        }
 
-        bool operator==(const void* ptr) const {
+        bool operator==(const void* ptr) const noexcept {
             return (ptr == nullptr) && (IsEmpty());
         }
 
-        bool operator!=(const void* ptr) const {
+        bool operator!=(const void* ptr) const noexcept {
             return (ptr != nullptr) || (!IsEmpty());
         }
 
@@ -83,9 +93,14 @@ namespace vpsk {
 
         template<typename LambdaFunc>
         delegate_t(const LambdaFunc& func) {
-            assign(static_cast<void*>(&func), )
+            assign((void*)(&func), lambda_stub<LambdaFunc>);
         }
 
+        template<typename LambdaFunc>
+        delegate_t& operator=(const LambdaFunc& func) {
+            assign((void*)(&func), lambda_stub<LambdaFunc>);
+            return *this;
+        }
 
         // i.e like if (!ptr_object), returns true when object doesn't "exist" and false
         // when it exists. thus if (!my_delegate_t) == if (my_delegate_t.invocation.stub == nullptr)
@@ -93,25 +108,88 @@ namespace vpsk {
             return invocation.stub == nullptr;
         }
 
-        bool IsEmpty() const noexcept {
-            return invocation.stub == nullptr;
+        bool operator==(const delegate_t& other) const noexcept {
+            return invocation == other.invocation;
+        }
+
+        bool operator!=(const delegate_t& other) const noexcept {
+            return invocation != other.invocation;
+        }
+
+        bool operator==(const multicast_delegate_t<Result(Args...)>& other) const noexcept {
+            return other == (*this);
+        }
+
+        bool operator!=(const multicast_delegate_t<Result(Args...)>& other) const noexcept {
+            return other != (*this);
+        }
+
+        Result operator()(Args&&...args) const {
+            return (*invocation.stub)(invocation.object,std::forward<Args>(args)...);
+        }
+
+        template<class T, Result(T::*Method)(Args...)>
+        static delegate_t create(T* object) {
+            return delegate_t(object, method_stub<T,Method>);
+        }
+
+        template<class T, Result(T::*Method)(Args...) const>
+        static delegate_t create(const T* object) {
+            return delegate_t(cons_cast<T*>(object), const_method_stub<T,Method>);
+        }
+
+        template<Result(*Function)(Args...)>
+        static delegate_t create() {
+            return delegate_t(nullptr, function_stub<Function>);
+        }
+
+        template<typename LambdaFunc>
+        static delegate_t create(const LambdaFunc& lambda) {
+            return delegate_t((void*)(&lambda), lambda_stub<LambdaFunc>);
         }
 
     private:
+
+        delegate_t(void* obj, typename base_delegate_t<Result(Args...)>::func_stub_t stub) {
+            this->invocation.object = obj;
+            this->invocation.stub = stub;
+        }
 
         void assign(void* object_ptr, typename base_delegate_t<Result(Args...)>::func_stub_t _stub) {
             this->invocation.object = object_ptr;
             this->invocation.stub = _stub;
         }
 
+        template<class T, Result(T::*Method)(Args...)>
+        static Result method_stub(void* this_ptr, Args&&...args) {
+            T* object_ptr = static_cast<T*>(this_ptr);
+            return (object_ptr->*Method)(std::forward<Args>(args)...);
+        }
+
+        template<class T, Result(T::*Method)(Args...) const>
+        static Result const_method_stub(void* this_ptr, Args&&...args) {
+            T* const object_ptr = static_cast<T*>(this_ptr);
+            return (object_ptr->*Method)(std::forward<Args>(args)...);
+        }
+
+        template<Result(*Function)(Args...)>
+        static Result function_stub(void* this_ptr, Args&&...args) {
+            return (Function)(std::forward<Args>(args)...);
+        }
+
         template<typename LambdaFunc>
-        static Result lambdaStub(void* this_ptr, Args&&...args) {
+        static Result lambda_stub(void* this_ptr, Args&&...args) {
             LambdaFunc* p = static_cast<LambdaFunc*>(this_ptr);
             return (p->operator())(std::forward<Args>(args)...);
         }
+
     };
 
+    template<typename Result, typename...Args>
+    class multicast_delegate_t<Result(Args...)> final : private base_delegate_t<Result(Args...)> {
+    public:
 
+    };
 }
 
 #endif //!VPSK_DELEGATE_HPP

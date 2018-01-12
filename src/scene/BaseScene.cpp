@@ -59,7 +59,7 @@ namespace vpsk {
         Multisampling::SampleCount = BaseScene::SceneConfiguration.MSAA_SampleCount;
         LOG_IF(verbose_logging, INFO) << "MSAA level set to " << std::to_string(Multisampling::SampleCount);
 
-        device = std::make_unique<Device>(instance.get(), instance->GetPhysicalDevice());
+        device = std::make_unique<Device>(instance.get(), instance->GetPhysicalDevice(), true);
 
         swapchain = std::make_unique<Swapchain>(instance.get(), device.get());
 
@@ -287,7 +287,7 @@ namespace vpsk {
         VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
         pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
-        graphicsPool = std::make_unique<CommandPool>(device.get(), pool_info, true);
+        graphicsPool = std::make_unique<CommandPool>(device.get(), pool_info);
         graphicsPool->AllocateCmdBuffers(swapchain->ImageCount(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         
     }
@@ -305,7 +305,7 @@ namespace vpsk {
         VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
         pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
-        secondaryPool = std::make_unique<CommandPool>(device.get(), pool_info, false);
+        secondaryPool = std::make_unique<CommandPool>(device.get(), pool_info);
         secondaryPool->AllocateCmdBuffers(swapchain->ImageCount() * static_cast<uint32_t>(numSecondaryBuffers), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
         
     }
@@ -425,7 +425,7 @@ namespace vpsk {
 
         LOG(INFO) << "Creating renderpass and MSAA attachments now...";
 
-        msaa = std::make_unique<Multisampling>(device.get(), swapchain.get(), sample_count, swapchain->Extent().width, swapchain->Extent().height);
+        msaa = std::make_unique<Multisampling>(device.get(), swapchain.get(), sample_count);
 
         attachmentDescriptions.resize(4);
         createRenderTargetAttachment();

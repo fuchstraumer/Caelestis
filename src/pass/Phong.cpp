@@ -3,6 +3,7 @@
 #include "scene/BaseScene.hpp"
 #include "core/LogicalDevice.hpp"
 #include "render/Renderpass.hpp"
+#include "render/DepthStencil.hpp"
 #include "command/CommandPool.hpp"
 #include "resource/PipelineCache.hpp"
 #include "util/easylogging++.h"
@@ -59,6 +60,8 @@ namespace vpsk {
             vkCmdExecuteCommands(primaryPool->GetCmdBuffer(idx), static_cast<uint32_t>(pipelines.size()), secondaryPool->GetCommandBuffers(idx * primaryPool->size()));
             vkCmdEndRenderPass(primaryPool->GetCmdBuffer(idx));
         err = vkEndCommandBuffer(primaryPool->GetCmdBuffer(idx)); VkAssert(result);
+
+        return primaryPool->GetCmdBuffer(idx);
     }
 
     void PhongPass::RegisterFeature(std::string name, const vpr::GraphicsPipelineInfo& info, VkPipelineLayout layout) {
@@ -93,7 +96,7 @@ namespace vpsk {
         for (auto& pline : pipelines) {
             vkBeginCommandBuffer(secondaryPool->GetCmdBuffer((idx * primaryPool->size()) + pline.first), &s_info);
             vkCmdBindPipeline(secondaryPool->GetCmdBuffer((idx * primaryPool->size()) + pline.first), VK_PIPELINE_BIND_POINT_GRAPHICS, pline.second->vkHandle());
-            render_futures.emplace_back(std::launch::async, renderFunctions.at(pline.first), secondaryPool->GetCmdBuffer((idx * primaryPool->size()) + pline.first));
+            render_futures.push_back(std::async(std::launch::async, renderFunctions.at(pline.first), (secondaryPool->GetCmdBuffer((idx * primaryPool->size()) + pline.first))));
         }
 
         for (auto& fut : render_futures) {
@@ -212,7 +215,7 @@ namespace vpsk {
     }
     
     void PhongPass::createDepthStencil() {
-        depthStencil = std::make_unique<vpr::DepthStencil>(device, VkExtent3D{ swapchain->Extent.width, swapchain->Extent.height, 1});
+        depthStencil = std::make_unique<vpr::DepthStencil>(device, VkExtent3D{ swapchain->Extent().width, swapchain->Extent().height, 1});
     }
 
     void PhongPass::createPrimaryPool() {
@@ -226,7 +229,7 @@ namespace vpsk {
         VkCommandPoolCreateInfo pool_info = vpr::vk_command_pool_info_base;
         pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
         secondaryPool = std::make_unique<vpr::CommandPool>(device, pool_info);
-        secondaryPool->AllocateCmdBuffers(swapchain->ImageCount() * pipelines.size(), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+        secondaryPool->AllocateCmdBuffers(swapchain->ImageCount() * static_cast<uint32_t>(pipelines.size()), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
     }
 
 }
