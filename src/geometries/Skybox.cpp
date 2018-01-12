@@ -140,7 +140,8 @@ namespace vpsk {
     void Skybox::setupPipelineLayout() {
 
         pipelineLayout = std::make_unique<PipelineLayout>(device);
-        pipelineLayout->Create({ setLayout->vkHandle() }, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ubo_data_t) }});
+        const VkPushConstantRange range{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ubo_data_t) };
+        pipelineLayout->Create(&range, 1, &setLayout->vkHandle(), 1);
 
     }
 

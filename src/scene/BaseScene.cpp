@@ -61,8 +61,7 @@ namespace vpsk {
 
         device = std::make_unique<Device>(instance.get(), instance->GetPhysicalDevice());
 
-        swapchain = std::make_unique<Swapchain>();
-        swapchain->Init(instance.get(), instance->GetPhysicalDevice(), device.get());
+        swapchain = std::make_unique<Swapchain>(instance.get(), device.get());
 
 
         LOG_IF(verbose_logging, INFO) << "Swapchain created.";
@@ -80,7 +79,7 @@ namespace vpsk {
         result = vkCreateSemaphore(device->vkHandle(), &semaphore_info, nullptr, &renderCompleteSemaphores[0]);
         VkAssert(result);
 
-        presentFences.resize(swapchain->ImageCount);
+        presentFences.resize(swapchain->ImageCount());
     
         VkFenceCreateInfo fence_info = vk_fence_create_info_base;
         for (auto& fence : presentFences) {
@@ -98,8 +97,8 @@ namespace vpsk {
         SetupRenderpass(SceneConfiguration.MSAA_SampleCount);
         SetupFramebuffers();
 
-        input_handler::LastX = swapchain->Extent.width / 2.0f;
-        input_handler::LastY = swapchain->Extent.height / 2.0f;
+        input_handler::LastX = swapchain->Extent().width / 2.0f;
+        input_handler::LastY = swapchain->Extent().height / 2.0f;
 
         if (SceneConfiguration.CameraType == cameraType::FPS) {
             fpsCamera.SetNearClipPlaneDistance(0.1f);
@@ -289,7 +288,7 @@ namespace vpsk {
         pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
         graphicsPool = std::make_unique<CommandPool>(device.get(), pool_info, true);
-        graphicsPool->AllocateCmdBuffers(swapchain->ImageCount, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        graphicsPool->AllocateCmdBuffers(swapchain->ImageCount(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         
     }
 
@@ -302,12 +301,12 @@ namespace vpsk {
 
     void BaseScene::createSecondaryCmdPool() {
 
-        LOG(INFO) << "Creating command pool for secondary command buffers. " << std::to_string(swapchain->ImageCount * static_cast<uint32_t>(numSecondaryBuffers)) << " buffers requested.";
+        LOG(INFO) << "Creating command pool for secondary command buffers. " << std::to_string(swapchain->ImageCount() * static_cast<uint32_t>(numSecondaryBuffers)) << " buffers requested.";
         VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
         pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
         secondaryPool = std::make_unique<CommandPool>(device.get(), pool_info, false);
-        secondaryPool->AllocateCmdBuffers(swapchain->ImageCount * static_cast<uint32_t>(numSecondaryBuffers), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+        secondaryPool->AllocateCmdBuffers(swapchain->ImageCount() * static_cast<uint32_t>(numSecondaryBuffers), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
         
     }
 
@@ -325,7 +324,7 @@ namespace vpsk {
     void BaseScene::createRenderTargetAttachment() {
 
         attachmentDescriptions[0] = vk_attachment_description_base;
-        attachmentDescriptions[0].format = swapchain->ColorFormat;
+        attachmentDescriptions[0].format = swapchain->ColorFormat();
         attachmentDescriptions[0].samples = BaseScene::SceneConfiguration.MSAA_SampleCount;
         attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -339,7 +338,7 @@ namespace vpsk {
     void BaseScene::createResolveAttachment() {
 
         attachmentDescriptions[1] = vk_attachment_description_base;
-        attachmentDescriptions[1].format = swapchain->ColorFormat;
+        attachmentDescriptions[1].format = swapchain->ColorFormat();
         attachmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -426,7 +425,7 @@ namespace vpsk {
 
         LOG(INFO) << "Creating renderpass and MSAA attachments now...";
 
-        msaa = std::make_unique<Multisampling>(device.get(), swapchain.get(), sample_count, swapchain->Extent.width, swapchain->Extent.height);
+        msaa = std::make_unique<Multisampling>(device.get(), swapchain.get(), sample_count, swapchain->Extent().width, swapchain->Extent().height);
 
         attachmentDescriptions.resize(4);
         createRenderTargetAttachment();
@@ -456,14 +455,14 @@ namespace vpsk {
             { 1.0f, 0 }
         };
 
-        renderPass->SetupBeginInfo(clear_values, swapchain->Extent);
+        renderPass->SetupBeginInfo(clear_values.data(), clear_values.size(), swapchain->Extent());
 
     }
 
     void BaseScene::SetupDepthStencil() {
 
         LOG(INFO) << "Creating depth stencil...";
-        depthStencil = std::make_unique<DepthStencil>(device.get(), VkExtent3D{ swapchain->Extent.width, swapchain->Extent.height, 1 });
+        depthStencil = std::make_unique<DepthStencil>(device.get(), VkExtent3D{ swapchain->Extent().width, swapchain->Extent().height, 1 });
 
     }
 
@@ -475,12 +474,12 @@ namespace vpsk {
         framebuffer_create_info.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebuffer_create_info.pAttachments = attachments.data();
         framebuffer_create_info.renderPass = renderPass->vkHandle();
-        framebuffer_create_info.width = swapchain->Extent.width;
-        framebuffer_create_info.height = swapchain->Extent.height;
+        framebuffer_create_info.width = swapchain->Extent().width;
+        framebuffer_create_info.height = swapchain->Extent().height;
         framebuffer_create_info.layers = 1;
 
-        for (uint32_t i = 0; i < swapchain->ImageCount; ++i) {
-            attachments[1] = swapchain->ImageViews[i];
+        for (uint32_t i = 0; i < swapchain->ImageCount(); ++i) {
+            attachments[1] = swapchain->ImageView(i);
             VkFramebuffer new_fbuff;
             VkResult result = vkCreateFramebuffer(device->vkHandle(), &framebuffer_create_info, nullptr, &new_fbuff);
             VkAssert(result);
@@ -518,12 +517,12 @@ namespace vpsk {
         */
 
         ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize.x = static_cast<float>(swapchain->Extent.width);
-        io.DisplaySize.y = static_cast<float>(swapchain->Extent.height);
-        BaseScene::fpsCamera = PerspectiveCamera(swapchain->Extent.width, swapchain->Extent.height, 70.0f);
-        BaseScene::arcballCamera = ArcballCamera(swapchain->Extent.width, swapchain->Extent.height, 70.0f, UtilitySphere(glm::vec3(0.0f), 7.0f));
-        input_handler::LastX = swapchain->Extent.width / 2.0f;
-        input_handler::LastY = swapchain->Extent.height / 2.0f;
+        io.DisplaySize.x = static_cast<float>(swapchain->Extent().width);
+        io.DisplaySize.y = static_cast<float>(swapchain->Extent().height);
+        BaseScene::fpsCamera = PerspectiveCamera(swapchain->Extent().width, swapchain->Extent().height, 70.0f);
+        BaseScene::arcballCamera = ArcballCamera(swapchain->Extent().width, swapchain->Extent().height, 70.0f, UtilitySphere(glm::vec3(0.0f), 7.0f));
+        input_handler::LastX = swapchain->Extent().width / 2.0f;
+        input_handler::LastY = swapchain->Extent().height / 2.0f;
         if (SceneConfiguration.CameraType == cameraType::FPS) {
             fpsCamera.SetNearClipPlaneDistance(0.1f);
             fpsCamera.SetFarClipPlaneDistance(2000.0f);
@@ -657,7 +656,7 @@ namespace vpsk {
             break;
         }
         VkAssert(result);
-        result = vkWaitForFences(device->vkHandle(), 1, &acquireFence, VK_TRUE, vk_default_fence_timeout);
+        result = vkWaitForFences(device->vkHandle(), 1, &acquireFence, VK_TRUE, 2);
         VkAssert(result);
 
         VkSubmitInfo submit_info = vk_submit_info_base;
@@ -697,7 +696,7 @@ namespace vpsk {
     }
 
     void BaseScene::waitForFrameComplete(const uint32_t idx) {
-        VkResult result = vkWaitForFences(device->vkHandle(), 1, &presentFences[idx], VK_TRUE, vk_default_fence_timeout);
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &presentFences[idx], VK_TRUE, 2);
         VkAssert(result);
         result = vkResetFences(device->vkHandle(), 1, &acquireFence);
         VkAssert(result);

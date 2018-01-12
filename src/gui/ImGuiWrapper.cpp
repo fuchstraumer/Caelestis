@@ -182,7 +182,7 @@ namespace vpsk {
 
         // Create texture
         font = std::make_unique<Texture<texture_2d_t>>(device);
-        font->CreateFromBuffer(std::move(textureStaging), VK_FORMAT_R8G8B8A8_UNORM, std::vector<VkBufferImageCopy>{ stagingToTextureCopy} );
+        font->CreateFromBuffer(std::move(textureStaging), VK_FORMAT_R8G8B8A8_UNORM, &stagingToTextureCopy, 1);
 
     }
 
@@ -202,8 +202,8 @@ namespace vpsk {
     void ImGuiWrapper::createPipelineLayout() {
 
         layout = std::make_unique<PipelineLayout>(device);
-        VkPushConstantRange push_constant{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4 };
-        layout->Create({ setLayout->vkHandle() }, { push_constant });
+        const VkPushConstantRange push_constant{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4 };
+        layout->Create(&push_constant, 1, &setLayout->vkHandle(), 1);
 
     }
 

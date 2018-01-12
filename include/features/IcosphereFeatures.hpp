@@ -17,7 +17,7 @@ namespace vpsk {
         void Render(const VkCommandBuffer& cmd) const;
         void AddObject(const Icosphere* object);
         const vpr::GraphicsPipelineInfo& PipelineInfo() const noexcept;
-
+        
     private:
 
 
@@ -26,7 +26,7 @@ namespace vpsk {
         void createPipelineLayout();
         void createShaders();
         void setPipelineStateInfo();
-        void createPipeline();
+
         bool initialized = false;
         const vpr::Device* device;
         const vpr::TransferPool* transferPool;
@@ -34,9 +34,12 @@ namespace vpsk {
         std::unique_ptr<vpr::DescriptorPool> descriptorPool;
         std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
         std::unique_ptr<vpr::PipelineLayout> layout;
+
         std::unique_ptr<vpr::ShaderModule> vert, frag;
         std::vector<const Icosphere*> objects;
         vpr::GraphicsPipelineInfo pipelineInfo;
+        VkViewport viewport;
+        VkRect2D scissor;
     };
 
 }

@@ -5,7 +5,7 @@
 #include "resource/ShaderModule.hpp"
 #include "scene/BaseScene.hpp"
 #include "geometries/vertex_t.hpp"
-#include <mutex>
+#include "imgui/imgui.h"
 using namespace vpr;
 
 namespace vpsk {
@@ -23,7 +23,6 @@ namespace vpsk {
     }
 
     void IcosphereFeatures::Render(const VkCommandBuffer& cmd) const {
-        std::lock_guard<std::mutex> lock(std::mutex());
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vkHandle());
         for(auto obj : objects) {
             obj->Render(cmd, layout->vkHandle());
@@ -64,12 +63,8 @@ namespace vpsk {
 
     void IcosphereFeatures::setPipelineStateInfo() {
 
-        constexpr static VkDynamicState dynamic_states[2] {
-            VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR
-        };
-
-        pipelineInfo.DynamicStateInfo.dynamicStateCount = 2;
-        pipelineInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
+        pipelineInfo.DynamicStateInfo.dynamicStateCount = 0;
+        pipelineInfo.DynamicStateInfo.pDynamicStates = nullptr;
 
         pipelineInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
         pipelineInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
@@ -78,6 +73,25 @@ namespace vpsk {
         pipelineInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
         pipelineInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
         pipelineInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
+
+        pipelineInfo.ViewportInfo.scissorCount = 1;
+        pipelineInfo.ViewportInfo.viewportCount = 1;
+
+        const ImGuiIO& io = ImGui::GetIO();
+
+        viewport = VkViewport{ 
+            0.0f, 0.0f,
+            io.DisplaySize.x, io.DisplaySize.y,
+            0.0f, 1.0f
+        };
+
+        scissor.extent.width = static_cast<uint32_t>(io.DisplaySize.x);
+        scissor.extent.height = static_cast<uint32_t>(io.DisplaySize.y);
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+
+        pipelineInfo.ViewportInfo.pViewports = &viewport;
+        pipelineInfo.ViewportInfo.pScissors = &scissor;
 
     }
 

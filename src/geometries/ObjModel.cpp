@@ -148,7 +148,8 @@ namespace vpsk {
 
         pipelineLayout = std::make_unique<PipelineLayout>(device);
         // since i'm already abusing this pipeline with the above sets, just using mvp in push constant
-        pipelineLayout->Create(set_layouts, { VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4) } }); 
+        const VkPushConstantRange range{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4) };
+        pipelineLayout->Create(&range, 1, set_layouts.data(), set_layouts.size()); 
 
     }
 
