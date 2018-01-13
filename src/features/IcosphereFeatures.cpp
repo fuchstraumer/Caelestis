@@ -4,14 +4,16 @@
 #include "resource/PipelineLayout.hpp"
 #include "resource/ShaderModule.hpp"
 #include "scene/BaseScene.hpp"
+#include "command/CommandPool.hpp"
 #include "geometries/vertex_t.hpp"
 #include "imgui/imgui.h"
+#include <future>
 using namespace vpr;
 
 namespace vpsk {
 
     IcosphereFeatures::IcosphereFeatures(const Device* dvc, const TransferPool* transfer_pool) : device(dvc), transferPool(transfer_pool) {
-
+        
     }
 
     void IcosphereFeatures::Init() {
@@ -22,11 +24,43 @@ namespace vpsk {
         setPipelineStateInfo();
     }
 
-    void IcosphereFeatures::Render(const VkCommandBuffer& cmd) const {
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vkHandle());
-        for(auto obj : objects) {
-            obj->Render(cmd, layout->vkHandle());
+    VkCommandBuffer IcosphereFeatures::Render(VkRenderPassBeginInfo rp, VkCommandBufferInheritanceInfo cbi) const {
+        constexpr static VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, 
+             VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
+        const VkCommandBufferBeginInfo secondary_begin_info{  VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+             VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+             &cbi };
+        
+        VkResult err = vkBeginCommandBuffer(primaryPool->GetCmdBuffer(0), &begin_info); VkAssert(err);
+            vkCmdBeginRenderPass(primaryPool->GetCmdBuffer(0), &rp, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+            renderObjects(secondary_begin_info);
+            vkCmdExecuteCommands(primaryPool->GetCmdBuffer(0), static_cast<uint32_t>(secondaryPool->size()), secondaryPool->GetCommandBuffers(0));
+            vkCmdEndRenderPass(primaryPool->GetCmdBuffer(0));
+        err = vkEndCommandBuffer(primaryPool->GetCmdBuffer(0)); VkAssert(err);
+
+        return primaryPool->GetCmdBuffer(0);
+    }
+
+    void IcosphereFeatures::renderObjects(const VkCommandBufferBeginInfo& info) const {
+
+        const VkPipelineLayout& layout_handle = layout->vkHandle();
+        const auto render_object = [info,layout_handle](const Icosphere* ico, VkCommandBuffer cmd) {
+            vkBeginCommandBuffer(cmd, &info);
+            ico->Render(cmd, layout_handle);
+            vkEndCommandBuffer(cmd);
+        };
+
+        std::vector<std::future<void>> futures;
+        size_t i = 0;
+        for (auto& obj : objects) {
+            futures.push_back(std::async(std::launch::async, render_object, obj, secondaryPool->GetCmdBuffer(i)));
+            ++i;
         }
+
+        for (auto&& fut : futures) {
+            fut.get();
+        }
+
     }
 
     void IcosphereFeatures::AddObject(const Icosphere* ico) {

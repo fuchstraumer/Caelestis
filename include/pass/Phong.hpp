@@ -16,7 +16,7 @@ namespace vpsk {
     public:
 
         PhongPass(const vpr::Device* dvc, const vpr::Swapchain* swap);
-        VkCommandBuffer RenderFrame(const size_t idx, VkFramebuffer fbuff) const;
+        VkCommandBuffer RenderFrame(const size_t idx) const;
         void RegisterFeature(std::string name, const vpr::GraphicsPipelineInfo& info, VkPipelineLayout layout);
         void SetFeatureRenderFn(std::string name, delegate_t<void(VkCommandBuffer)> func);
         // This has to be delayed until you have registered features
@@ -34,10 +34,9 @@ namespace vpsk {
         void createSubpassDescription();
         void createSubpassDependencies();
         void createRenderpass();
+        void createFramebuffers();
 
         void createDepthStencil();
-        void createPrimaryPool();
-        void createSecondaryPool();
 
         std::unique_ptr<vpr::Multisampling> msaa;
         std::unique_ptr<vpr::DepthStencil> depthStencil;
@@ -46,15 +45,16 @@ namespace vpsk {
         std::array<VkAttachmentDescription, 4> attachmentDescriptions;
         std::array<VkAttachmentReference, 3> attachmentReferences;
         std::array<VkSubpassDependency, 2> subpassDependencies;
+        std::vector<VkFramebuffer> framebuffers;
         std::unique_ptr<vpr::Renderpass> renderpass;
 
         std::map<std::string, size_t> nameToIdxMap;
         std::map<size_t, delegate_t<void(VkCommandBuffer)>> renderFunctions;
+        std::map<size_t, delegate_t<void()>> poolResetFunctions;
         std::unique_ptr<vpr::PipelineCache> cache;
         std::map<size_t, std::unique_ptr<vpr::GraphicsPipeline>> pipelines;
         std::map<size_t, VkGraphicsPipelineCreateInfo> pipelineInfos;
-        std::unique_ptr<vpr::CommandPool> primaryPool;
-        std::unique_ptr<vpr::CommandPool> secondaryPool;
+        
         const vpr::Swapchain* swapchain;
         const vpr::Device* device;
         bool constructed;

@@ -39,18 +39,13 @@ namespace vpsk {
          *  \param width: initial width of spawned GLFW window.
          *  \param height: initial height of spawned GLFW window.
         */
-        BaseScene(const size_t& num_secondary_buffers, const uint32_t& width, const uint32_t& height);
+        BaseScene(const uint32_t& width, const uint32_t& height);
 
         ~BaseScene();
-
-        virtual void CreateCommandPools();
-        
-        /** This must be called by derived classes.
-         *  \param sample_count: the sampling level of the MSAA attachments. 
+         
+        /**Shared by all passes.
         */
-        virtual void SetupRenderpass(const VkSampleCountFlagBits& sample_count);
-        virtual void SetupDepthStencil();
-        virtual void SetupFramebuffers();
+        virtual void CreateTransferPool();
 
         virtual void RecreateSwapchain();
         
@@ -73,6 +68,8 @@ namespace vpsk {
 
         void SetCameraTarget(const glm::vec3& target_pos);
 
+        void AddFrameCmdBuffer(const VkCommandBuffer& buffer_to_submit);
+
         // updates mouse actions via ImGui.
         virtual void UpdateMouseActions();
 
@@ -90,11 +87,7 @@ namespace vpsk {
         static std::atomic<bool> ShouldResize;
     protected:
 
-        void setupGUI();
-        void destroyGUI();
-        virtual void createGraphicsCmdPool();
         virtual void createTransferCmdPool();
-        virtual void createSecondaryCmdPool();
 
         void cleanupShaderCacheFiles();
         virtual void mouseDown(const int& button, const float& x, const float& y);
@@ -118,7 +111,6 @@ namespace vpsk {
          */
         virtual void endFrame(const size_t& curr_idx) = 0;
 
-        std::unique_ptr<vpr::Multisampling> msaa;
         std::unique_ptr<vpsk::ImGuiWrapper> gui;
         uint32_t width, height;
         VkSemaphore semaphores[2];
@@ -126,16 +118,9 @@ namespace vpsk {
         std::unique_ptr<vpr::Instance> instance;
         std::unique_ptr<vpr::Device> device;
         std::unique_ptr<vpr::Swapchain> swapchain;
-        std::vector<VkFramebuffer> framebuffers;
-        std::unique_ptr<vpr::DepthStencil> depthStencil;
-        std::unique_ptr<vpr::CommandPool> graphicsPool, secondaryPool;
         std::unique_ptr<vpr::TransferPool> transferPool;
-        std::unique_ptr<vpr::Renderpass> renderPass;
-        std::unique_ptr<vpr::DescriptorPool> descriptorPool;
         std::unique_ptr<Window> window;
-        std::vector<VkAttachmentDescription> attachmentDescriptions;
-        std::vector<VkAttachmentReference> attachmentReferences;
-        std::vector<VkSubpassDependency> subpassDependencies;
+        std::vector<VkCommandBuffer> frameCmdBuffers;
 
         std::chrono::system_clock::time_point limiter_a, limiter_b;
         double desiredFrameTimeMs = 16.0;
@@ -143,13 +128,6 @@ namespace vpsk {
         VkFence acquireFence;
 
         float frameTime;
-        virtual void createRenderTargetAttachment();
-        virtual void createResolveAttachment();
-        virtual void createMultisampleDepthAttachment();
-        virtual void createResolveDepthAttachment();
-        virtual void createAttachmentReferences();
-        virtual VkSubpassDescription createSubpassDescription();
-        virtual void createSubpassDependencies();
 
         static std::vector<uint16_t> pipelineCacheHandles;
         size_t numSecondaryBuffers;

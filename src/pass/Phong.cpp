@@ -17,7 +17,7 @@ namespace vpsk {
         createRenderpass();
     }
 
-    VkCommandBuffer PhongPass::RenderFrame(const size_t idx, VkFramebuffer curr_framebuffer) const {
+    VkCommandBuffer PhongPass::RenderFrame(const size_t idx) const {
         if (!constructed) {
             LOG(ERROR) << "Didn't construct PhongPass before attempting use: expect delay as construction is now performed.";
             throw std::runtime_error("Failed to construct PhongPass before usage.");
@@ -35,7 +35,7 @@ namespace vpsk {
             nullptr,
             renderpass->vkHandle(),
             0,
-            curr_framebuffer,
+            framebuffers[idx],
             VK_FALSE,
             0,
             0
@@ -52,7 +52,7 @@ namespace vpsk {
             return (idx * frame_idx) + obj_idx;
         };
 
-        renderpass->UpdateBeginInfo(curr_framebuffer);
+        renderpass->UpdateBeginInfo(framebuffers[idx]);
 
         VkResult err = vkBeginCommandBuffer(primaryPool->GetCmdBuffer(idx), &primary_begin_info); VkAssert(result);
             vkCmdBeginRenderPass(primaryPool->GetCmdBuffer(idx), &renderpass->BeginInfo(), VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
@@ -212,6 +212,25 @@ namespace vpsk {
 
         renderpass->SetupBeginInfo(clear_values.data(), clear_values.size(), swapchain->Extent());
 
+    }
+
+    void PhongPass::createFramebuffers() {
+        std::array<VkImageView, 4> attachments{ msaa->ColorBufferMS->View(), VK_NULL_HANDLE, msaa->DepthBufferMS->View(), depthStencil->View() };
+        VkFramebufferCreateInfo framebuffer_create_info = vpr::vk_framebuffer_create_info_base;
+        framebuffer_create_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebuffer_create_info.pAttachments = attachments.data();
+        framebuffer_create_info.renderPass = renderpass->vkHandle();
+        framebuffer_create_info.width = swapchain->Extent().width;
+        framebuffer_create_info.height = swapchain->Extent().height;
+        framebuffer_create_info.layers = 1;
+
+        for (uint32_t i = 0; i < swapchain->ImageCount(); ++i) {
+            attachments[1] = swapchain->ImageView(i);
+            VkFramebuffer new_fbuff;
+            VkResult result = vkCreateFramebuffer(device->vkHandle(), &framebuffer_create_info, nullptr, &new_fbuff);
+            VkAssert(result);
+            framebuffers.push_back(std::move(new_fbuff));
+        }
     }
     
     void PhongPass::createDepthStencil() {

@@ -38,7 +38,7 @@ namespace vpsk {
 
     std::vector<uint16_t> BaseScene::pipelineCacheHandles = std::vector<uint16_t>();
 
-    BaseScene::BaseScene(const size_t& num_secondary_buffers, const uint32_t& _width, const uint32_t& _height) : width(_width), height(_height), numSecondaryBuffers(num_secondary_buffers) {
+    BaseScene::BaseScene(const uint32_t& _width, const uint32_t& _height) : width(_width), height(_height) {
 
         const bool verbose_logging = BaseScene::SceneConfiguration.VerboseLogging;
         window = std::make_unique<Window>(_width, _height, BaseScene::SceneConfiguration.ApplicationName);
@@ -66,9 +66,6 @@ namespace vpsk {
 
         LOG_IF(verbose_logging, INFO) << "Swapchain created.";
 
-        CreateCommandPools();
-        SetupDepthStencil();
-
         VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
         VkResult result = vkCreateSemaphore(device->vkHandle(), &semaphore_info, nullptr, &semaphores[0]);
         VkAssert(result);
@@ -94,7 +91,6 @@ namespace vpsk {
         limiter_a = std::chrono::system_clock::now();
         limiter_b = std::chrono::system_clock::now();
 
-        SetupRenderpass(SceneConfiguration.MSAA_SampleCount);
         SetupFramebuffers();
 
         input_handler::LastX = swapchain->Extent().width / 2.0f;
@@ -111,28 +107,6 @@ namespace vpsk {
 
         LOG_IF(verbose_logging, INFO) << "BaseScene setup complete.";
 
-
-    }
-
-    void BaseScene::setupGUI() {
-
-        if (!SceneConfiguration.EnableGUI) {
-            return;
-        }
-
-        gui = std::make_unique<ImGuiWrapper>();
-        gui->Init(device.get(), renderPass->vkHandle(), descriptorPool.get());
-        gui->UploadTextureData(transferPool.get());
-
-    }
-    
-    void BaseScene::destroyGUI() {
-
-        if (!SceneConfiguration.EnableGUI) {
-            return;
-        }
-
-        gui.reset();
 
     }
 
@@ -177,13 +151,9 @@ namespace vpsk {
     
     BaseScene::~BaseScene() {
         gui.reset();
-        depthStencil.reset();
-        graphicsPool.reset();
         transferPool.reset();
-        secondaryPool.reset();
         swapchain.reset();
         msaa.reset();
-        descriptorPool.reset();
         for (const auto& fbuf : framebuffers) {
             vkDestroyFramebuffer(device->vkHandle(), fbuf, nullptr);
         }
@@ -193,8 +163,6 @@ namespace vpsk {
         }
 
         vkDestroyFence(device->vkHandle(), acquireFence, nullptr);
-
-        renderPass.reset();
 
         vkDestroySemaphore(device->vkHandle(), semaphores[1], nullptr);
         vkDestroySemaphore(device->vkHandle(), semaphores[0], nullptr);
@@ -281,16 +249,6 @@ namespace vpsk {
     void BaseScene::PipelineCacheCreated(const uint16_t & cache_id) {
         pipelineCacheHandles.push_back(cache_id);
     }
-    
-    void BaseScene::createGraphicsCmdPool() {
-
-        VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
-        pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
-        graphicsPool = std::make_unique<CommandPool>(device.get(), pool_info);
-        graphicsPool->AllocateCmdBuffers(swapchain->ImageCount(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-        
-    }
 
     void BaseScene::createTransferCmdPool() {
         VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
@@ -299,192 +257,10 @@ namespace vpsk {
         transferPool = std::make_unique<TransferPool>(device.get());
     }
 
-    void BaseScene::createSecondaryCmdPool() {
-
-        LOG(INFO) << "Creating command pool for secondary command buffers. " << std::to_string(swapchain->ImageCount() * static_cast<uint32_t>(numSecondaryBuffers)) << " buffers requested.";
-        VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
-        pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
-        secondaryPool = std::make_unique<CommandPool>(device.get(), pool_info);
-        secondaryPool->AllocateCmdBuffers(swapchain->ImageCount() * static_cast<uint32_t>(numSecondaryBuffers), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-        
-    }
-
-    void BaseScene::CreateCommandPools() {
+    void BaseScene::CreateTransferPool() {
 
         LOG(INFO) << "Creating primary graphics and transfer command pools...";
-
-        createGraphicsCmdPool();
         createTransferCmdPool();
-        createSecondaryCmdPool();
-
-    }
-
-
-    void BaseScene::createRenderTargetAttachment() {
-
-        attachmentDescriptions[0] = vk_attachment_description_base;
-        attachmentDescriptions[0].format = swapchain->ColorFormat();
-        attachmentDescriptions[0].samples = BaseScene::SceneConfiguration.MSAA_SampleCount;
-        attachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    }
-
-    void BaseScene::createResolveAttachment() {
-
-        attachmentDescriptions[1] = vk_attachment_description_base;
-        attachmentDescriptions[1].format = swapchain->ColorFormat();
-        attachmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    }
-
-    void BaseScene::createMultisampleDepthAttachment() {
-
-        attachmentDescriptions[2] = vk_attachment_description_base;
-        attachmentDescriptions[2].format = device->FindDepthFormat();
-        attachmentDescriptions[2].samples = BaseScene::SceneConfiguration.MSAA_SampleCount;
-        attachmentDescriptions[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachmentDescriptions[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[2].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-
-    }
-
-    void BaseScene::createResolveDepthAttachment() {
-
-        attachmentDescriptions[3] = vk_attachment_description_base;
-        attachmentDescriptions[3].format = device->FindDepthFormat();
-        attachmentDescriptions[3].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachmentDescriptions[3].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[3].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachmentDescriptions[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachmentDescriptions[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachmentDescriptions[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachmentDescriptions[3].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    }
-
-    void BaseScene::createAttachmentReferences() {
-
-        attachmentReferences.resize(3);
-
-        attachmentReferences[0] = VkAttachmentReference{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        attachmentReferences[1] = VkAttachmentReference{ 2, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-        attachmentReferences[2] = VkAttachmentReference{ 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-    }
-
-    VkSubpassDescription BaseScene::createSubpassDescription() {
-
-        VkSubpassDescription result = vk_subpass_description_base;
-        result.colorAttachmentCount = 1;
-        result.pColorAttachments = &attachmentReferences[0];
-        result.pResolveAttachments = &attachmentReferences[2];
-        result.pDepthStencilAttachment = &attachmentReferences[1];
-        return result;
-
-    }
-
-    void BaseScene::createSubpassDependencies() {
-
-        subpassDependencies.resize(2);
-        
-        subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-        subpassDependencies[0].dstSubpass = 0;
-        subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpassDependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        subpassDependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-        subpassDependencies[1].srcSubpass = 0;
-        subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-        subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        subpassDependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        subpassDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    }
-
-    void BaseScene::SetupRenderpass(const VkSampleCountFlagBits& sample_count) {
-
-        LOG(INFO) << "Creating renderpass and MSAA attachments now...";
-
-        msaa = std::make_unique<Multisampling>(device.get(), swapchain.get(), sample_count);
-
-        attachmentDescriptions.resize(4);
-        createRenderTargetAttachment();
-        createResolveAttachment();
-        createMultisampleDepthAttachment();
-        createResolveDepthAttachment();
-
-        createAttachmentReferences();
-        VkSubpassDescription subpass_descr = createSubpassDescription();
-        createSubpassDependencies();
-
-        VkRenderPassCreateInfo renderpass_create_info = vk_render_pass_create_info_base;
-        renderpass_create_info.attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size());
-        renderpass_create_info.pAttachments = attachmentDescriptions.data();
-        renderpass_create_info.subpassCount = 1;
-        renderpass_create_info.pSubpasses = &subpass_descr;
-        renderpass_create_info.dependencyCount = static_cast<uint32_t>(subpassDependencies.size());
-        renderpass_create_info.pDependencies = subpassDependencies.data();
-
-        renderPass = std::make_unique<Renderpass>(device.get(), renderpass_create_info);
-
-        LOG_IF(BaseScene::SceneConfiguration.VerboseLogging, INFO) << "Renderpass created.";
-        
-        static const std::vector<VkClearValue> clear_values {
-            { 0.25f, 0.25f, 0.55f, 1.0f },
-            { 0.25f, 0.25f, 0.55f, 1.0f },
-            { 1.0f, 0 }
-        };
-
-        renderPass->SetupBeginInfo(clear_values.data(), clear_values.size(), swapchain->Extent());
-
-    }
-
-    void BaseScene::SetupDepthStencil() {
-
-        LOG(INFO) << "Creating depth stencil...";
-        depthStencil = std::make_unique<DepthStencil>(device.get(), VkExtent3D{ swapchain->Extent().width, swapchain->Extent().height, 1 });
-
-    }
-
-    void BaseScene::SetupFramebuffers() {
-
-        LOG(INFO) << "Creating framebuffers...";
-        std::array<VkImageView, 4> attachments{ msaa->ColorBufferMS->View(), VK_NULL_HANDLE, msaa->DepthBufferMS->View(), depthStencil->View() };
-        VkFramebufferCreateInfo framebuffer_create_info = vk_framebuffer_create_info_base;
-        framebuffer_create_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebuffer_create_info.pAttachments = attachments.data();
-        framebuffer_create_info.renderPass = renderPass->vkHandle();
-        framebuffer_create_info.width = swapchain->Extent().width;
-        framebuffer_create_info.height = swapchain->Extent().height;
-        framebuffer_create_info.layers = 1;
-
-        for (uint32_t i = 0; i < swapchain->ImageCount(); ++i) {
-            attachments[1] = swapchain->ImageView(i);
-            VkFramebuffer new_fbuff;
-            VkResult result = vkCreateFramebuffer(device->vkHandle(), &framebuffer_create_info, nullptr, &new_fbuff);
-            VkAssert(result);
-            framebuffers.push_back(std::move(new_fbuff));
-        }
 
     }
 
@@ -494,19 +270,9 @@ namespace vpsk {
 
         // First wait to make sure nothing is in use.
         vkDeviceWaitIdle(device->vkHandle());
-
-        destroyGUI();
-        depthStencil.reset();
-        framebuffers.clear();
-        framebuffers.shrink_to_fit();
-
         transferPool.reset();
-        secondaryPool.reset();
-        graphicsPool.reset();
-
         WindowResized();
-        msaa.reset();
-        renderPass.reset();
+
 
         device->vkAllocator->Recreate();
 
@@ -532,12 +298,7 @@ namespace vpsk {
             arcballCamera.SetFarClipPlaneDistance(2000.0f);
         }
 
-        CreateCommandPools();
-        SetupRenderpass(BaseScene::SceneConfiguration.MSAA_SampleCount);
-        SetupDepthStencil();
-        SetupFramebuffers();
         RecreateObjects();
-        setupGUI();
         vkDeviceWaitIdle(device->vkHandle());
 
         LOG_IF(BaseScene::SceneConfiguration.VerboseLogging, INFO) << "Swapchain recreation successful.";
@@ -574,9 +335,6 @@ namespace vpsk {
             submitExtra(idx);
             waitForFrameComplete(idx);
             endFrame(idx);
-
-            vkResetCommandPool(device->vkHandle(), secondaryPool->vkHandle(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-            vkResetCommandPool(device->vkHandle(), graphicsPool->vkHandle(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
 
             Buffer::DestroyStagingResources(device.get());
 
@@ -660,12 +418,12 @@ namespace vpsk {
         VkAssert(result);
 
         VkSubmitInfo submit_info = vk_submit_info_base;
-        VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
+        VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT };
         submit_info.waitSemaphoreCount = 1;
         submit_info.pWaitSemaphores = &semaphores[0];
         submit_info.pWaitDstStageMask = wait_stages;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &graphicsPool->GetCmdBuffer(image_idx);
+        submit_info.commandBufferCount = static_cast<uint32_t>(frameCmdBuffers.size());
+        submit_info.pCommandBuffers = frameCmdBuffers.data();
         submit_info.signalSemaphoreCount = static_cast<uint32_t>(renderCompleteSemaphores.size());
         submit_info.pSignalSemaphores = renderCompleteSemaphores.data();
         result = vkQueueSubmit(device->GraphicsQueue(), 1, &submit_info, presentFences[image_idx]);
@@ -783,5 +541,9 @@ namespace vpsk {
             LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
             fpsCamera.LookAtTarget(target_pos);
         }
+    }
+
+    void BaseScene::AddFrameCmdBuffer(const VkCommandBuffer & buffer_to_submit) {
+        frameCmdBuffers.push_back(buffer_to_submit);
     }
 }
