@@ -109,12 +109,7 @@ void TetherScene::construct() {
 void TetherScene::destroy() {
     skybox.reset();
     gui.reset();
-    ubo.reset();
-    fragmentUBO.reset();
     descriptor.reset();
-    vbo.reset();
-    ebo.reset();
-    iboColors.reset();
 }
 
 void TetherScene::createSkybox() {

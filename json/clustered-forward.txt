@@ -1,0 +1,35 @@
+resources:
+http://advancedgraphics.marries.nl/presentationslides/09_clustered_deferred_and_forward_shading.pdf
+http://www.adriancourreges.com/blog/2016/09/09/doom-2016-graphics-study/
+https://github.com/Oculus-VR/UnrealEngine/tree/4.11-ofr
+https://mynameismjp.wordpress.com/2016/03/25/bindless-texturing-for-deferred-rendering-and-decals/
+https://gist.github.com/kvark/4d400632714011f80ff1
+http://www.humus.name/Articles/PracticalClusteredShading.pdf
+https://software.intel.com/en-us/articles/forward-clustered-shading
+
+"clustered" concept:
+- Subdivide frustrum into a number of clusters containing lights
+- XY is screenspace, Z is depth range (logarithmic, so we cover a large range)
+- Binning can be on CPU (Avalanche method) as it doesn't rely on depth and avoids 
+  redundant calculations on the GPU. See Intel example for optimizations.
+- Binning can also be on GPU by running a prepass system
+
+step outline:
+1. Get light data from CPU
+    Data is:
+    cluster list: [ item offset, light count, decal count ]
+    item list: [ light index, decal index ]
+    light data [ ] & decal data [ ]
+2. Rasterize into the 3D cluster texture using instanced rendering or the geometry shader
+
+notes:
+
+doom system:
+- depth pre-pass
+- occlusion calculations
+- perform clustered forward
+- while that's running, also write to thin gbuffer for normals+specular
+- generates ssao map at half-resolution using depth + normals + specular
+- generate screenspace reflections using depth + normal + specular + previous frame (pre tonemapping, post transparency)
+- blend maps using compute shader. uses: ssao, ssr, static as fallback for ssr. also adds some fog
+- oh god so many more

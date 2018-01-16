@@ -1,7 +1,0 @@
-#pragma once
-#ifndef VPSK_DIFFUSE_LIGHT_HPP
-#define VPSK_DIFFUSE_LIGHT_HPP
-
-
-
-#endif //!VPSK_DIFFUSE_LIGHT_HPP
