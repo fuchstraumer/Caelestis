@@ -97,6 +97,7 @@ namespace vpsk {
             vkBeginCommandBuffer(secondaryPool->GetCmdBuffer((idx * primaryPool->size()) + pline.first), &s_info);
             vkCmdBindPipeline(secondaryPool->GetCmdBuffer((idx * primaryPool->size()) + pline.first), VK_PIPELINE_BIND_POINT_GRAPHICS, pline.second->vkHandle());
             render_futures.push_back(std::async(std::launch::async, renderFunctions.at(pline.first), (secondaryPool->GetCmdBuffer((idx * primaryPool->size()) + pline.first))));
+            vkEndCommandBuffer(secondaryPool->GetCmdBuffer((idx * primaryPool->size())) + pline.first);
         }
 
         for (auto& fut : render_futures) {

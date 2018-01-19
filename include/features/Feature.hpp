@@ -1,0 +1,3 @@
+#pragma once
+#ifndef VPSK_FEATURES_BASE_HPP
+#define VPSK_FEATURES_BASE_HPP

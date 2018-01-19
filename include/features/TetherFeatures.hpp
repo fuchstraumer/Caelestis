@@ -3,6 +3,7 @@
 #define VPSK_TETHER_FEATURES_HPP
 #include "render/GraphicsPipeline.hpp"
 #include <vector>
+#include "glm/fwd.hpp"
 
 namespace vpsk {
 
@@ -13,12 +14,15 @@ namespace vpsk {
         TetherFeatures& operator=(const TetherFeatures&) = delete;
     public:
 
-        TetherFeatures(const vpr::Device* dvc, const vpr::TransferPool* transfer_pool);
+        TetherFeatures(const vpr::Device* dvc);
+        void AddObject(const Tether* obj);
         void Init();
 
         VkCommandBuffer Render(VkRenderPassBeginInfo pass_info, VkCommandBufferInheritanceInfo sc_info) const;
     private:
 
+        void renderObjects(const VkCommandBufferBeginInfo& scb);
+        void createCommandPools();
         void setVertexPipelineData();
         void setPipelineState();
         void createSetLayout();
@@ -27,14 +31,18 @@ namespace vpsk {
         void createShaders();
 
         std::vector<const Tether*> tethers;
+
+        struct vertex_shader_ubo_t {
+            glm::mat4 view, projection;
+        };
+
         std::array<VkVertexInputAttributeDescription, 3> attr;
         std::array<VkVertexInputBindingDescription, 2> bindings;
         const vpr::Device* device;
-        const vpr::TransferPool* transferPool;
         std::unique_ptr<vpr::GraphicsPipeline> pipeline;
         std::unique_ptr<vpr::DescriptorPool> descriptorPool;
         std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
-        std::unique_ptr<vpr::PipelineLayout> layout;
+        std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
         std::unique_ptr<vpr::CommandPool> primaryPool;
         std::unique_ptr<vpr::CommandPool> secondaryPool;
         std::unique_ptr<vpr::ShaderModule> vert, frag;
