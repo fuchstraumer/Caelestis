@@ -6,7 +6,7 @@
                 "name" : "backbuffer",
                 "format" : "SWAPCHAIN_FORMAT",
                 "samples" : 1,
-                "loadOp" : "CLEAR",
+                "loadOp" : "DONT_CARE",
                 "storeOp" : "STORE",
                 "finalLayout" : "PRESENT_SRC"
             },
@@ -57,9 +57,10 @@
         "subpass-1" : {
             "name" : "gbuffer",
             "idx" : 1,
-            "colorAttachmentCount" : 4,
+            "colorAttachmentCount" : 3,
             "colorReferences" : {
-
+                "attachment-0" : [ "gbuffer-positions", "COLOR_ATTACHMENT_OPTIMAL" ],
+                "attachment-1" : [ "gbuffer-normals", "COLOR_ATTACHMENT_OPTIMAL" ]
             }
         },
         "subpass-2" : {
