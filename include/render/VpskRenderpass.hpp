@@ -14,17 +14,22 @@ namespace vpsk {
 
         RenderPass(const vpr::Device* dvc = nullptr);
 
-        void LoadFromJSON(const std::string& input_file);
+        void LoadFromJSON(const std::string& input_file, const std::string& renderpass_name);
+        void SetDepthFormat(const VkFormat fmt);
+        void SetSwapchainFormat(const VkFormat fmt);
 
         Subpass& AddSubpass(const std::string& name, VkPipelineStageFlags stages);
 
         ImageResource& GetImageResource(const std::string& name);
+        ImageResource& AddImageResource(const size_t& idx, const std::string& name);
         BufferResource& GetBufferResource(const std::string& name);
 
         ImageResource& SetDepthStencilInput(const std::string& name);
         ImageResource& SetDepthStencilOutput(const std::string& name);
         
     private:
+        VkFormat swapchainFormat = VK_FORMAT_R8G8B8A8_UNORM;
+        VkFormat depthFormat = VK_FORMAT_UNDEFINED;
         const vpr::Device* device;
         std::string name;
         std::vector<Subpass> subpasses;
