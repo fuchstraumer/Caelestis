@@ -71,7 +71,18 @@ namespace vpsk {
         
         bool operator==(const ImageResource& other) const noexcept;
         
+        void MakeStorage() const noexcept;
+        void MakeTransient() const noexcept;
+        void DisableTransient() const noexcept;
+        void DisableStorage() const noexcept;
+
+        bool IsTransient() const noexcept;
+        bool IsStorage() const noexcept;
     private:
+        // Used to indicate that we can set the transient flag, meaning it doesn't
+        // have to be 100% backed by memory during use (or be synchronized across whole region)
+        bool transient = false;
+        bool storage = false;
         vpr::Image* object;
     };
 
