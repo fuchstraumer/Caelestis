@@ -14,6 +14,9 @@ namespace vpsk {
         size_t Samples = 1;
         size_t Layers = 1;
         size_t Levels = 1;
+        VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
+        VkAttachmentStoreOp storeOp = VK_ATTACHMENT_STORE_OP_MAX_ENUM;
+        VkImageLayout finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     };
 
     class RenderResource {
