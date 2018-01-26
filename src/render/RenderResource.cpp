@@ -65,6 +65,8 @@ namespace vpsk {
         return object->vkHandle() == other.object->vkHandle();
     }
 
+    ImageResource::ImageResource(const size_t & idx, const std::string & name) : RenderResource(idx, name) {}
+
     bool ImageResource::operator==(const ImageResource& other) const noexcept {
         return object->vkHandle() == other.object->vkHandle();
     }

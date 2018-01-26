@@ -71,9 +71,9 @@ namespace vpsk {
 
     class ImageResource : public RenderResource {
     public:
-        
+        ImageResource(const size_t& idx, const std::string& name);
         bool operator==(const ImageResource& other) const noexcept;
-        
+        AttachmentInfo Info;
         void MakeStorage() const noexcept;
         void MakeTransient() const noexcept;
         void DisableTransient() const noexcept;
