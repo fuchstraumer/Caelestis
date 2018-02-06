@@ -1,0 +1,129 @@
+#version 450
+
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+layout(local_size_x = 32) in;
+layout(constant_index = 0) const uint TileCountZ = 256;
+layout(constant_index = 1) const uint LightListMax = 512;
+layout(constant_index = 2) const uint ResolutionX = 1440;
+layout(constant_index = 3) const uint ResolutionY = 900;
+// TileSize vector in sample code
+layout(constant_index = 4) const uint TileWidthX = 64;
+layout(constant_index = 5) const uint TileWidthY = 64;
+layout(constant_index = 6) const float NearPlane = 0.1f;
+layout(constant_index = 7) const float FarPlane = 3000.0f;
+// Grid dimension vector in sampler code.
+layout(constant_index = 8) const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
+layout(constant_index = 9) const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+
+layout (set = 0, binding = 0) uniform _ubo {
+    mat4 model;
+    mat4 view;
+    mat4 projectionClip;
+    mat4 normal;
+    vec4 viewPosition;
+    uint numLights;
+} UBO;
+
+layout (set = 0, binding = 1, rgba32f) uniform imageBuffer positionRanges;
+
+layout (set = 1, binding = 0, r8ui) uniform uimageBuffer Flags;
+layout (set = 1, binding = 1, r32ui) uniform uimageBuffer lightBounds;
+layout (set = 1, binding = 2, r32ui) uniform uimageBuffer lightCounts;
+
+int CoordToIdx(uint i, uint j, uint k) {
+    return TileCountX * TileCountY * int(k) + TileCountX * int(j) + int(i);
+}
+
+vec3 getViewSpacePos(vec3 pos_in) {
+    return (UBO.View * vec4(pos_in,1.0f)).xyz;
+}
+
+vec2 viewPosToFragPos(vec3 view_pos) {
+    vec4 clip_pos = UBO.projectionClip * vec4(view_pos,1.0f);
+    vec3 ndc = clip_pos.xyz / clip_pos.w;
+    return 0.50f * (1.0f + ndc.xyz) *  vec2(float(ResolutionX),float(ResolutionY));
+}
+
+vec3 viewPosToGrid(vec2 frag_pos, float view_z) {
+    vec3 c(frag_pos / vec2(float(TileWidthX),float(TileWidthY)), 1.0f);
+    c.z = min(float(TileCountZ - 1), max(0.f, float(TileCountZ) * log((-view_z - NearPlane) / (FarPlane - NearPlane) + 1.0f)));
+    return c;
+}
+
+void markLightToSkip(uint light_idx, vec4 light_pos) {
+    imageStore(positionRanges, int(light_idx), light_pos);
+}
+
+void main() {
+
+    uint light_idx = gl_GlobalInvocationID.x;
+
+    if (light_idx > UBO.numLights) {
+        return;
+    }
+
+    vec4 pos_range_in = imageLoad(positionRanges, int(light_idx));
+
+    vec3 vp = getViewSpacePos(pos_range_in.xyz);
+    vec3 vp_min, vp_max;
+    vp_min.x = vp.x - pos_range_in.w;
+    vp_max.x = vp.x + pos_range_in.w;
+    vp_min.yz = vp.yz + pos_range_in.w;
+    vp_max.yz = vp.yz - pos_range_in.w;
+
+    // restrict view z as it should be
+    if ((vp_max.z >= -NearPlane) || (vp_max.z <= -FarPlane)) {
+        markLightToSkip(light_idx, pos_range_in);
+        return;
+    }
+
+    vp_min.z = min(-NearPlane, vp_min.z);
+    vp_max.z = max(-FarPlane, vp_max.z);
+
+    vec2 fp_a = viewPosToFragPos(vec3(vp_min.xy, vp_min.z));
+    vec2 fp_b = viewPosToFragPos(vec3(vp_min.xy, vp_max.z));
+    vec2 fp_c = viewPosToFragPos(vec3(vp_max.xy, vp_max.z));
+    vec2 fp_d = viewPosToFragPos(vec3(vp_max.xy, vp_min.z));
+    vec2 fp_min = min(fp_a, fp_b);
+    vec2 fp_max = max(fp_c, fp_d);
+
+    // restrict to frustum
+    bvec4 exit(
+        (fp_min.x < 0.0f) && (fp_max.x < 0.0f), 
+        (fp_min.y < 0.0f) && (fp_max.y < 0.0f),
+        (fp_min.x >= ResolutionX && fp_max.x >= ResolutionX) || (fp_min.y >= ResolutionY && fp_max.y >= ResolutionY),
+        (any(greaterThan(fp_min, fp_max)))
+        );
+
+    if (any(exit)) {
+        markLightToSkip(light_idx, pos_range_in.xyz);
+        return;
+    }
+
+    fp_min.xy = max(vec2(0.0f), fp_min);
+    fp_max.xy = min(vec2(float(ResolutionX),float(ResolutionY)) - 1.0f, fp_max);
+
+    vec3 grid_min = viewPosToGrid(fp_min, vp_min.z);
+    vec3 grid_max = viewPosToGrid(fp_max, vp_max.z);
+    uvec3 bmin = uvec3(grid_min0);
+    uvec3 bmax = uvec3(grid_max0);
+
+    imageStore(lightBounds, int(light_idx * 6 + 0), uvec4(bmin.x, 0, 0, 0));
+    imageStore(lightBounds, int(light_idx * 6 + 1), uvec4(bmin.y, 0, 0, 0));
+    imageStore(lightBounds, int(light_idx * 6 + 2), uvec4(bmin.z, 0, 0, 0));
+    imageStore(lightBounds, int(light_idx * 6 + 3), uvec4(bmax.x, 0, 0, 0));
+    imageStore(lightBounds, int(light_idx * 6 + 4), uvec4(bmax.y, 0, 0, 0));
+    imageStore(lightBounds, int(light_idx * 6 + 5), uvec4(bmax.z, 0, 0, 0));
+
+    for (uint i = bmin.x; i <= bmax.x; ++i) {
+        for (uint j = bmin.y; j <= bmax.y; ++j) {
+            for (uint k = bmin.z; k <= bmax.z; ++k) {
+                int idx = CoordToIdx(i, j, k);
+                if (imageLoad(Flags, idx).r == 1) {
+                    imageAtomicAdd(lightCounts, idx, 1);
+                }
+            }
+        }
+    }
+}
