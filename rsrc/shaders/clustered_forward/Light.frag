@@ -5,19 +5,20 @@
 
 layout(early_fragment_tests) in;
 layout(location = 0) in vec4 vPosition;
-
-layout(constant_id = 0) const uint TileCountZ = 256;
-layout(constant_id = 1) const uint LightListMax = 512;
-layout(constant_id = 2) const uint ResolutionX = 1440;
-layout(constant_id = 3) const uint ResolutionY = 900;
+layout (constant_id =  0) const uint ResolutionX = 1440;
+layout (constant_id =  1) const uint ResolutionY = 900;
+layout (constant_id =  2) const uint LightListMax = 512;
 // TileSize vector in sample code
-layout(constant_id = 4) const uint TileWidthX = 64;
-layout(constant_id = 5) const uint TileWidthY = 64;
-layout(constant_id = 6) const float NearPlane = 0.1f;
-layout(constant_id = 7) const float FarPlane = 3000.0f;
+layout (constant_id =  3) const uint TileWidthX = 64;
+layout (constant_id =  4) const uint TileWidthY = 64;
 // Grid dimension vector in sampler code.
-layout(constant_id = 8) const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-layout(constant_id = 9) const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+layout (constant_id =  5) const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
+layout (constant_id =  6) const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+layout (constant_id =  7) const uint TileCountZ = 256;
+layout (constant_id =  8) const float NearPlane = 0.1f;
+layout (constant_id =  9) const float FarPlane = 3000.0f;
+layout (constant_id = 10) const float AmbientGlobal = 0.20f;
+
 
 layout (set = 0, binding = 0) uniform _ubo {
     mat4 model;
