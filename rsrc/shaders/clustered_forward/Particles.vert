@@ -3,11 +3,11 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout(constant_index = 6) const float NearPlane = 0.1f;
-layout(constant_index = 7) const float FarPlane = 3000.0f;
+layout(constant_id = 6) const float NearPlane = 0.1f;
+layout(constant_id = 7) const float FarPlane = 3000.0f;
 
 layout (location = 0) in vec4 posRangeIn;
-layout (lcoation = 1) in vec4 color;
+layout (location = 1) in vec4 color;
 layout (location = 0) out vec3 vColor;
 
 layout (set = 0, binding = 0) uniform _ubo {

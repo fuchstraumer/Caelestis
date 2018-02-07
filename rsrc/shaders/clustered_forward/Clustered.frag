@@ -3,19 +3,19 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (constant_index =  0) const uint TileCountZ = 256;
-layout (constant_index =  1) const uint LightListMax = 512;
-layout (constant_index =  2) const uint ResolutionX = 1440;
-layout (constant_index =  3) const uint ResolutionY = 900;
+layout (constant_id =  0) const uint TileCountZ = 256;
+layout (constant_id =  1) const uint LightListMax = 512;
+layout (constant_id =  2) const uint ResolutionX = 1440;
+layout (constant_id =  3) const uint ResolutionY = 900;
 // TileSize vector in sample code
-layout (constant_index =  4) const uint TileWidthX = 64;
-layout (constant_index =  5) const uint TileWidthY = 64;
-layout (constant_index =  6) const float NearPlane = 0.1f;
-layout (constant_index =  7) const float FarPlane = 3000.0f;
+layout (constant_id =  4) const uint TileWidthX = 64;
+layout (constant_id =  5) const uint TileWidthY = 64;
+layout (constant_id =  6) const float NearPlane = 0.1f;
+layout (constant_id =  7) const float FarPlane = 3000.0f;
 // Grid dimension vector in sampler code.
-layout (constant_index =  8) const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-layout (constant_index =  9) const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
-layout (constant_index = 10) const float AmbientGlobal = 0.20f;
+layout (constant_id =  8) const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
+layout (constant_id =  9) const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+layout (constant_id = 10) const float AmbientGlobal = 0.20f;
 
 layout (location = 0) in vec4 vPosition;
 layout (location = 1) in vec4 vNormal;
@@ -50,7 +50,7 @@ layout (set = 0, binding = 0) uniform _mtl {
     vec4 emissive;
 } Material;
 
-layout (set = 1, binding = 0) uniform sampler2D diffuse;
+layout (set = 1, binding = 0) uniform sampler2D diffuse_map;
 layout (set = 1, binding = 1) uniform sampler2D opacity;
 layout (set = 1, binding = 2) uniform sampler2D specular_map;
 layout (set = 1, binding = 3) uniform sampler2D normal_map;
@@ -60,16 +60,17 @@ uint CoordToIdx(uint i, uint j, uint k) {
 }
 
 vec3 viewPosToGrid(vec2 frag_pos, float view_z) {
-    vec3 c(frag_pos / vec2(float(TileWidthX),float(TileWidthY)), 1.0f);
+    vec3 c;
+    c.xy = frag_pos / vec2(float(TileWidthX),float(TileWidthY));
     c.z = min(float(TileCountZ - 1), max(0.f, float(TileCountZ) * log((-view_z - NearPlane) / (FarPlane - NearPlane) + 1.0f)));
     return c;
 }
 
 void main() {
-    vec3 diffuse_color = texture(diffuse, vUV).rgb * Material.diffuse.rgb;
+    vec3 diffuse_color = texture(diffuse_map, vUV).rgb * Material.diffuse.rgb;
     vec3 ambient = AmbientGlobal * Material.ambient.rgb;
 
-    vec3 bitangent = cross(vTangent, vNormal);
+    vec3 bitangent = cross(vTangent.xyz, vNormal.xyz);
     const mat3 inv_btn = inverse(transpose(mat3(vTangent,normalize(bitangent),vNormal)));
     vec3 normal_sample = texture(normal_map, vUV).rgb * vec3(2.0f) - vec3(1.0f);
     vec3 world_normal = inv_btn * normal_sample;
@@ -85,7 +86,7 @@ void main() {
     vec3 fresnel_specular = specular * (1.0f - specular) * fresnel;
 
     vec3 view_pos = (UBO.view * vPosition).xyz;
-    uvec3 grid_coord = uvec3(viewPosToGrid(gl_FragCoord.xy), view_pos.z);
+    uvec3 grid_coord = uvec3(viewPosToGrid(gl_FragCoord.xy, view_pos.z));
     int grid_idx = int(CoordToIdx(grid_coord.x, grid_coord.y, grid_coord.z));
 
     vec3 lighting = vec3(0.0f);
@@ -96,12 +97,12 @@ void main() {
         for (uint i = 0; i < light_count; ++i) {
             int light_idx = int(imageLoad(lightList, int(offset + i).r));
             vec4 light_pos_range = imageLoad(positionRanges, light_idx);
-            float dist = distance(light_pos_range.xyz - vPosition.xyz);
+            float dist = distance(light_pos_range.xyz, vPosition.xyz);
             if (dist < light_pos_range.w) {
                 vec3 l = normalize(light_pos_range.xyz - vPosition.xyz);
                 vec3 h = normalize(0.5f * (view_dir + l));
                 
-                float lambertian = max(dot(world_normal, 1.0f), 0.0f);
+                float lambertian = max(dot(world_normal, vec3(1.0f)), 0.0f);
                 float atten = max(1.0f - max(0.0f, dist / light_pos_range.w), 0.0f);
 
                 vec3 specular;
@@ -114,7 +115,7 @@ void main() {
                 }
 
                 vec3 light_color = imageLoad(lightColors, light_idx).rgb;
-                lighting += light_color * lambertian * atten * (diffuse + specular);
+                lighting += light_color * lambertian * atten * (diffuse_color + specular);
             }
         }
     }
