@@ -2,15 +2,16 @@
 #ifndef VULPESRENDER_MATERIALS_HPP
 #define VULPESRENDER_MATERIALS_HPP
 #include "ForwardDecl.hpp"
-#include <vulkan/vulkan.h>
-#include <memory>
-#include "tiny_obj_loader.h"
-#include "glm/vec4.hpp"
 #include "resource/Texture.hpp"
+#include <list>
+#include <memory>
+#include "glm/vec4.hpp"
+#include "tinyobjloader/tiny_obj_loader.h"
+
 namespace vpsk {
 
     struct pbrTexturePack;
-
+    
     /** Hides away the tremendous amount of textures and data required to render more complicated .obj models.
     *   Uses tinyobj to load the obj file, and enables all of the features it can. Can also be passed an mtl file path,
     *   otherwise accepts a tinyobj::material_t reference that it will use for loading the textures.
@@ -47,7 +48,6 @@ namespace vpsk {
         Material(Material&&) noexcept;
         Material& operator=(Material&&) noexcept;
 
-        void Create(const std::string& mtl_file_path, const vpr::Device* device, vpr::DescriptorPool* descriptor_pool);
         void Create(const tinyobj::material_t& tinyobj_imported_material, const vpr::Device* dvc, vpr::DescriptorPool* descriptor_pool);
         void UploadToDevice(vpr::TransferPool* transfer_pool);
 

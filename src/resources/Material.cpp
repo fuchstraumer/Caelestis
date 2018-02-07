@@ -1,5 +1,5 @@
 
-#include "render/Material.hpp"
+#include "resources/Material.hpp"
 #include "core/LogicalDevice.hpp"
 #include "command/TransferPool.hpp"
 #include "resource/DescriptorSetLayout.hpp"

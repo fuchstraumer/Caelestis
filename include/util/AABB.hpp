@@ -8,7 +8,7 @@ namespace vpsk {
     class AABB {
     public:
 
-        AABB() = default;
+        AABB();
         AABB(const glm::vec3& p);
         AABB(const glm::vec3& p0, const glm::vec3& p1);
         AABB(const glm::vec3& center, const float& radius);

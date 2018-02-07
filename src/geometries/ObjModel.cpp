@@ -1,19 +1,16 @@
-#include "vpr_stdafx.h"
 #include "geometries/ObjModel.hpp"
 #include "command/TransferPool.hpp"
-#include "scene/BaseScene.hpp"
 #include "resource/DescriptorSetLayout.hpp"
-#include "util/easylogging++.h"
 #include <unordered_map>
-#include "tiny_obj_loader.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
+#include "tinyobjloader/tiny_obj_loader.h"
+#include "util/easylogging++.h"
+#include "scene/BaseScene.hpp"
 
 using namespace vpr;
 
 namespace vpsk {
 
-    std::map<std::string, std::unique_ptr<Material>> ObjModel::materialsPool = std::map<std::string, std::unique_ptr<Material>>{};
+    ObjModel::ObjModel(const Device* dvc) : TriangleMesh(glm::vec3(0.0f)), device(dvc), aabb() {}
 
     void ObjModel::Render(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin, const VkViewport& vp, const VkRect2D& sc) {
         vkBeginCommandBuffer(cmd, &begin);
@@ -23,29 +20,6 @@ namespace vpsk {
             vkCmdSetScissor(cmd, 0, 1, &sc);
             TriangleMesh::Render(cmd);
         vkEndCommandBuffer(cmd);
-    }
-
-    void ObjModel::LoadModelFromFile(const std::string& obj_f, const std::string& tex_f, TransferPool* transfer_pool) {
-        tinyobj::attrib_t attrib;
-        std::vector<tinyobj::shape_t> shapes;
-        std::vector<tinyobj::material_t> mtls;
-        std::string err;
-
-        if(!tinyobj::LoadObj(&attrib, &shapes, &mtls, &err, obj_f.c_str())) {
-            LOG(ERROR) << "TinyObjLoader failed to load model file " << obj_f << " , exiting.";
-            LOG(ERROR) << "Load failed with error: " << err;
-            throw std::runtime_error(err.c_str());
-        }
-        
-        modelName = shapes.front().name;
-
-        loadMeshes(shapes, attrib, transfer_pool);
-
-        tinyobj::material_t mtl;
-        mtl.diffuse_texname = tex_f;
-        mtls.push_back(std::move(mtl));
-        createMaterials(mtls, transfer_pool);
-
     }
 
     void ObjModel::LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool) {
@@ -64,17 +38,13 @@ namespace vpsk {
         modelName = shapes.front().name;
 
         loadMeshes(shapes, attrib, transfer_pool);
-
-        if(!materials.empty()) {
-            createMaterials(materials, transfer_pool);
-        }
         
     }
 
     void ObjModel::loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, TransferPool* transfer_pool) {
        
         std::unordered_map<vertex_t, uint32_t> unique_vertices{};
-
+        
         for (const auto& shape : shapes) {
             for (const auto& idx : shape.mesh.indices) {
 
@@ -83,7 +53,7 @@ namespace vpsk {
                 vert.pos = { attrib.vertices[3 * idx.vertex_index], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2] };
                 vert.normal = { attrib.normals[3 * idx.normal_index], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2] };
                 vert.uv = { attrib.texcoords[2 * idx.texcoord_index], 1.0f - attrib.texcoords[2 * idx.texcoord_index + 1] };
-
+                aabb.Include(vert.pos);
                 if (unique_vertices.count(vert) == 0) {
                     unique_vertices[vert] = AddVertex(vert);
                 }
@@ -91,6 +61,8 @@ namespace vpsk {
                 AddIndex(unique_vertices[vert]);
             }
         }
+
+        UpdatePosition(aabb.Center());
 
         CreateBuffers(device);
         LOG(INFO) << "Loaded mesh data from .obj file, uploading to device now...";
@@ -100,26 +72,6 @@ namespace vpsk {
         transfer_pool->Submit();
         LOG(INFO) << "Mesh data upload complete.";
 
-    }
-
-    void ObjModel::createMaterials(const std::vector<tinyobj::material_t>& materials, TransferPool* transfer_pool) {
-        for (const auto& material : materials) {
-            if (materialsPool.count(material.name) == 0) {
-                auto inserted = materialsPool.insert(std::make_pair(material.name, std::move(std::make_unique<Material>())));
-                inserted.first->second->Create(material, device, descriptorPool);
-                LOG(INFO) << "Created a new material object, sending to device now...";
-                inserted.first->second->UploadToDevice(transfer_pool);
-                LOG(INFO) << "New material object created and uploaded to device.";
-                myMaterial = inserted.first;
-            }
-            else {
-                myMaterial = materialsPool.find(material.name);
-                if (myMaterial == materialsPool.cend()) {
-                    LOG(ERROR) << "Couldn't find object's material in the materials pool!";
-                    throw std::runtime_error("Couldn't find material belonging to object.");
-                }
-            }
-        }
     }
 
     void ObjModel::CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path) {

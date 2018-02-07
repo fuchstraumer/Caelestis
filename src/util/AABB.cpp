@@ -9,6 +9,8 @@ namespace vpsk {
             return std::fma(s, v1, std::fma(-s, v0, v0));
         }
 
+        AABB::AABB() : min(0.0f,0.0f,0.0f), max(0.0f,0.0f,0.0f) {}
+
         AABB::AABB(const glm::vec3& p) : min(p), max(p) {}
 
         AABB::AABB(const glm::vec3& p0, const glm::vec3& p1) :
