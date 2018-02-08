@@ -16,6 +16,8 @@
 #include "resource/ShaderModule.hpp"
 #include "resource/PipelineCache.hpp"
 #include "resource/PipelineLayout.hpp"
+#include "resource/DescriptorSetLayout.hpp"
+#include "resource/DescriptorSet.hpp"
 #include <memory>
 #include <map>
 namespace forward_plus {
@@ -43,10 +45,10 @@ namespace forward_plus {
     std::vector<glm::vec4> LightPositions;
     std::vector<glm::u8vec4> LightColors;
 
-    class LightBuffers {
+    class light_buffers_t {
     public:
 
-        LightBuffers(const Device* dvc);
+        light_buffers_t(const Device* dvc);
         void CreateBuffers();
         std::unique_ptr<Buffer> Flags;
         std::unique_ptr<Buffer> Bounds;
@@ -155,10 +157,10 @@ namespace forward_plus {
 
     struct clustered_forward_pipelines_t {
         g_pipeline_items_t Depth;
-        g_pipeline_items_t ClusteringOpaque;
-        g_pipeline_items_t ClusteringTransparent;
-        g_pipeline_items_t ClusteringFwdOpaque;
-        g_pipeline_items_t ClusteringFwdTransparent;
+        g_pipeline_items_t LightingOpaque;
+        g_pipeline_items_t LightingTransparent;
+        g_pipeline_items_t Opaque;
+        g_pipeline_items_t Transparent;
         g_pipeline_items_t Particles;
         compute_pipelines_t ComputePipelines;
     };
@@ -170,35 +172,49 @@ namespace forward_plus {
 
     private:
 
+        void createShaders();
         void createDepthPipeline();
-
+        void createLightingOpaquePipeline();
+        void createLightingTransparentPipeline();
+        void createOpaquePipeline();
+        void createTransparentPipeline();
+        void createParticlePipeline();
         void createComputePipelines();
 
-        void createComputePool();
+        void createComputeCmdPool();
+        void createPrimaryCmdPool();
+        void createSecondaryCmdPool();
+
         void createDescriptorPool();
+        void createFrameDataSetLayout();
+        void createFrameDataDescriptorSet();
+        void createTexelBufferSetLayout();
+        void createTexelBufferDescriptorSet();
+
         void createFrameData();
 
-        void createOnscreenPass();
         void createOnscreenAttachmentDescriptions();
         void createOnscreenAttachmentReferences();
         void createOnscreenSubpassDescription();
         void createOnscreenSubpassDependencies();
+        void createOnscreenPass();
 
-        void createComputePass();
         void createComputeAttachmentDescriptions();
         void createComputeSubpassDescriptions();
         void createComputeSubpassDependencies();
+        void createComputePass();
 
-        void createShaders();
-
+        light_buffers_t LightBuffers;
         clustered_forward_pipelines_t Pipelines;
-
         std::unique_ptr<DescriptorPool> descriptorPool;
         std::unique_ptr<DescriptorSetLayout> frameDataLayout;
         std::unique_ptr<DescriptorSetLayout> texelBuffersLayout;
         std::unique_ptr<CommandPool> graphicsPool;
         std::unique_ptr<CommandPool> secondaryPool;
         std::unique_ptr<CommandPool> computePool;
+
+        std::array<std::unique_ptr<DescriptorSet>, 3> frameSets;
+        std::unique_ptr<DescriptorSet> texelBufferSet;
 
         std::unique_ptr<Renderpass> onscreenPass;
         VkSubpassDescription onscreenSbDescr;
@@ -222,11 +238,11 @@ namespace forward_plus {
         
     };
     
-    LightBuffers::LightBuffers(const Device* dvc) : Flags(std::make_unique<Buffer>(dvc)), Bounds(std::make_unique<Buffer>(dvc)), 
+    light_buffers_t::light_buffers_t(const Device* dvc) : Flags(std::make_unique<Buffer>(dvc)), Bounds(std::make_unique<Buffer>(dvc)), 
         LightCounts(std::make_unique<Buffer>(dvc)), LightCountTotal(std::make_unique<Buffer>(dvc)), LightCountOffsets(std::make_unique<Buffer>(dvc)),
         LightList(std::make_unique<Buffer>(dvc)), LightCountsCompare(std::make_unique<Buffer>(dvc)) {}
 
-    void LightBuffers::CreateBuffers() {
+    void light_buffers_t::CreateBuffers() {
         const uint32_t max_grid_count = ((ProgramState.ResolutionX - 1) / (ProgramState.TileWidth + 1)) 
             * ((ProgramState.ResolutionY - 1) / (ProgramState.TileWidth + 1)) * ProgramState.TileCountZ;
         constexpr VkBufferUsageFlags buffer_flags = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -315,13 +331,47 @@ namespace forward_plus {
     }
 
     void ClusteredForward::createDescriptorPool() {
-        // 1 set 
         descriptorPool = std::make_unique<DescriptorPool>(device.get(), swapchain->ImageCount() + 1);
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, swapchain->ImageCount());
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, swapchain->ImageCount * 2 + 7);
+        descriptorPool->Create();
     }
 
-    void ClusteredForward::createComputePool() {
+    void ClusteredForward::createFrameDataSetLayout() {
+        frameDataLayout = std::make_unique<DescriptorSetLayout>(device.get());
+        constexpr static VkShaderStageFlags vfc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+        constexpr static VkShaderStageFlags fc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+        frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, vfc_flags, 0);
+        frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 1);
+        frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 2);
+    }
+
+    void ClusteredForward::createTexelBufferSetLayout() {
+        texelBuffersLayout = std::make_unique<DescriptorSetLayout>(device.get());
+        constexpr static VkShaderStageFlags vfc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+        constexpr static VkShaderStageFlags fc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 0);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 1);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 2);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 3);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 4);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 5);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 6);
+    }
+
+    void ClusteredForward::createTexelBufferDescriptorSet() {
+        texelBufferSet = std::make_unique<DescriptorSet>(device.get());
+        texelBufferSet->AddDescriptorInfo(LightBuffers.Flags->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 0);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.Bounds->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCounts->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 2);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountTotal->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 3);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountOffsets->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 4);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightList->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 5);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountsCompare->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 6);
+        texelBufferSet->Init(descriptorPool.get(), texelBuffersLayout.get());
+    }
+
+    void ClusteredForward::createComputeCmdPool() {
         VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
         pool_info.queueFamilyIndex = device->QueueFamilyIndices.Compute;
         assert(device->QueueFamilyIndices.Compute != device->QueueFamilyIndices.Graphics);
