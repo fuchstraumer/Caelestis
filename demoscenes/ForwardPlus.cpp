@@ -9,9 +9,18 @@
 #include "util/AABB.hpp"
 #include "lights/Light.hpp"
 #include "render/Swapchain.hpp"
+#include "command/CommandPool.hpp"
+#include "command/TransferPool.hpp"
+#include "geometries/vertex_t.hpp"
+#include "render/GraphicsPipeline.hpp"
+#include "resource/ShaderModule.hpp"
+#include "resource/PipelineCache.hpp"
+#include "resource/PipelineLayout.hpp"
 #include <memory>
-
+#include <map>
 namespace forward_plus {
+
+    // https://mynameismjp.wordpress.com/2016/03/25/bindless-texturing-for-deferred-rendering-and-decals/
 
     using namespace vpr;
     using namespace vpsk;
@@ -107,7 +116,7 @@ namespace forward_plus {
 
     struct frame_data_t {
 
-        frame_data_t(const Device* dvc);
+        frame_data_t(const Device* dvc, uint32_t idx);
 
         struct cmd_buffer_block_t {
             VkCommandBuffer Cmd = VK_NULL_HANDLE;
@@ -123,18 +132,94 @@ namespace forward_plus {
         std::unique_ptr<Buffer> LightPositions;
         std::unique_ptr<Buffer> LightColors;
         std::unique_ptr<Buffer> UBO;
+        uint32_t idx;
+    };
+
+    struct g_pipeline_items_t {
+        std::unique_ptr<GraphicsPipeline> Pipeline;
+        std::unique_ptr<PipelineLayout> Layout;
+        std::unique_ptr<PipelineCache> Cache;
+    };
+
+    static const std::map<const std::string, const size_t> NameIdxMap { 
+            { "LightGrids", 0 }, { "GridOffsets", 1 }, { "LightList", 2 }
+    };
+
+    struct compute_pipelines_t {
+        
+        std::array<VkPipeline, 3> Handles;
+        std::array<VkComputePipelineCreateInfo, 3> Infos;
+        std::unique_ptr<PipelineLayout> PipelineLayout;
+        std::unique_ptr<PipelineCache> Cache;
+    };
+
+    struct clustered_forward_pipelines_t {
+        g_pipeline_items_t Depth;
+        g_pipeline_items_t ClusteringOpaque;
+        g_pipeline_items_t ClusteringTransparent;
+        g_pipeline_items_t ClusteringFwdOpaque;
+        g_pipeline_items_t ClusteringFwdTransparent;
+        g_pipeline_items_t Particles;
+        compute_pipelines_t ComputePipelines;
     };
 
     class ClusteredForward : public BaseScene {
     public:
 
-    private:
-        std::unique_ptr<CommandPool> computePool;
-        std::vector<frame_data_t> FrameData;
-        VkPipelineStageFlags OffscreenFlags, ComputeFlags, RenderFlags;
-        VkSubmitInfo OffscreenSubmit, ComputeSubmit, RenderSubmit;
+        void Render();
 
+    private:
+
+        void createDepthPipeline();
+
+        void createComputePipelines();
+
+        void createComputePool();
+        void createDescriptorPool();
         void createFrameData();
+
+        void createOnscreenPass();
+        void createOnscreenAttachmentDescriptions();
+        void createOnscreenAttachmentReferences();
+        void createOnscreenSubpassDescription();
+        void createOnscreenSubpassDependencies();
+
+        void createComputePass();
+        void createComputeAttachmentDescriptions();
+        void createComputeSubpassDescriptions();
+        void createComputeSubpassDependencies();
+
+        void createShaders();
+
+        clustered_forward_pipelines_t Pipelines;
+
+        std::unique_ptr<DescriptorPool> descriptorPool;
+        std::unique_ptr<DescriptorSetLayout> frameDataLayout;
+        std::unique_ptr<DescriptorSetLayout> texelBuffersLayout;
+        std::unique_ptr<CommandPool> graphicsPool;
+        std::unique_ptr<CommandPool> secondaryPool;
+        std::unique_ptr<CommandPool> computePool;
+
+        std::unique_ptr<Renderpass> onscreenPass;
+        VkSubpassDescription onscreenSbDescr;
+        std::array<VkAttachmentDescription, 3> onscreenDescr;
+        std::array<VkAttachmentReference, 3> onscreenReferences;
+        std::array<VkSubpassDependency, 2> onscreenDependencies;
+
+        std::unique_ptr<Renderpass> computePass;
+        std::array<VkAttachmentDescription, 1> computeAttachmentDescr;
+        std::array<VkSubpassDescription, 2> computeSbDescr;
+        VkAttachmentReference computeRef;
+        std::array<VkSubpassDependency, 3> computeDependencies;
+
+        std::vector<frame_data_t> FrameData;
+        VkSubmitInfo OffscreenSubmit, ComputeSubmit, RenderSubmit;
+        std::map<std::string, std::unique_ptr<ShaderModule>> shaders;
+
+        constexpr static VkPipelineStageFlags OffscreenFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        constexpr static VkPipelineStageFlags ComputeFlags = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        
     };
     
     LightBuffers::LightBuffers(const Device* dvc) : Flags(std::make_unique<Buffer>(dvc)), Bounds(std::make_unique<Buffer>(dvc)), 
@@ -156,17 +241,18 @@ namespace forward_plus {
 
     void ClusteredForward::createFrameData() {
         const uint32_t num_frames = swapchain->ImageCount;
-        FrameData.resize(num_frames, device.get());
-        for (auto& data : FrameData) {
-            data.Create();
+        for (uint32_t i = 0; i < num_frames; ++i) {
+            FrameData.push_back(frame_data_t{ device.get(), i });
         }
+        
     }
 
-    frame_data_t::frame_data_t(const Device* dvc)  : LightPositions(std::make_unique<Buffer>(dvc)), LightColors(std::make_unique<Buffer>(dvc)),
-        UBO(std::make_unique<Buffer>(dvc)), device(dvc) {
-        const VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    frame_data_t::frame_data_t(const Device* dvc, const uint32_t _idx)  : idx(_idx), LightPositions(std::make_unique<Buffer>(dvc)), 
+        LightColors(std::make_unique<Buffer>(dvc)), UBO(std::make_unique<Buffer>(dvc)), device(dvc) {
+        constexpr static VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         VkBufferCreateInfo create_info = vk_buffer_create_info_base;
         uint32_t queue_indices[2]{ 0, 0 };
+
         if (device->QueueFamilyIndices.Compute != device->QueueFamilyIndices.Graphics) {
             create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
             queue_indices[0] = device->QueueFamilyIndices.Graphics;
@@ -190,6 +276,220 @@ namespace forward_plus {
         create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         create_info.size = sizeof(clustered_forward_global_ubo_t);
         UBO->CreateBuffer(create_info, mem_flags);
+    }
+
+    void ClusteredForward::createDepthPipeline() {
+        GraphicsPipelineInfo info;
+        info.VertexInfo.vertexAttributeDescriptionCount = 1;
+        info.VertexInfo.vertexBindingDescriptionCount = 1;
+        // just use position input.
+        static const VkVertexInputAttributeDescription attr = vertex_t::attributeDescriptions[0];
+        static const VkVertexInputBindingDescription bind = vertex_t::bindingDescriptions[0];
+        info.VertexInfo.pVertexAttributeDescriptions = &attr;
+        info.VertexInfo.pVertexBindingDescriptions = &bind;
+
+        auto pipeline_info = info.GetPipelineCreateInfo();
+        pipeline_info.stageCount = 1;
+        pipeline_info.pStages = &shaders.at("Simple.vert")->PipelineInfo();
+
+        Pipelines.Depth.Pipeline = std::make_unique<GraphicsPipeline>(device.get(), pipeline_info, Pipelines.Depth.Cache->vkHandle());
+    }
+
+    void ClusteredForward::createComputePipelines() {
+        Pipelines.ComputePipelines.Infos.fill(VkComputePipelineCreateInfo{ 
+            VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0, VkPipelineShaderStageCreateInfo{}, VK_NULL_HANDLE, VK_NULL_HANDLE, -1
+        });
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].stage = shaders.at("LightGrids.comp")->PipelineInfo();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].stage = shaders.at("GridOffsets.comp")->PipelineInfo();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].stage = shaders.at("LightList.comp")->PipelineInfo();
+        Pipelines.ComputePipelines.Cache = std::make_unique<PipelineCache>(device.get(), 
+            static_cast<uint16_t>(std::hash<std::string>()("compute-pipeline-cache")));
+        
+        VkResult result = vkCreateComputePipelines(device->vkHandle(), Pipelines.ComputePipelines.Cache->vkHandle(), 
+            static_cast<uint32_t>(Pipelines.ComputePipelines.Infos.size()), Pipelines.ComputePipelines.Infos.data(), 
+            nullptr, Pipelines.ComputePipelines.Handles.data());
+        VkAssert(result);
+    }
+
+    void ClusteredForward::createDescriptorPool() {
+        // 1 set 
+        descriptorPool = std::make_unique<DescriptorPool>(device.get(), swapchain->ImageCount() + 1);
+        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, swapchain->ImageCount());
+        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, swapchain->ImageCount * 2 + 7);
+    }
+
+    void ClusteredForward::createComputePool() {
+        VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
+        pool_info.queueFamilyIndex = device->QueueFamilyIndices.Compute;
+        assert(device->QueueFamilyIndices.Compute != device->QueueFamilyIndices.Graphics);
+        computePool = std::make_unique<CommandPool>(device.get(), pool_info);
+        computePool->AllocateCmdBuffers(swapchain->ImageCount(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    }
+
+    void ClusteredForward::createOnscreenAttachmentDescriptions() {
+        onscreenDescr[0].format = swapchain->ColorFormat();
+        onscreenDescr[0].samples = VK_SAMPLE_COUNT_4_BIT;
+        onscreenDescr[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        onscreenDescr[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        onscreenDescr[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        onscreenDescr[1].format = swapchain->ColorFormat();
+        onscreenDescr[1].samples = VK_SAMPLE_COUNT_1_BIT;
+        onscreenDescr[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        onscreenDescr[1].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        onscreenDescr[2].format = device->FindDepthFormat();
+        onscreenDescr[2].samples = VK_SAMPLE_COUNT_4_BIT;
+        onscreenDescr[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        onscreenDescr[2].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+
+    void ClusteredForward::createOnscreenAttachmentReferences() {
+        onscreenReferences[0] = VkAttachmentReference{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        onscreenReferences[1] = VkAttachmentReference{ 2, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+        onscreenReferences[2] = VkAttachmentReference{ 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    }
+
+    void ClusteredForward::createOnscreenSubpassDescription() {
+        onscreenSbDescr = vk_subpass_description_base;
+        onscreenSbDescr.colorAttachmentCount = 1;
+        onscreenSbDescr.pColorAttachments = &onscreenReferences[0];
+        onscreenSbDescr.pResolveAttachments = &onscreenReferences[2];
+        onscreenSbDescr.pDepthStencilAttachment = &onscreenReferences[1];
+    }
+
+    void ClusteredForward::createOnscreenSubpassDependencies() {
+        onscreenDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+        onscreenDependencies[0].dstSubpass = 0;
+        onscreenDependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        onscreenDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        onscreenDependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        onscreenDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        onscreenDependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+        onscreenDependencies[1].srcSubpass = 0;
+        onscreenDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+        onscreenDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        onscreenDependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        onscreenDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        onscreenDependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        onscreenDependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    }
+
+    void ClusteredForward::createOnscreenPass() {
+        createOnscreenAttachmentDescriptions();
+        createOnscreenAttachmentReferences();
+        createOnscreenSubpassDescription();
+        createOnscreenSubpassDependencies();
+
+        VkRenderPassCreateInfo create_info = vk_render_pass_create_info_base;
+        create_info.attachmentCount = static_cast<uint32_t>(onscreenDescr.size());
+        create_info.pAttachments = onscreenDescr.data();
+        create_info.subpassCount = 1;
+        create_info.pSubpasses = &onscreenSbDescr;
+        create_info.dependencyCount = static_cast<uint32_t>(onscreenDependencies.size());
+        create_info.pDependencies = onscreenDependencies.data();
+        
+        onscreenPass = std::make_unique<Renderpass>(device.get(), create_info);
+    }
+
+    void ClusteredForward::createComputeAttachmentDescriptions() {
+        computeAttachmentDescr[0] = vk_attachment_description_base;
+        computeAttachmentDescr[0] = VkAttachmentDescription{
+            0,
+            device->FindDepthFormat(),
+            VK_SAMPLE_COUNT_1_BIT,
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        };
+    }
+
+    void ClusteredForward::createComputeSubpassDescriptions() {
+        computeRef = VkAttachmentReference{ 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+        computeSbDescr[0] = VkSubpassDescription{
+            0, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            0, nullptr, 0, nullptr,
+            nullptr, &computeRef,
+            0, nullptr
+        };
+
+        computeSbDescr[1] = computeSbDescr[1];
+    }
+
+    void ClusteredForward::createComputeSubpassDependencies() {
+
+        computeDependencies[0] = VkSubpassDependency{
+            VK_SUBPASS_EXTERNAL,
+            0,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+            VK_ACCESS_MEMORY_WRITE_BIT,
+            VK_ACCESS_UNIFORM_READ_BIT,
+            VK_DEPENDENCY_BY_REGION_BIT
+        };
+
+        computeDependencies[1] = VkSubpassDependency{
+            0,
+            1,
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+            VK_DEPENDENCY_BY_REGION_BIT
+        };
+
+        computeDependencies[2] = VkSubpassDependency{
+            1,
+            VK_SUBPASS_EXTERNAL,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_ACCESS_SHADER_WRITE_BIT,
+            VK_ACCESS_SHADER_READ_BIT,
+            VK_DEPENDENCY_BY_REGION_BIT
+        };
+
+    }
+
+    void ClusteredForward::createComputePass() {
+        createComputeAttachmentDescriptions();
+        createComputeSubpassDescriptions();
+        createComputeSubpassDependencies();
+
+        VkRenderPassCreateInfo create_info = vk_render_pass_create_info_base;
+        create_info.attachmentCount = static_cast<uint32_t>(computeAttachmentDescr.size());
+        create_info.pAttachments = computeAttachmentDescr.data();
+        create_info.subpassCount = static_cast<uint32_t>(computeSbDescr.size());
+        create_info.pSubpasses = computeSbDescr.data();
+        create_info.dependencyCount = static_cast<uint32_t>(computeDependencies.size());
+        create_info.pDependencies = computeDependencies.data();
+
+        computePass = std::make_unique<Renderpass>(device.get(), create_info);
+    }
+
+    void ClusteredForward::createShaders() {
+        const std::string prefix("clustered_forward/");
+        shaders["Simple.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Simple.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+        shaders["Light.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+        shaders["Light.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+        shaders["Clustered.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Clustered.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+        shaders["Clustered.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Clustered.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+        shaders["Particles.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Particles.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+        shaders["Particles.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Particles.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+        shaders["GridOffsets.comp"] = std::make_unique<ShaderModule>(device.get(), prefix + "GridOffsets.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+        shaders["LightGrid.comp"] = std::make_unique<ShaderModule>(device.get(), prefix + "LightGrid.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+        shaders["LightList.comp"] = std::make_unique<ShaderModule>(device.get(), prefix + "LightList.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+
+    void ClusteredForward::Render() {
+
     }
 
 }
