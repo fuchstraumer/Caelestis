@@ -13,6 +13,8 @@
 #include "command/TransferPool.hpp"
 #include "geometries/vertex_t.hpp"
 #include "render/GraphicsPipeline.hpp"
+#include "render/Renderpass.hpp"
+#include "render/Framebuffer.hpp"
 #include "resource/ShaderModule.hpp"
 #include "resource/PipelineCache.hpp"
 #include "resource/PipelineLayout.hpp"
@@ -20,6 +22,7 @@
 #include "resource/DescriptorSet.hpp"
 #include <memory>
 #include <map>
+#include <random>
 namespace forward_plus {
 
     // https://mynameismjp.wordpress.com/2016/03/25/bindless-texturing-for-deferred-rendering-and-decals/
@@ -57,6 +60,66 @@ namespace forward_plus {
         std::unique_ptr<Buffer> LightCountOffsets;
         std::unique_ptr<Buffer> LightList;
         std::unique_ptr<Buffer> LightCountsCompare;
+    };
+
+    std::uniform_real_distribution<float> rand_distr;
+
+    float random_unit_float() {
+        return rand_distr(std::mt19937());
+    }
+
+    float random_range(const float l, const float h) {
+        return l + (h - l) * random_unit_float();
+    }
+
+    glm::vec3 hue_to_rgb(const float hue) {
+        const float s = hue * 6.0f;
+        const float r0 = glm::clamp(s - 4.0f, 0.0f, 1.0f);
+        const float g0 = glm::clamp(s - 0.0f, 0.0f, 1.0f);
+        const float b0 = glm::clamp(s - 2.0f, 0.0f, 1.0f);
+        const float r1 = glm::clamp(2.0f - s, 0.0f, 1.0f);
+        const float g1 = glm::clamp(4.0f - s, 0.0f, 1.0f);
+        const float b1 = glm::clamp(6.0f - s, 0.0f, 1.0f);
+
+        return glm::vec3{ r0 + r1, g0 * g1, b0 * b1 };
+    }
+
+    glm::u8vec4 float_to_uchar(const glm::vec3& color) {
+        return glm::u8vec4{ 
+            static_cast<uint8_t>(std::round(color.x * 255.0f)),
+            static_cast<uint8_t>(std::round(color.y * 255.0f)),
+            static_cast<uint8_t>(std::round(color.z * 255.0f)),
+            0
+        };
+    }
+
+    void GenerateLights(const AABB& model_bounds) {
+        const glm::vec3 extents = model_bounds.Extents();
+        const float volume = extents.x * extents.y * extents.z;
+        const float light_vol = volume / static_cast<float>(ProgramState.NumLights);
+        const float base_range = powf(light_vol, 1.0f / 3.0f);
+        const float max_range = base_range * 3.0f;
+        const float min_range = base_range / 1.5f;
+        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.50f;
+        const float pos_radius = std::max(half_size.x, std::max(half_size.y, half_size.z));
+        Lights.reserve(ProgramState.NumLights);
+        for (uint32_t i = 0; i < ProgramState.NumLights; ++i) {
+            glm::vec3 fcol = hue_to_rgb(random_range(0.0f,1.0f));
+            fcol *= 1.30f;
+            fcol -= 0.15f;
+            const glm::u8vec4 color = float_to_uchar(fcol);
+            const glm::vec3 position{ 
+                random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius) 
+            };
+            const float range = random_range(min_range, max_range);
+            Lights.emplace_back(position, color, range);
+        }
+    }
+
+    constexpr static std::array<const VkClearValue, 3> ClearValues {
+        VkClearValue{ 0.0f, 0.0f, 0.0f, 1.0f },
+        VkClearValue{ 0.0f, 0.0f, 0.0f, 1.0f },
+        VkClearValue{ 1.0f, 0 }
     };
 
     struct clustered_forward_global_ubo_t {
@@ -148,7 +211,6 @@ namespace forward_plus {
     };
 
     struct compute_pipelines_t {
-        
         std::array<VkPipeline, 3> Handles;
         std::array<VkComputePipelineCreateInfo, 3> Infos;
         std::unique_ptr<PipelineLayout> PipelineLayout;
@@ -204,14 +266,18 @@ namespace forward_plus {
         void createComputeSubpassDependencies();
         void createComputePass();
 
+        void createOffscreenRenderTarget();
+        void createOffscreenFramebuffer();
+
         light_buffers_t LightBuffers;
         clustered_forward_pipelines_t Pipelines;
         std::unique_ptr<DescriptorPool> descriptorPool;
         std::unique_ptr<DescriptorSetLayout> frameDataLayout;
         std::unique_ptr<DescriptorSetLayout> texelBuffersLayout;
-        std::unique_ptr<CommandPool> graphicsPool;
-        std::unique_ptr<CommandPool> secondaryPool;
+        std::unique_ptr<CommandPool> primaryPool;
         std::unique_ptr<CommandPool> computePool;
+        std::unique_ptr<Image> offscreenRenderTarget;
+        std::unique_ptr<Framebuffer> offscreenFramebuffer;
 
         std::array<std::unique_ptr<DescriptorSet>, 3> frameSets;
         std::unique_ptr<DescriptorSet> texelBufferSet;
@@ -292,6 +358,12 @@ namespace forward_plus {
         create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         create_info.size = sizeof(clustered_forward_global_ubo_t);
         UBO->CreateBuffer(create_info, mem_flags);
+
+        VkFenceCreateInfo fence_info = vk_fence_create_info_base;
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        VkResult result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &OffscreenCmd.Fence); VkAssert(result);
+        result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &ComputeCmd.Fence); VkAssert(result);
+        result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &RenderCmd.Fence); VkAssert(result);
     }
 
     void ClusteredForward::createDepthPipeline() {
@@ -374,9 +446,20 @@ namespace forward_plus {
     void ClusteredForward::createComputeCmdPool() {
         VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
         pool_info.queueFamilyIndex = device->QueueFamilyIndices.Compute;
-        assert(device->QueueFamilyIndices.Compute != device->QueueFamilyIndices.Graphics);
+        if (device->QueueFamilyIndices.Compute == device->QueueFamilyIndices.Graphics) {
+            std::cerr << "Compute/Graphics queues are the same on current hardware.\n";
+        }
+        pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
         computePool = std::make_unique<CommandPool>(device.get(), pool_info);
         computePool->AllocateCmdBuffers(swapchain->ImageCount(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    }
+
+    void ClusteredForward::createPrimaryCmdPool() {
+        VkCommandPoolCreateInfo pool_info = vk_command_pool_info_base;
+        pool_info.queueFamilyIndex = device->QueueFamilyIndices.Graphics;
+        pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        primaryPool = std::make_unique<CommandPool>(device.get(), pool_info);
+        primaryPool->AllocateCmdBuffers(swapchain->ImageCount() * 2, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     }
 
     void ClusteredForward::createOnscreenAttachmentDescriptions() {
@@ -522,6 +605,7 @@ namespace forward_plus {
         create_info.pDependencies = computeDependencies.data();
 
         computePass = std::make_unique<Renderpass>(device.get(), create_info);
+        computePass->SetupBeginInfo(ClearValues.data(), ClearValues.size(), swapchain->Extent());
     }
 
     void ClusteredForward::createShaders() {
@@ -538,8 +622,23 @@ namespace forward_plus {
         shaders["LightList.comp"] = std::make_unique<ShaderModule>(device.get(), prefix + "LightList.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
     }
 
-    void ClusteredForward::Render() {
+    void ClusteredForward::createOffscreenRenderTarget() {
+        offscreenRenderTarget = std::make_unique<Image>(device.get());
+        VkImageCreateInfo create_info = vk_image_create_info_base;
+        create_info.extent = VkExtent3D{ swapchain->Extent().width, swapchain->Extent().height, 1 };
+        create_info.imageType = VK_IMAGE_TYPE_2D;
+        create_info.format = device->FindDepthFormat();
+        create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        offscreenRenderTarget->Create(create_info);
+        offscreenRenderTarget->CreateView(VK_IMAGE_ASPECT_DEPTH_BIT);
+    }
 
+    void ClusteredForward::createOffscreenFramebuffer() {
+        VkFramebufferCreateInfo create_info = vk_framebuffer_create_info_base;
+        create_info.attachmentCount = 1;
+        create_info.pAttachments = &offscreenRenderTarget->View();
+        create_info.renderPass = computePass->vkHandle();
+        offscreenFramebuffer = std::make_unique<Framebuffer>(device.get(), create_info);
     }
 
 }
