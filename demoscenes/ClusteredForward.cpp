@@ -367,6 +367,10 @@ namespace forward_plus {
     }
 
     void ClusteredForward::createDepthPipeline() {
+
+        Pipelines.Depth.PipelineLayout = std::make_unique<PipelineLayout>(device.get());
+        Pipelines.Depth.PipelineLayout->Create({ frameDataLayout->vkHandle() });
+
         GraphicsPipelineInfo info;
         info.VertexInfo.vertexAttributeDescriptionCount = 1;
         info.VertexInfo.vertexBindingDescriptionCount = 1;
@@ -379,6 +383,7 @@ namespace forward_plus {
         auto pipeline_info = info.GetPipelineCreateInfo();
         pipeline_info.stageCount = 1;
         pipeline_info.pStages = &shaders.at("Simple.vert")->PipelineInfo();
+        pipeline_info.layout = Pipelines.Depth.PipelineLayout->vkHandle();
 
         Pipelines.Depth.Pipeline = std::make_unique<GraphicsPipeline>(device.get(), pipeline_info, Pipelines.Depth.Cache->vkHandle());
     }
@@ -400,6 +405,11 @@ namespace forward_plus {
             static_cast<uint32_t>(Pipelines.ComputePipelines.Infos.size()), Pipelines.ComputePipelines.Infos.data(), 
             nullptr, Pipelines.ComputePipelines.Handles.data());
         VkAssert(result);
+    }
+
+    void ClusteredForward::createLightingOpaquePipeline() {
+        Pipelines.LightingOpaque.PipelineLayout = std::make_unique<PipelineLayout>(device.get());
+        Pipelines.LightingOpaque.PipelineLayout->Create({ frameDataLayout->vkHandle(), texelBuffersLayout->vkHandle() });
     }
 
     void ClusteredForward::createDescriptorPool() {
