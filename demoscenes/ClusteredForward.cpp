@@ -23,6 +23,8 @@
 #include <memory>
 #include <map>
 #include <random>
+#include <deque>
+
 namespace forward_plus {
 
     // https://mynameismjp.wordpress.com/2016/03/25/bindless-texturing-for-deferred-rendering-and-decals/
@@ -169,16 +171,6 @@ namespace forward_plus {
         Transfer
     };
 
-    struct query_data_t {
-        std::array<uint32_t, 2> DepthPass;
-        std::array<uint32_t, 2> Clustering;
-        std::array<uint32_t, 2> CalcLightGrids;
-        std::array<uint32_t, 2> CalcGridOffsets;
-        std::array<uint32_t, 2> CalcLightList;
-        std::array<uint32_t, 2> Onscreen;
-        std::array<uint32_t, 2> Transfer;
-    };
-
     struct frame_data_t {
 
         frame_data_t(const Device* dvc, uint32_t idx);
@@ -186,13 +178,13 @@ namespace forward_plus {
         struct cmd_buffer_block_t {
             VkCommandBuffer Cmd = VK_NULL_HANDLE;
             VkFence Fence = VK_NULL_HANDLE;
+            VkSubmitInfo Info = vk_submit_info_base;
         };
 
         cmd_buffer_block_t OffscreenCmd;
         cmd_buffer_block_t ComputeCmd;
         cmd_buffer_block_t RenderCmd;
-        VkQueryPool QueryPool;
-        query_data_t QueryResults;
+
         const Device* device;
         std::unique_ptr<Buffer> LightPositions;
         std::unique_ptr<Buffer> LightColors;
@@ -227,6 +219,18 @@ namespace forward_plus {
         compute_pipelines_t ComputePipelines;
     };
 
+    struct backbuffer_data_t {
+        backbuffer_data_t(const Device* dvc);
+        ~backbuffer_data_t();
+        uint32_t idx = 0;
+        VkSemaphore ImageAcquire;
+        VkSemaphore PreCompute;
+        VkSemaphore Compute;
+        VkSemaphore Render;
+        VkFence QueueSubmit;
+        const Device* device;
+    };
+
     class ClusteredForward : public BaseScene {
     public:
 
@@ -254,6 +258,7 @@ namespace forward_plus {
         void createTexelBufferDescriptorSet();
 
         void createFrameData();
+        void createBackbuffers();
 
         void createOnscreenAttachmentDescriptions();
         void createOnscreenAttachmentReferences();
@@ -295,6 +300,7 @@ namespace forward_plus {
         std::array<VkSubpassDependency, 3> computeDependencies;
 
         std::vector<frame_data_t> FrameData;
+        std::vector<backbuffer_data_t> Backbuffers;
         VkSubmitInfo OffscreenSubmit, ComputeSubmit, RenderSubmit;
         std::map<std::string, std::unique_ptr<ShaderModule>> shaders;
 
@@ -321,10 +327,32 @@ namespace forward_plus {
         LightCountsCompare->CreateBuffer(buffer_flags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint32_t) * max_grid_count);
     }
 
+    backbuffer_data_t::backbuffer_data_t(const Device * dvc) : device(dvc) {
+        VkResult result = VK_SUCCESS;
+        result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &Render); VkAssert(result);
+        result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &Compute); VkAssert(result);
+        result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &PreCompute); VkAssert(result);
+        result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &ImageAcquire); VkAssert(result);
+        VkFenceCreateInfo fence_info = vk_fence_create_info_base;
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &QueueSubmit); VkAssert(result);
+    }
+
+    backbuffer_data_t::~backbuffer_data_t() {
+        vkDestroyFence(device->vkHandle(), QueueSubmit, nullptr);
+        vkDestroySemaphore(device->vkHandle(), ImageAcquire, nullptr);
+        vkDestroySemaphore(device->vkHandle(), PreCompute, nullptr);
+        vkDestroySemaphore(device->vkHandle(), Compute, nullptr);
+        vkDestroySemaphore(device->vkHandle(), Render, nullptr);
+    }
+
     void ClusteredForward::createFrameData() {
         const uint32_t num_frames = swapchain->ImageCount;
         for (uint32_t i = 0; i < num_frames; ++i) {
             FrameData.push_back(frame_data_t{ device.get(), i });
+            FrameData.back().ComputeCmd.Cmd = computePool->GetCmdBuffer(i);
+            FrameData.back().OffscreenCmd.Cmd = primaryPool->GetCmdBuffer(i * 2);
+            FrameData.back().RenderCmd.Cmd = primaryPool->GetCmdBuffer(i * 2 + 1); 
         }
         
     }
@@ -368,8 +396,9 @@ namespace forward_plus {
 
     void ClusteredForward::createDepthPipeline() {
 
-        Pipelines.Depth.PipelineLayout = std::make_unique<PipelineLayout>(device.get());
-        Pipelines.Depth.PipelineLayout->Create({ frameDataLayout->vkHandle() });
+        Pipelines.Depth.Layout = std::make_unique<PipelineLayout>(device.get());
+        const VkDescriptorSetLayout* set_layout = &frameDataLayout->vkHandle();
+        Pipelines.Depth.Layout->Create(set_layout, 1);
 
         GraphicsPipelineInfo info;
         info.VertexInfo.vertexAttributeDescriptionCount = 1;
@@ -380,37 +409,70 @@ namespace forward_plus {
         info.VertexInfo.pVertexAttributeDescriptions = &attr;
         info.VertexInfo.pVertexBindingDescriptions = &bind;
 
+        info.RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+        info.RasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+        info.DepthStencilInfo.depthTestEnable = VK_TRUE;
+        info.DepthStencilInfo.depthWriteEnable = VK_TRUE;
+        info.DepthStencilInfo.depthBoundsTestEnable = VK_FALSE;
+        info.DepthStencilInfo.stencilTestEnable = VK_FALSE;
+
+        info.ColorBlendInfo.attachmentCount = 0;
+        info.ColorBlendInfo.pAttachments = nullptr;
+        info.ColorBlendInfo.logicOpEnable = VK_FALSE;
+        info.ColorBlendInfo.logicOp = VK_LOGIC_OP_CLEAR;
+
+        info.DynamicStateInfo.dynamicStateCount = 2;
+        static constexpr VkDynamicState States[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        info.DynamicStateInfo.pDynamicStates = States;
+
         auto pipeline_info = info.GetPipelineCreateInfo();
         pipeline_info.stageCount = 1;
         pipeline_info.pStages = &shaders.at("Simple.vert")->PipelineInfo();
-        pipeline_info.layout = Pipelines.Depth.PipelineLayout->vkHandle();
+        pipeline_info.layout = Pipelines.Depth.Layout->vkHandle();
+        pipeline_info.renderPass = computePass->vkHandle();
+        pipeline_info.subpass = 0;
 
         Pipelines.Depth.Pipeline = std::make_unique<GraphicsPipeline>(device.get(), pipeline_info, Pipelines.Depth.Cache->vkHandle());
     }
 
+    void ClusteredForward::createLightingOpaquePipeline() {
+
+        Pipelines.LightingOpaque.Layout = std::make_unique<PipelineLayout>(device.get());
+        const VkDescriptorSetLayout layouts[2]{ frameDataLayout->vkHandle(), texelBuffersLayout->vkHandle() };
+        Pipelines.LightingOpaque.Layout->Create(layouts, 2);
+
+        GraphicsPipelineInfo PipelineInfo;
+
+        PipelineInfo.VertexInfo.pVertexAttributeDescriptions = &vertex_t::attributeDescriptions[0];
+        PipelineInfo.VertexInfo.pVertexBindingDescriptions = &vertex_t::bindingDescriptions[0];
+        PipelineInfo.VertexInfo.vertexAttributeDescriptionCount = 1;
+        PipelineInfo.VertexInfo.vertexBindingDescriptionCount = 1;
+
+        PipelineInfo.DepthStencilInfo.depthTestEnable = VK_TRUE;
+        PipelineInfo.DepthStencilInfo.depthWriteEnable = VK_FALSE;
+
+    }
+
     void ClusteredForward::createComputePipelines() {
-        Pipelines.ComputePipelines.Infos.fill(VkComputePipelineCreateInfo{ 
+        Pipelines.ComputePipelines.Infos.fill(VkComputePipelineCreateInfo{
             VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0, VkPipelineShaderStageCreateInfo{}, VK_NULL_HANDLE, VK_NULL_HANDLE, -1
-        });
+            });
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].stage = shaders.at("LightGrids.comp")->PipelineInfo();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].stage = shaders.at("GridOffsets.comp")->PipelineInfo();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].stage = shaders.at("LightList.comp")->PipelineInfo();
-        Pipelines.ComputePipelines.Cache = std::make_unique<PipelineCache>(device.get(), 
+        Pipelines.ComputePipelines.Cache = std::make_unique<PipelineCache>(device.get(),
             static_cast<uint16_t>(std::hash<std::string>()("compute-pipeline-cache")));
-        
-        VkResult result = vkCreateComputePipelines(device->vkHandle(), Pipelines.ComputePipelines.Cache->vkHandle(), 
-            static_cast<uint32_t>(Pipelines.ComputePipelines.Infos.size()), Pipelines.ComputePipelines.Infos.data(), 
+
+        VkResult result = vkCreateComputePipelines(device->vkHandle(), Pipelines.ComputePipelines.Cache->vkHandle(),
+            static_cast<uint32_t>(Pipelines.ComputePipelines.Infos.size()), Pipelines.ComputePipelines.Infos.data(),
             nullptr, Pipelines.ComputePipelines.Handles.data());
         VkAssert(result);
     }
 
-    void ClusteredForward::createLightingOpaquePipeline() {
-        Pipelines.LightingOpaque.PipelineLayout = std::make_unique<PipelineLayout>(device.get());
-        Pipelines.LightingOpaque.PipelineLayout->Create({ frameDataLayout->vkHandle(), texelBuffersLayout->vkHandle() });
-    }
 
     void ClusteredForward::createDescriptorPool() {
         descriptorPool = std::make_unique<DescriptorPool>(device.get(), swapchain->ImageCount() + 1);
@@ -564,7 +626,7 @@ namespace forward_plus {
             0, nullptr
         };
 
-        computeSbDescr[1] = computeSbDescr[1];
+        computeSbDescr[1] = computeSbDescr[0];
     }
 
     void ClusteredForward::createComputeSubpassDependencies() {
@@ -650,5 +712,6 @@ namespace forward_plus {
         create_info.renderPass = computePass->vkHandle();
         offscreenFramebuffer = std::make_unique<Framebuffer>(device.get(), create_info);
     }
+
 
 }
