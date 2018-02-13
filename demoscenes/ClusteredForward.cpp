@@ -220,6 +220,10 @@ namespace forward_plus {
     };
 
     struct backbuffer_data_t {
+        backbuffer_data_t(const backbuffer_data_t&) = delete;
+        backbuffer_data_t& operator=(const backbuffer_data_t&) = delete;
+        backbuffer_data_t(backbuffer_data_t&& other) noexcept;
+        backbuffer_data_t& operator=(backbuffer_data_t&& other) noexcept;
         backbuffer_data_t(const Device* dvc);
         ~backbuffer_data_t();
         uint32_t idx = 0;
@@ -237,6 +241,9 @@ namespace forward_plus {
         void Render();
 
     private:
+
+        void acquireBackBuffer();
+        void presentBackBuffer();
 
         void createShaders();
         void createDepthPipeline();
@@ -272,6 +279,7 @@ namespace forward_plus {
         void createOffscreenRenderTarget();
         void createOffscreenFramebuffer();
 
+        
         light_buffers_t LightBuffers;
         clustered_forward_pipelines_t Pipelines;
         std::unique_ptr<DescriptorPool> descriptorPool;
@@ -299,7 +307,8 @@ namespace forward_plus {
         std::array<VkSubpassDependency, 3> computeDependencies;
 
         std::vector<frame_data_t> FrameData;
-        std::vector<backbuffer_data_t> Backbuffers;
+        std::deque<backbuffer_data_t> Backbuffers;
+        backbuffer_data_t acquiredBackBuffer;
         VkSubmitInfo OffscreenSubmit, ComputeSubmit, RenderSubmit;
         std::map<std::string, std::unique_ptr<ShaderModule>> shaders;
 
@@ -326,6 +335,20 @@ namespace forward_plus {
         LightCountsCompare->CreateBuffer(buffer_flags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint32_t) * max_grid_count);
     }
 
+    backbuffer_data_t::backbuffer_data_t(backbuffer_data_t && other) noexcept : idx(std::move(other.idx)), ImageAcquire(std::move(other.ImageAcquire)), PreCompute(std::move(other.PreCompute)), 
+        Compute(std::move(other.Compute)), Render(std::move(other.Render)), QueueSubmit(std::move(other.QueueSubmit)), device(std::move(other.device)) {}
+
+    backbuffer_data_t& backbuffer_data_t::operator=(backbuffer_data_t&& other) noexcept {
+        idx = std::move(other.idx);
+        ImageAcquire = std::move(other.ImageAcquire);
+        PreCompute = std::move(other.PreCompute);
+        Compute = std::move(other.Compute);
+        Render = std::move(other.Render);
+        QueueSubmit = std::move(other.QueueSubmit);
+        device = std::move(other.device);
+        return *this;
+    }
+
     backbuffer_data_t::backbuffer_data_t(const Device * dvc) : device(dvc) {
         VkResult result = VK_SUCCESS;
         result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &Render); VkAssert(result);
@@ -333,16 +356,25 @@ namespace forward_plus {
         result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &PreCompute); VkAssert(result);
         result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &ImageAcquire); VkAssert(result);
         VkFenceCreateInfo fence_info = vk_fence_create_info_base;
-        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
         result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &QueueSubmit); VkAssert(result);
     }
 
     backbuffer_data_t::~backbuffer_data_t() {
-        vkDestroyFence(device->vkHandle(), QueueSubmit, nullptr);
-        vkDestroySemaphore(device->vkHandle(), ImageAcquire, nullptr);
-        vkDestroySemaphore(device->vkHandle(), PreCompute, nullptr);
-        vkDestroySemaphore(device->vkHandle(), Compute, nullptr);
-        vkDestroySemaphore(device->vkHandle(), Render, nullptr);
+        if (QueueSubmit != VK_NULL_HANDLE) {
+            vkDestroyFence(device->vkHandle(), QueueSubmit, nullptr);
+        }
+        if (ImageAcquire != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device->vkHandle(), ImageAcquire, nullptr);
+        }
+        if (PreCompute != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device->vkHandle(), PreCompute, nullptr);
+        }
+        if (Compute != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device->vkHandle(), Compute, nullptr);
+        }
+        if (Render != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device->vkHandle(), Render, nullptr);
+        }
     }
 
     void ClusteredForward::createFrameData() {
@@ -757,6 +789,18 @@ namespace forward_plus {
 
         computePass = std::make_unique<Renderpass>(device.get(), create_info);
         computePass->SetupBeginInfo(ClearValues.data(), ClearValues.size(), swapchain->Extent());
+    }
+
+    void ClusteredForward::acquireBackBuffer() {
+        auto& curr = Backbuffers.front();
+
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
+        vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
+
+        vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 2e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
+        Backbuffers.push_back(std::move(acquiredBackBuffer));
+        acquiredBackBuffer = std::move(curr);
+        Backbuffers.pop_front();
     }
 
     void ClusteredForward::createShaders() {
