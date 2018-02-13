@@ -46,8 +46,45 @@ namespace forward_plus {
         uint32_t TileCountZ = 256;
     } ProgramState;
 
-    std::vector<glm::vec4> LightPositions;
-    std::vector<glm::u8vec4> LightColors;
+    struct lights_soa_t {
+        void update() {
+
+            const auto set_from_vec = [](const glm::vec4& v) {
+                glm::vec3 el(0.0f);
+                el.x = glm::length(v);
+                if (v.x != 0.0f) {
+                    el.y = acosf(glm::clamp(-v.y / el.x, -1.0f, 1.0f));
+                    el.z = atan2f(-v.z, v.x);
+                }
+                return el;
+            };
+
+            const auto get_vec = [](const glm::vec3& v) {
+                return glm::vec3{
+                    v.x * sinf(v.y) * cos(v.z),
+                   -v.x * cosf(v.y),
+                   -v.x * sinf(v.y) * sinf(v.z)
+                };
+            };
+
+            const auto restrict_phi = [](const float& y) {
+                return std::fmaxf(std::numeric_limits<float>::epsilon(), std::fminf(3.14159f - std::numeric_limits<float>::epsilon(), y));
+            };
+
+            for (size_t i = 0; i < Positions.size(); ++i) {
+                auto el = set_from_vec(Positions[i]);
+                el.z += 0.001f;
+                el.y = restrict_phi(el.y);
+                auto v = get_vec(el);
+                Positions[i].x = v.x;
+                Positions[i].y = v.y;
+                Positions[i].z = v.z;
+            }
+
+        }
+        std::vector<glm::vec4> Positions;
+        std::vector<glm::u8vec4> Colors;
+    } Lights;
 
     class light_buffers_t {
     public:
@@ -103,8 +140,8 @@ namespace forward_plus {
         const float min_range = base_range / 1.5f;
         const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.50f;
         const float pos_radius = std::max(half_size.x, std::max(half_size.y, half_size.z));
-        LightPositions.reserve(ProgramState.MaxLights);
-        LightColors.reserve(ProgramState.MaxLights);
+        Lights.Positions.reserve(ProgramState.MaxLights);
+        Lights.Colors.reserve(ProgramState.MaxLights);
         for (uint32_t i = 0; i < ProgramState.MaxLights; ++i) {
             glm::vec3 fcol = hue_to_rgb(random_range(0.0f,1.0f));
             fcol *= 1.30f;
@@ -113,8 +150,8 @@ namespace forward_plus {
             const glm::vec4 position{ 
                 random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius), random_range(min_range, max_range)
             };
-            LightPositions.emplace_back(position);
-            LightColors.emplace_back(color);
+            Lights.Positions.push_back(position);
+            Lights.Colors.push_back(color);
         }
     }
 
