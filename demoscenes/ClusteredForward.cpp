@@ -168,7 +168,7 @@ namespace forward_plus {
         glm::mat4 normal;
         glm::vec4 viewPosition;
         uint32_t NumLights;
-    } ClusteredForwardGlobalUBO;
+    } GlobalUBO;
 
     struct specialization_constants_t {
         uint32_t ResolutionX = 1440;
@@ -198,16 +198,6 @@ namespace forward_plus {
         VkSpecializationMapEntry{10, sizeof(uint32_t) * 8 + 2 * sizeof(float), sizeof(float) }
     };
 
-    enum class QueryType : uint8_t {
-        DepthPass = 0,
-        Clustering,
-        CalcGrids,
-        CalcOffsets,
-        CalcList,
-        Onscreen,
-        Transfer
-    };
-
     struct frame_data_t {
 
         frame_data_t(const Device* dvc, uint32_t idx);
@@ -218,6 +208,10 @@ namespace forward_plus {
             VkSubmitInfo Info = vk_submit_info_base;
         };
 
+        void UpdateUBO() {
+            ubo->CopyToMapped(&GlobalUBO, sizeof(GlobalUBO), 0);
+        }
+
         cmd_buffer_block_t OffscreenCmd;
         cmd_buffer_block_t ComputeCmd;
         cmd_buffer_block_t RenderCmd;
@@ -225,7 +219,8 @@ namespace forward_plus {
         const Device* device;
         std::unique_ptr<Buffer> LightPositions;
         std::unique_ptr<Buffer> LightColors;
-        std::unique_ptr<Buffer> UBO;
+        std::unique_ptr<Buffer> ubo;
+        std::unique_ptr<DescriptorSet> descriptor;
         uint32_t idx;
     };
 
@@ -279,7 +274,13 @@ namespace forward_plus {
 
     private:
 
+        void updateUniforms();
+        void createUBO();
+
         void acquireBackBuffer();
+        void recordComputePass(frame_data_t& frame);
+        void recordCommands();
+        void submitCommands();
         void presentBackBuffer();
 
         void createShaders();
@@ -328,7 +329,6 @@ namespace forward_plus {
         std::unique_ptr<Image> offscreenRenderTarget;
         std::unique_ptr<Framebuffer> offscreenFramebuffer;
 
-        std::array<std::unique_ptr<DescriptorSet>, 3> frameSets;
         std::unique_ptr<DescriptorSet> texelBufferSet;
 
         std::unique_ptr<Renderpass> onscreenPass;
@@ -342,12 +342,16 @@ namespace forward_plus {
         std::array<VkSubpassDescription, 2> computeSbDescr;
         VkAttachmentReference computeRef;
         std::array<VkSubpassDependency, 3> computeDependencies;
-
+        uint32_t CurrFrameDataIdx = 0;
         std::vector<frame_data_t> FrameData;
         std::deque<backbuffer_data_t> Backbuffers;
         backbuffer_data_t acquiredBackBuffer;
         VkSubmitInfo OffscreenSubmit, ComputeSubmit, RenderSubmit;
         std::map<std::string, std::unique_ptr<ShaderModule>> shaders;
+        VkBufferMemoryBarrier Barriers[2]{ vk_buffer_memory_barrier_info_base, vk_buffer_memory_barrier_info_base };
+
+        VkViewport offscreenViewport, onscreenViewport;
+        VkRect2D offscreenScissor, onscreenScissor;
 
         constexpr static VkPipelineStageFlags OffscreenFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         constexpr static VkPipelineStageFlags ComputeFlags = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
@@ -414,6 +418,67 @@ namespace forward_plus {
         }
     }
 
+    void ClusteredForward::updateUniforms() {
+        GlobalUBO.view = GetViewMatrix();
+        GlobalUBO.projection = GetProjectionMatrix();
+        GlobalUBO.viewPosition = glm::vec4(GetCameraPosition(), 1.0f);
+        GlobalUBO.NumLights = ProgramState.NumLights;
+    }
+
+    void ClusteredForward::acquireBackBuffer() {
+        auto& curr = Backbuffers.front();
+
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
+        vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
+
+        vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 2e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
+        Backbuffers.push_back(std::move(acquiredBackBuffer));
+        acquiredBackBuffer = std::move(curr);
+        Backbuffers.pop_front();
+    }
+
+    void ClusteredForward::recordComputePass(frame_data_t& frame) {
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.OffscreenCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
+        vkResetFences(device->vkHandle(), 1, &frame.OffscreenCmd.Fence);
+
+        
+        Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+        Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        Barriers[0].buffer = frame.ubo->vkHandle();
+        Barriers[0].size = frame.ubo->Size();
+
+        frame.UpdateUBO();
+        frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
+
+        computePass->UpdateBeginInfo(offscreenFramebuffer->vkHandle());
+        auto& cmd = frame.OffscreenCmd.Cmd;
+        const VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
+        vkBeginCommandBuffer(cmd, &begin_info);
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &Barriers[0], 0, nullptr);
+            vkCmdSetViewport(cmd, 0, 1, &offscreenViewport);
+            vkCmdSetScissor(cmd, 0, 1, &offscreenScissor);
+            vkCmdBeginRenderPass(cmd, &computePass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Depth.Layout->vkHandle(), 0, 1, &frame.descriptor->vkHandle(), 0, nullptr);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Depth.Pipeline->vkHandle());
+    }
+
+    void ClusteredForward::recordCommands() {
+        constexpr static VkDeviceSize Offsets[1]{ 0 };
+        
+
+        auto& frame_data = FrameData[CurrFrameDataIdx];
+        recordComputePass(frame_data);
+        
+    }
+
+    void ClusteredForward::presentBackBuffer() {
+        VkPresentInfoKHR present_info = vk_present_info_base;
+        present_info.pImageIndices = &acquiredBackBuffer.idx;
+        present_info.pWaitSemaphores = &acquiredBackBuffer.Render;
+        present_info.swapchainCount = 1;
+        present_info.pSwapchains = &swapchain->vkHandle();
+    }
+
     void ClusteredForward::createFrameData() {
         const uint32_t num_frames = swapchain->ImageCount;
         for (uint32_t i = 0; i < num_frames; ++i) {
@@ -426,7 +491,7 @@ namespace forward_plus {
     }
 
     frame_data_t::frame_data_t(const Device* dvc, const uint32_t _idx)  : idx(_idx), LightPositions(std::make_unique<Buffer>(dvc)), 
-        LightColors(std::make_unique<Buffer>(dvc)), UBO(std::make_unique<Buffer>(dvc)), device(dvc) {
+        LightColors(std::make_unique<Buffer>(dvc)), ubo(std::make_unique<Buffer>(dvc)), device(dvc) {
         constexpr static VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         VkBufferCreateInfo create_info = vk_buffer_create_info_base;
         uint32_t queue_indices[2]{ 0, 0 };
@@ -446,14 +511,12 @@ namespace forward_plus {
         create_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
         create_info.size = sizeof(glm::vec4) * ProgramState.MaxLights;
         LightPositions->CreateBuffer(create_info, mem_flags);
+        LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
         LightPositions->CreateView(VK_FORMAT_R32G32B32A32_SFLOAT, LightPositions->Size(), 0);
         create_info.size = sizeof(uint8_t) * 4 * ProgramState.MaxLights;
         LightColors->CreateBuffer(create_info, mem_flags);
+        LightColors->CopyToMapped(Lights.Colors.data(), Lights.Colors.size() * sizeof(glm::u8vec4), 0);
         LightColors->CreateView(VK_FORMAT_R8G8B8A8_UNORM, LightColors->Size(), 0);
-
-        create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        create_info.size = sizeof(clustered_forward_global_ubo_t);
-        UBO->CreateBuffer(create_info, mem_flags);
 
         VkFenceCreateInfo fence_info = vk_fence_create_info_base;
         fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -826,18 +889,6 @@ namespace forward_plus {
 
         computePass = std::make_unique<Renderpass>(device.get(), create_info);
         computePass->SetupBeginInfo(ClearValues.data(), ClearValues.size(), swapchain->Extent());
-    }
-
-    void ClusteredForward::acquireBackBuffer() {
-        auto& curr = Backbuffers.front();
-
-        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
-        vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
-
-        vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 2e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
-        Backbuffers.push_back(std::move(acquiredBackBuffer));
-        acquiredBackBuffer = std::move(curr);
-        Backbuffers.pop_front();
     }
 
     void ClusteredForward::createShaders() {
