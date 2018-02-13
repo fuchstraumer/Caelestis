@@ -91,8 +91,6 @@ namespace vpsk {
         limiter_a = std::chrono::system_clock::now();
         limiter_b = std::chrono::system_clock::now();
 
-        SetupFramebuffers();
-
         input_handler::LastX = swapchain->Extent().width / 2.0f;
         input_handler::LastY = swapchain->Extent().height / 2.0f;
 
@@ -110,53 +108,10 @@ namespace vpsk {
 
     }
 
-#ifdef USE_EXPERIMENTAL_FILESYSTEM
-    void BaseScene::cleanupShaderCacheFiles() {
-        std::experimental::filesystem::path pipeline_cache_path("rsrc/shader_cache");
-        
-        if (std::experimental::filesystem::exists(pipeline_cache_path) && !pipelineCacheHandles.empty()) {
-            auto dir_iter = std::experimental::filesystem::directory_iterator(pipeline_cache_path);
-            for (auto& p : dir_iter) {
-                
-                bool id_used = false;
-                
-                if (p.path().extension().string() == ".vkdat") {
-                    
-                    std::string cache_name = p.path().filename().string();
-                    size_t idx = cache_name.find_last_of('.');
-                    cache_name = cache_name.substr(0, idx);
-                    
-                    uint16_t id = static_cast<uint16_t>(std::stoi(cache_name));
-                    
-                    for(uint16_t& curr : pipelineCacheHandles) {
-                        if (curr == id) {
-                            id_used = true;
-                            continue;
-                        }
-                    }
-                    
-                }
-                
-                if (!id_used) {
-                    bool erased = std::experimental::filesystem::remove(p.path());
-                    if (!erased) {
-                        LOG(WARNING) << "Failed to erase a pipeline cache with ID " << p.path().filename().string();
-                    }
-                }
-                
-            }
-        }
-    }
-#endif
-    
     BaseScene::~BaseScene() {
         gui.reset();
         transferPool.reset();
         swapchain.reset();
-        msaa.reset();
-        for (const auto& fbuf : framebuffers) {
-            vkDestroyFramebuffer(device->vkHandle(), fbuf, nullptr);
-        }
 
         for (const auto& fence : presentFences) {
             vkDestroyFence(device->vkHandle(), fence, nullptr);
@@ -171,7 +126,6 @@ namespace vpsk {
         cleanupShaderCacheFiles();
 #endif
         window.reset();
-        renderPass.reset();
     }
     
     
@@ -321,17 +275,23 @@ namespace vpsk {
             limitFrame();
 
             UpdateMouseActions();
+
             if(SceneConfiguration.EnableGUI) {
                 gui->NewFrame(window->glfwWindow());
             }
 
             UpdateMovement(static_cast<float>(BaseScene::SceneConfiguration.FrameTimeMs));
-            
-            RecordCommands();
-            auto idx = submitFrame();
+
+            // Acquire image, which will run async while we record commands
+            uint32_t idx = 0;
+            acquireNextImage(&idx);
             if (idx == std::numeric_limits<uint32_t>::max()) {
                 continue;
             }
+            RecordCommands();
+            // Submit recorded commands. Waits for semaphores specified when acquiring images.
+            submitFrame(&idx);
+
             submitExtra(idx);
             waitForFrameComplete(idx);
             endFrame(idx);
@@ -401,21 +361,31 @@ namespace vpsk {
         return;
     }
 
-    uint32_t BaseScene::submitFrame() {
 
-        uint32_t image_idx;
-        VkResult result = vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), std::numeric_limits<uint64_t>::max(), semaphores[0], acquireFence, &image_idx);
+    void BaseScene::acquireNextImage(uint32_t* image_idx_ptr) {
+        VkResult result = VK_SUCCESS;
+        result = vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), AcquireMaxTime, semaphores[0], acquireFence, image_idx_ptr);
         switch (result) {
         case VK_ERROR_OUT_OF_DATE_KHR:
+            LOG(WARNING) << "Received VK_ERROR_OUT_OF_DATE_KHR on trying to acquire an image, recreating swapchain...";
             RecreateSwapchain();
-            return std::numeric_limits<uint32_t>::max();
+            *image_idx_ptr = std::numeric_limits<uint32_t>::max();
+        case VK_SUBOPTIMAL_KHR:
+            LOG(WARNING) << "Received VK_SUBOPTIMAL_KHR on trying to acquire an image, recreating swapchain...";
+            RecreateSwapchain();
+            *image_idx_ptr = std::numeric_limits<uint32_t>::max();
         default:
             VkAssert(result);
             break;
         }
-        VkAssert(result);
-        result = vkWaitForFences(device->vkHandle(), 1, &acquireFence, VK_TRUE, 2);
-        VkAssert(result);
+        
+        if (WaitForAcquire) {
+            result = vkWaitForFences(device->vkHandle(), 1, &acquireFence, VK_TRUE, AcquireWaitTime);
+            VkAssert(result);
+        }
+    }
+
+    void BaseScene::submitFrame(uint32_t* image_idx_ptr) {
 
         VkSubmitInfo submit_info = vk_submit_info_base;
         VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT };
@@ -426,7 +396,7 @@ namespace vpsk {
         submit_info.pCommandBuffers = frameCmdBuffers.data();
         submit_info.signalSemaphoreCount = static_cast<uint32_t>(renderCompleteSemaphores.size());
         submit_info.pSignalSemaphores = renderCompleteSemaphores.data();
-        result = vkQueueSubmit(device->GraphicsQueue(), 1, &submit_info, presentFences[image_idx]);
+        VkResult result = vkQueueSubmit(device->GraphicsQueue(), 1, &submit_info, presentFences[*image_idx_ptr]);
         switch(result) {
             case VK_ERROR_DEVICE_LOST:
                 LOG(WARNING) << "vkQueueSubmit returned VK_ERROR_DEVICE_LOST";
@@ -436,9 +406,6 @@ namespace vpsk {
                 break;
         }
 
-        presentFrame(image_idx);
-
-        return image_idx;
     }
 
     void BaseScene::presentFrame(const uint32_t idx) {

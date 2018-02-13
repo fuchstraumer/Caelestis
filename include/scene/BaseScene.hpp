@@ -20,6 +20,12 @@ namespace vpsk {
      *  \defgroup Scenes
      */
 
+    constexpr static bool WaitForAcquire = false;
+    // wait time for 60FPS 
+    constexpr static uint64_t AcquireWaitTime = static_cast<uint64_t>((1.0 / 60.0) * 1.0e9);
+    // Wait 5 seconds at max
+    constexpr static uint64_t AcquireMaxTime = static_cast<uint64_t>(5.0 * 1.0e9);
+
     /** The BaseScene class takes care of setting up as much as it can, leaving only the calling of the framebuffer and renderpass creation methods to the user. It 
      *  calls suitable virtual methods to signal window resize and swapchain recreation events, and takes care of things like framerate locking (defaults to 60fps) to
      *  avoid overwhelming the CPU. 
@@ -87,6 +93,8 @@ namespace vpsk {
         static std::atomic<bool> ShouldResize;
     protected:
 
+
+
         virtual void createTransferCmdPool();
 
         void cleanupShaderCacheFiles();
@@ -98,7 +106,8 @@ namespace vpsk {
         virtual void limitFrame();
         // override in derived classes to perform extra work per frame. Does nothing by default.
         virtual void submitExtra(const uint32_t frame_idx);
-        virtual uint32_t submitFrame();
+        void acquireNextImage(uint32_t* image_idx_ptr);
+        virtual void submitFrame(uint32_t* image_idx_ptr);
         void presentFrame(const uint32_t idx);
         // Uses fences to wait for frame completion. Called after submitExtra.
         void waitForFrameComplete(const uint32_t idx);
