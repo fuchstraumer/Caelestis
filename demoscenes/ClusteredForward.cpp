@@ -46,7 +46,6 @@ namespace forward_plus {
         uint32_t TileCountZ = 256;
     } ProgramState;
 
-    std::vector<Light> Lights;
     std::vector<glm::vec4> LightPositions;
     std::vector<glm::u8vec4> LightColors;
 
@@ -98,23 +97,24 @@ namespace forward_plus {
     void GenerateLights(const AABB& model_bounds) {
         const glm::vec3 extents = model_bounds.Extents();
         const float volume = extents.x * extents.y * extents.z;
-        const float light_vol = volume / static_cast<float>(ProgramState.NumLights);
+        const float light_vol = volume / static_cast<float>(ProgramState.MaxLights);
         const float base_range = powf(light_vol, 1.0f / 3.0f);
         const float max_range = base_range * 3.0f;
         const float min_range = base_range / 1.5f;
         const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.50f;
         const float pos_radius = std::max(half_size.x, std::max(half_size.y, half_size.z));
-        Lights.reserve(ProgramState.NumLights);
-        for (uint32_t i = 0; i < ProgramState.NumLights; ++i) {
+        LightPositions.reserve(ProgramState.MaxLights);
+        LightColors.reserve(ProgramState.MaxLights);
+        for (uint32_t i = 0; i < ProgramState.MaxLights; ++i) {
             glm::vec3 fcol = hue_to_rgb(random_range(0.0f,1.0f));
             fcol *= 1.30f;
             fcol -= 0.15f;
             const glm::u8vec4 color = float_to_uchar(fcol);
-            const glm::vec3 position{ 
-                random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius) 
+            const glm::vec4 position{ 
+                random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius), random_range(-pos_radius, pos_radius), random_range(min_range, max_range)
             };
-            const float range = random_range(min_range, max_range);
-            Lights.emplace_back(position, color, range);
+            LightPositions.emplace_back(position);
+            LightColors.emplace_back(color);
         }
     }
 
@@ -240,10 +240,8 @@ namespace forward_plus {
 
         void createShaders();
         void createDepthPipeline();
-        void createLightingOpaquePipeline();
-        void createLightingTransparentPipeline();
-        void createOpaquePipeline();
-        void createTransparentPipeline();
+        void createLightingPipelines();
+        void createMainPipelines();
         void createParticlePipeline();
         void createComputePipelines();
 
@@ -279,6 +277,7 @@ namespace forward_plus {
         std::unique_ptr<DescriptorPool> descriptorPool;
         std::unique_ptr<DescriptorSetLayout> frameDataLayout;
         std::unique_ptr<DescriptorSetLayout> texelBuffersLayout;
+        std::unique_ptr<DescriptorSetLayout> modelLayout;
         std::unique_ptr<CommandPool> primaryPool;
         std::unique_ptr<CommandPool> computePool;
         std::unique_ptr<Image> offscreenRenderTarget;
@@ -436,7 +435,7 @@ namespace forward_plus {
         Pipelines.Depth.Pipeline = std::make_unique<GraphicsPipeline>(device.get(), pipeline_info, Pipelines.Depth.Cache->vkHandle());
     }
 
-    void ClusteredForward::createLightingOpaquePipeline() {
+    void ClusteredForward::createLightingPipelines() {
 
         Pipelines.LightingOpaque.Layout = std::make_unique<PipelineLayout>(device.get());
         const VkDescriptorSetLayout layouts[2]{ frameDataLayout->vkHandle(), texelBuffersLayout->vkHandle() };
@@ -452,27 +451,107 @@ namespace forward_plus {
         PipelineInfo.DepthStencilInfo.depthTestEnable = VK_TRUE;
         PipelineInfo.DepthStencilInfo.depthWriteEnable = VK_FALSE;
 
+        PipelineInfo.ColorBlendInfo.attachmentCount = 0;
+        PipelineInfo.ColorBlendInfo.pAttachments = nullptr;
+
+        PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+
+        VkGraphicsPipelineCreateInfo create_info = PipelineInfo.GetPipelineCreateInfo();
+        create_info.layout = Pipelines.LightingOpaque.Layout->vkHandle();
+        const VkPipelineShaderStageCreateInfo shader_infos[2]{ shaders.at("Lighting.vert")->PipelineInfo(), shaders.at("Lighting.frag")->PipelineInfo() };
+        const uint16_t hash_id = static_cast<uint16_t>(std::hash<std::string>()("lighting-pipeline-opaque"));
+        Pipelines.LightingOpaque.Cache = std::make_unique<PipelineCache>(device.get(), hash_id);
+        create_info.subpass = 1;
+        create_info.renderPass = computePass->vkHandle();
+
+        Pipelines.LightingOpaque.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
+        Pipelines.LightingOpaque.Pipeline->Init(create_info, Pipelines.LightingOpaque.Cache->vkHandle());
+
+        PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+
+        Pipelines.LightingTransparent.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
+        Pipelines.LightingTransparent.Pipeline->Init(create_info, Pipelines.LightingOpaque.Cache->vkHandle());
+
+    }
+
+    void ClusteredForward::createMainPipelines() {
+
+        Pipelines.Opaque.Layout = std::make_unique<PipelineLayout>(device.get());
+        const VkDescriptorSetLayout set_layouts[3]{ modelLayout->vkHandle(), texelBuffersLayout->vkHandle(), frameDataLayout->vkHandle() };
+        Pipelines.Opaque.Layout->Create(set_layouts, 3);
+
+        const uint16_t hash_id = static_cast<uint16_t>(std::hash<std::string>()("main-pipeline"));
+        Pipelines.Opaque.Cache = std::make_unique<PipelineCache>(device.get(), hash_id);
+
+        VkPipelineColorBlendAttachmentState attachment_state = vk_pipeline_color_blend_attachment_info_base;
+
+        GraphicsPipelineInfo PipelineInfo;
+
+        PipelineInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
+        PipelineInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
+        PipelineInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
+        PipelineInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
+
+        PipelineInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
+        PipelineInfo.MultisampleInfo.minSampleShading = 0.25f;
+        PipelineInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_8_BIT;
+
+        PipelineInfo.ColorBlendInfo.attachmentCount = 1;
+        PipelineInfo.ColorBlendInfo.pAttachments = &attachment_state;
+
+        PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+
+        PipelineInfo.DynamicStateInfo.dynamicStateCount = 2;
+        constexpr static VkDynamicState states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        PipelineInfo.DynamicStateInfo.pDynamicStates = states;
+
+        VkGraphicsPipelineCreateInfo create_info = PipelineInfo.GetPipelineCreateInfo();
+        create_info.subpass = 0;
+        create_info.layout = Pipelines.Opaque.Layout->vkHandle();
+        create_info.renderPass = onscreenPass->vkHandle();
+
+        Pipelines.Opaque.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
+        Pipelines.Opaque.Pipeline->Init(create_info, Pipelines.Opaque.Cache->vkHandle());
+
+        PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+        attachment_state.blendEnable = VK_FALSE;
+        PipelineInfo.DepthStencilInfo.depthWriteEnable = VK_FALSE;
+
+        Pipelines.Transparent.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
+        Pipelines.Transparent.Pipeline->Init(create_info, Pipelines.Opaque.Cache->vkHandle());
+
+    }
+
+    void ClusteredForward::createParticlePipeline() {
+
+        GraphicsPipelineInfo PipelineInfo;
+        PipelineInfo.AssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        
+        constexpr static std::array<VkVertexInputAttributeDescription, 2> attributes{
+            VkVertexInputAttributeDescription{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+            VkVertexInputAttributeDescription{ 1, 0, VK_FORMAT_R8G8B8A8_UNORM, sizeof(glm::vec4) }
+        };
+
+        constexpr static VkVertexInputBindingDescription binding {
+            0, sizeof(glm::vec4) + 4 * sizeof(uint8_t), VK_VERTEX_INPUT_RATE_VERTEX
+        };
     }
 
     void ClusteredForward::createComputePipelines() {
-        Pipelines.ComputePipelines.Infos.fill(VkComputePipelineCreateInfo{
-            VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0, VkPipelineShaderStageCreateInfo{}, VK_NULL_HANDLE, VK_NULL_HANDLE, -1
-            });
+        Pipelines.ComputePipelines.Infos.fill(VkComputePipelineCreateInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0, VkPipelineShaderStageCreateInfo{}, VK_NULL_HANDLE, VK_NULL_HANDLE, -1 });
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].stage = shaders.at("LightGrids.comp")->PipelineInfo();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].stage = shaders.at("GridOffsets.comp")->PipelineInfo();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].stage = shaders.at("LightList.comp")->PipelineInfo();
-        Pipelines.ComputePipelines.Cache = std::make_unique<PipelineCache>(device.get(),
-            static_cast<uint16_t>(std::hash<std::string>()("compute-pipeline-cache")));
+        Pipelines.ComputePipelines.Cache = std::make_unique<PipelineCache>(device.get(), static_cast<uint16_t>(std::hash<std::string>()("compute-pipeline-cache")));
 
         VkResult result = vkCreateComputePipelines(device->vkHandle(), Pipelines.ComputePipelines.Cache->vkHandle(),
             static_cast<uint32_t>(Pipelines.ComputePipelines.Infos.size()), Pipelines.ComputePipelines.Infos.data(),
             nullptr, Pipelines.ComputePipelines.Handles.data());
         VkAssert(result);
     }
-
 
     void ClusteredForward::createDescriptorPool() {
         descriptorPool = std::make_unique<DescriptorPool>(device.get(), swapchain->ImageCount() + 1);
