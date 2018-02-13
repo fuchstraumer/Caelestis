@@ -1,6 +1,5 @@
 #include "geometries/ObjModel.hpp"
 #include "command/TransferPool.hpp"
-#include "resource/DescriptorSetLayout.hpp"
 #include <unordered_map>
 #include "tinyobjloader/tiny_obj_loader.h"
 #include "util/easylogging++.h"
@@ -10,16 +9,17 @@ using namespace vpr;
 
 namespace vpsk {
 
-    ObjModel::ObjModel(const Device* dvc) : TriangleMesh(glm::vec3(0.0f)), device(dvc), aabb() {}
+    ObjModel::ObjModel(const Device * dvc) {
+    }
 
-    void ObjModel::Render(const VkCommandBuffer& cmd, const VkCommandBufferBeginInfo& begin, const VkViewport& vp, const VkRect2D& sc) {
-        vkBeginCommandBuffer(cmd, &begin);
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->vkHandle());
-            myMaterial->second->BindMaterial(cmd, pipelineLayout->vkHandle());
-            vkCmdSetViewport(cmd, 0, 1, &vp);
-            vkCmdSetScissor(cmd, 0, 1, &sc);
-            TriangleMesh::Render(cmd);
-        vkEndCommandBuffer(cmd);
+    ObjModel::~ObjModel() {
+    }
+
+    void ObjModel::Render(const VkCommandBuffer& cmd) {
+        bindBuffers(cmd);
+        for (auto& part : parts) {
+
+        }
     }
 
     void ObjModel::LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool) {
@@ -72,77 +72,6 @@ namespace vpsk {
         transfer_pool->Submit();
         LOG(INFO) << "Mesh data upload complete.";
 
-    }
-
-    void ObjModel::CreateShaders(const std::string& vertex_shader_path, const std::string& fragment_shader_path) {
-
-        vert = std::make_unique<ShaderModule>(device, vertex_shader_path.c_str(), VK_SHADER_STAGE_VERTEX_BIT);
-        frag = std::make_unique<ShaderModule>(device, fragment_shader_path.c_str(), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    }
-
-    void ObjModel::createPipelineCache() {
-
-        // can't use typeid, different models might have drastically different pipeline data due to textures etc
-        pipelineCache = std::make_unique<PipelineCache>(device, static_cast<uint16_t>(std::hash<std::string>()(modelName)));
-
-    }
-
-    void ObjModel::createPipelineLayout() {
-
-        std::vector<VkDescriptorSetLayout> set_layouts{
-            myMaterial->second->GetSetLayout()
-        };
-
-        if (myMaterial->second->GetPbrSetLayout() != VK_NULL_HANDLE) {
-            set_layouts.push_back(myMaterial->second->GetPbrSetLayout());
-        }
-
-        pipelineLayout = std::make_unique<PipelineLayout>(device);
-        // since i'm already abusing this pipeline with the above sets, just using mvp in push constant
-        const VkPushConstantRange range{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4) };
-        pipelineLayout->Create(&range, 1, set_layouts.data(), set_layouts.size()); 
-
-    }
-
-    void ObjModel::setPipelineStateInfo() {
-
-        constexpr static VkDynamicState dynamic_states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-        pipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
-        pipelineStateInfo.DynamicStateInfo.pDynamicStates = dynamic_states;
-
-        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
-        if (pipelineStateInfo.MultisampleInfo.sampleShadingEnable) {
-            pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
-        }
-
-        pipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
-        pipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
-        pipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
-        pipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
-
-    }
-
-    void ObjModel::createGraphicsPipeline(const VkRenderPass& renderpass) {
-
-        pipelineCreateInfo = pipelineStateInfo.GetPipelineCreateInfo();
-        
-        const std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{
-            vert->PipelineInfo(), frag->PipelineInfo()
-        };
-
-        pipelineCreateInfo.stageCount = static_cast<uint32_t>(shader_stages.size());
-        pipelineCreateInfo.pStages = shader_stages.data();
-
-        pipelineCreateInfo.layout = pipelineLayout->vkHandle();
-        pipelineCreateInfo.subpass = 0;
-        pipelineCreateInfo.renderPass = renderpass;
-        pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-        pipelineCreateInfo.basePipelineIndex = -1;
-
-        graphicsPipeline = std::make_unique<GraphicsPipeline>(device);
-        graphicsPipeline->Init(pipelineCreateInfo, pipelineCache->vkHandle());
-        
     }
 
 }
