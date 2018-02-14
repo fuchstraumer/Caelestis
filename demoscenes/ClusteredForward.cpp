@@ -26,6 +26,9 @@
 #include <random>
 #include <deque>
 
+#include "util/easylogging++.h"
+INITIALIZE_EASYLOGGINGPP
+
 namespace forward_plus {
 
     // https://mynameismjp.wordpress.com/2016/03/25/bindless-texturing-for-deferred-rendering-and-decals/
@@ -481,7 +484,7 @@ namespace forward_plus {
     }
 
     void ClusteredForward::createFrameData() {
-        const uint32_t num_frames = swapchain->ImageCount;
+        const uint32_t num_frames = swapchain->ImageCount();
         for (uint32_t i = 0; i < num_frames; ++i) {
             FrameData.push_back(frame_data_t{ device.get(), i });
             FrameData.back().ComputeCmd.Cmd = computePool->GetCmdBuffer(i);
@@ -565,7 +568,8 @@ namespace forward_plus {
         pipeline_info.renderPass = computePass->vkHandle();
         pipeline_info.subpass = 0;
 
-        Pipelines.Depth.Pipeline = std::make_unique<GraphicsPipeline>(device.get(), pipeline_info, Pipelines.Depth.Cache->vkHandle());
+        Pipelines.Depth.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
+        Pipelines.Depth.Pipeline->Init(pipeline_info, Pipelines.Depth.Cache->vkHandle());
     }
 
     void ClusteredForward::createLightingPipelines() {
@@ -689,7 +693,7 @@ namespace forward_plus {
     void ClusteredForward::createDescriptorPool() {
         descriptorPool = std::make_unique<DescriptorPool>(device.get(), swapchain->ImageCount() + 1);
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, swapchain->ImageCount());
-        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, swapchain->ImageCount * 2 + 7);
+        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, swapchain->ImageCount() * 2 + 7);
         descriptorPool->Create();
     }
 
