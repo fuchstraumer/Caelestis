@@ -1,7 +1,6 @@
 #include "render/VpskRenderpass.hpp"
 #include "core/LogicalDevice.hpp"
 #include "util/EnumStringConverters.hpp"
-#include "third_party/json/src/json.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -19,7 +18,7 @@ namespace vpsk {
             throw std::runtime_error("Failed to open input JSON file describing a renderpass.");
         }
 
-        nlohmann::json j;
+        /*nlohmann::json j;
         input_file >> j;
         if (j.count(renderpass_name) == 0) {
             throw std::runtime_error("Renderpass name did not match input file.");
@@ -50,7 +49,7 @@ namespace vpsk {
         catch (const std::exception& e) {
             std::cerr << e.what() << "\n";
             throw e;
-        }
+        }*/
         
         std::cerr << "done\n";
     }
