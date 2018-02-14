@@ -41,6 +41,8 @@ namespace vpsk {
     BaseScene::BaseScene(const uint32_t& _width, const uint32_t& _height) : width(_width), height(_height) {
 
         const bool verbose_logging = BaseScene::SceneConfiguration.VerboseLogging;
+        ImGui::CreateContext();
+
         window = std::make_unique<Window>(_width, _height, BaseScene::SceneConfiguration.ApplicationName);
         const VkApplicationInfo app_info{
             VK_STRUCTURE_TYPE_APPLICATION_INFO,

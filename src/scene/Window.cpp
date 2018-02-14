@@ -38,7 +38,7 @@ namespace vpsk {
         io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
 
         glfwSetWindowSizeCallback(window, ResizeCallback);
-        createInputHandler(); // TODO: Input handler class.
+        createInputHandler();
 
     }
 
