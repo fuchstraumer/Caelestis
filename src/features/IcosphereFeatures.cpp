@@ -74,7 +74,7 @@ namespace vpsk {
 
     void IcosphereFeatures::createDescriptorPool() {
         const size_t num_textures_req = objects.size();
-        descriptorPool = std::make_unique<DescriptorPool>(device);
+        descriptorPool = std::make_unique<DescriptorPool>(device, 2);
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(num_textures_req));
         descriptorPool->Create();
     }
@@ -85,7 +85,8 @@ namespace vpsk {
             // Multiply matrices on CPU, transfer calculated MVP to shader using push constant.
             VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4) }
         };
-        layout->Create({ setLayout->vkHandle() }, push_constants);
+        const VkDescriptorSetLayout* set_layout = &setLayout->vkHandle();
+        layout->Create(push_constants.data(), 1, set_layout, 1);
     }
 
     void IcosphereFeatures::createShaders() {
