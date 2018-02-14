@@ -40,6 +40,11 @@ namespace vpsk {
                         glm::vec3(std::max(b.Max().x, p.x), std::max(b.Max().y, p.y), std::max(b.Max().z, p.z)));
         }
 
+        glm::vec3 AABB::Extents() const noexcept
+        {
+            return glm::vec3(max - min);
+        }
+
         glm::vec3 AABB::Center() const noexcept {
             return (min + max) / 2.0f;
         }
