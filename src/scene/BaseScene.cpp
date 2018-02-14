@@ -107,7 +107,7 @@ namespace vpsk {
 
         LOG_IF(verbose_logging, INFO) << "BaseScene setup complete.";
 
-
+        transferPool = std::make_unique<TransferPool>(device.get());
     }
 
     BaseScene::~BaseScene() {
