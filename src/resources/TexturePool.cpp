@@ -1,10 +1,12 @@
 #include "resources/TexturePool.hpp"
 #include "command/TransferPool.hpp"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
 namespace vpsk {
 
     TexturePool::TexturePool(const vpr::Device * dvc, const vpr::TransferPool * transfer_pool) : device(dvc), transferPool(transfer_pool) {}
 
-    void TexturePool::AddMaterials(const std::vector<tinyobj::material_t>& materials) {
+    void TexturePool::AddMaterials(const std::vector<tinyobj::material_t>& materials, const std::string& path_prefix) {
         // Go through the given material and all the texture data to the texture data map.
         for (const auto& mtl : materials) {
             auto load_texture_data = [&](const std::string& tex) {
@@ -12,8 +14,8 @@ namespace vpsk {
                     return;
                 }
                 else {
-                    auto inserted = gli2dTextures.try_emplace(tex, std::make_unique<vpr::Texture<gli::texture2d>>(device));
-                    inserted.first->second->CreateFromFile(tex.c_str());
+                    auto inserted = stbTextures.try_emplace(tex, std::make_unique<vpr::Texture<vpr::texture_2d_t>>(device));
+                    inserted.first->second->CreateFromFile(std::string(path_prefix + tex).c_str());
                     if (inserted.second) {
                         // Added a texture, add to material textures.
                         materialTextures.emplace(mtl.name, inserted.first);

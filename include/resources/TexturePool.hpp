@@ -67,7 +67,7 @@ namespace vpsk {
         TexturePool(const vpr::Device* dvc, const vpr::TransferPool* transfer_pool);
         ~TexturePool() = default;
 
-        void AddMaterials(const std::vector<tinyobj::material_t>& material);
+        void AddMaterials(const std::vector<tinyobj::material_t>& material, const std::string& path_prefix);
         void AddTexture(const std::string& path);
         void AddTexture(const std::string& path, const VkFormat format);
 
@@ -84,7 +84,7 @@ namespace vpsk {
         std::unordered_map<std::string, std::unique_ptr<vpr::Texture<vpr::texture_2d_t>>> stbTextures;
         std::unordered_map<std::string, std::unique_ptr<vpr::Texture<gli::texture2d>>> gli2dTextures;
         // Uses mtl name to store iterators to all of it's textures.
-        std::unordered_multimap<std::string, decltype(gli2dTextures)::iterator> materialTextures;
+        std::unordered_multimap<std::string, decltype(stbTextures)::iterator> materialTextures;
         std::unordered_map<std::string, std::unique_ptr<vpr::Texture<gli::texture_cube>>> gliCubeTextures;
         std::unordered_map<std::string, std::unique_ptr<vpr::Texture<gli::texture2d_array>>> gliArrayTextures;
         
