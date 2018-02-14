@@ -1,16 +1,12 @@
 #include "geometries/ObjModel.hpp"
+#include "resources/TexturePool.hpp"
 #include "command/TransferPool.hpp"
-#include <unordered_map>
-#include "tinyobjloader/tiny_obj_loader.h"
 #include "util/easylogging++.h"
-#include "scene/BaseScene.hpp"
 
 using namespace vpr;
 
 namespace vpsk {
 
-    ObjModel::ObjModel(const Device * dvc) {
-    }
 
     ObjModel::~ObjModel() {
     }
@@ -18,7 +14,7 @@ namespace vpsk {
     void ObjModel::Render(const VkCommandBuffer& cmd) {
         bindBuffers(cmd);
         for (auto& part : parts) {
-
+            vkCmdDrawIndexed(cmd, part.idxCount, 1, part.startIdx, part.vertexOffset, 0);
         }
     }
 
@@ -37,6 +33,8 @@ namespace vpsk {
 
         modelName = shapes.front().name;
 
+        texturePool->AddMaterials(materials);
+
         loadMeshes(shapes, attrib, transfer_pool);
         
     }
@@ -48,6 +46,7 @@ namespace vpsk {
         for (const auto& shape : shapes) {
             modelPart part;
             part.startIdx = indices.size();
+            part.vertexOffset = 0;
             for (const auto& idx : shape.mesh.indices) {
 
                 ReserveIndices(NumIndices() + shape.mesh.indices.size());
@@ -64,6 +63,7 @@ namespace vpsk {
             }
 
             part.idxCount = indices.size();
+            parts.push_back(part);
         }
 
         UpdatePosition(aabb.Center());
