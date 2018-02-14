@@ -20,6 +20,7 @@
 #include "resource/PipelineLayout.hpp"
 #include "resource/DescriptorSetLayout.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "geometries/ObjModel.hpp"
 #include <memory>
 #include <map>
 #include <random>
@@ -925,4 +926,10 @@ namespace forward_plus {
     }
 
 
+}
+
+int main(int argc, char* argv[]) {
+    using namespace vpsk;
+    using namespace vpr;
+    return 0;
 }
