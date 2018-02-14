@@ -20,6 +20,7 @@
 #include "resource/PipelineLayout.hpp"
 #include "resource/DescriptorSetLayout.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "resources/TexturePool.hpp"
 #include "geometries/ObjModel.hpp"
 #include <memory>
 #include <map>
@@ -29,12 +30,11 @@
 #include "util/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 
-namespace forward_plus {
+namespace vpsk {
 
     // https://mynameismjp.wordpress.com/2016/03/25/bindless-texturing-for-deferred-rendering-and-decals/
 
     using namespace vpr;
-    using namespace vpsk;
 
     struct program_state_t {
         uint32_t ResolutionX = 1440;
@@ -91,8 +91,12 @@ namespace forward_plus {
     } Lights;
 
     class light_buffers_t {
+        light_buffers_t(const light_buffers_t&) = delete;
+        light_buffers_t& operator=(const light_buffers_t&) = delete;
     public:
-
+        light_buffers_t() = default;
+        light_buffers_t(light_buffers_t&& other) noexcept;
+        light_buffers_t& operator=(light_buffers_t&& other) noexcept;
         light_buffers_t(const Device* dvc);
         void CreateBuffers();
         std::unique_ptr<Buffer> Flags;
@@ -256,6 +260,7 @@ namespace forward_plus {
     };
 
     struct backbuffer_data_t {
+        backbuffer_data_t() = default;
         backbuffer_data_t(const backbuffer_data_t&) = delete;
         backbuffer_data_t& operator=(const backbuffer_data_t&) = delete;
         backbuffer_data_t(backbuffer_data_t&& other) noexcept;
@@ -274,9 +279,14 @@ namespace forward_plus {
     class ClusteredForward : public BaseScene {
     public:
 
-        void Render();
+        ClusteredForward(const std::string& obj_file);
+        void RecordCommands() final {};
 
     private:
+
+        void WindowResized() final {}
+        void RecreateObjects() final {}
+        void endFrame(const size_t& curr_idx) final {}
 
         void updateUniforms();
         void createUBO();
@@ -363,7 +373,21 @@ namespace forward_plus {
         
     };
     
-    light_buffers_t::light_buffers_t(const Device* dvc) : Flags(std::make_unique<Buffer>(dvc)), Bounds(std::make_unique<Buffer>(dvc)), 
+    light_buffers_t::light_buffers_t(light_buffers_t && other) noexcept : Flags(std::move(other.Flags)), Bounds(std::move(other.Bounds)), LightCounts(std::move(other.LightCounts)),
+        LightCountTotal(std::move(other.LightCountTotal)), LightCountOffsets(std::move(other.LightCountOffsets)), LightList(std::move(other.LightList)), LightCountsCompare(std::move(other.LightCountsCompare)) {}
+
+    light_buffers_t & light_buffers_t::operator=(light_buffers_t && other) noexcept {
+        Flags = std::move(other.Flags);
+        Bounds = std::move(other.Bounds);
+        LightCounts = std::move(other.LightCounts);
+        LightCountTotal = std::move(other.LightCountTotal);
+        LightCountOffsets = std::move(other.LightCountOffsets);
+        LightList = std::move(other.LightList);
+        LightCountsCompare = std::move(other.LightCountsCompare);
+        return *this;
+    }
+
+    light_buffers_t::light_buffers_t(const Device* dvc) : Flags(std::make_unique<Buffer>(dvc)), Bounds(std::make_unique<Buffer>(dvc)),
         LightCounts(std::make_unique<Buffer>(dvc)), LightCountTotal(std::make_unique<Buffer>(dvc)), LightCountOffsets(std::make_unique<Buffer>(dvc)),
         LightList(std::make_unique<Buffer>(dvc)), LightCountsCompare(std::make_unique<Buffer>(dvc)) {}
 
@@ -420,6 +444,12 @@ namespace forward_plus {
         if (Render != VK_NULL_HANDLE) {
             vkDestroySemaphore(device->vkHandle(), Render, nullptr);
         }
+    }
+
+    ClusteredForward::ClusteredForward(const std::string & obj_file) : BaseScene(1440, 900) {
+        TexturePool pool(device.get(), transferPool.get());
+        ObjModel model(device.get(), &pool);
+        model.LoadModelFromFile(obj_file, transferPool.get());
     }
 
     void ClusteredForward::updateUniforms() {
@@ -935,5 +965,6 @@ namespace forward_plus {
 int main(int argc, char* argv[]) {
     using namespace vpsk;
     using namespace vpr;
+    ClusteredForward fwd("SponzaOBJ/sponza.obj");
     return 0;
 }

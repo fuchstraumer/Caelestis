@@ -6,7 +6,7 @@
 using namespace vpr;
 
 namespace vpsk {
-
+    ObjModel::ObjModel(const vpr::Device * dvc, TexturePool * resource_pool) : device(dvc), texturePool(resource_pool) {}
 
     ObjModel::~ObjModel() {
     }
@@ -25,15 +25,14 @@ namespace vpsk {
         std::vector<tinyobj::material_t> materials;
         std::string tinyobj_err;
 
-        if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_err, obj_model_filename.c_str())) {
+        if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_err, obj_model_filename.c_str(), "SponzaOBJ/")) {
             LOG(ERROR) << "TinyObjLoader failed to load model file " << obj_model_filename << " , exiting.";
             LOG(ERROR) << "Load failed with error: " << tinyobj_err;
             throw std::runtime_error(tinyobj_err.c_str());
         }
 
         modelName = shapes.front().name;
-
-        texturePool->AddMaterials(materials);
+        texturePool->AddMaterials(materials, "SponzaOBJ/");
 
         loadMeshes(shapes, attrib, transfer_pool);
         
