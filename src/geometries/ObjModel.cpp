@@ -46,6 +46,8 @@ namespace vpsk {
         std::unordered_map<vertex_t, uint32_t> unique_vertices{};
         
         for (const auto& shape : shapes) {
+            modelPart part;
+            part.startIdx = indices.size();
             for (const auto& idx : shape.mesh.indices) {
 
                 ReserveIndices(NumIndices() + shape.mesh.indices.size());
@@ -60,6 +62,8 @@ namespace vpsk {
 
                 AddIndex(unique_vertices[vert]);
             }
+
+            part.idxCount = indices.size();
         }
 
         UpdatePosition(aabb.Center());
