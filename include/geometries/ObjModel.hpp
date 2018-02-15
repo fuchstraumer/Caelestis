@@ -6,7 +6,7 @@
 #include "resource/Buffer.hpp"
 #include "resources/Material.hpp"
 #include "util/AABB.hpp"
-
+#include <unordered_map>
 namespace vpsk {
 
     class TexturePool;
@@ -19,25 +19,24 @@ namespace vpsk {
         ObjModel(const vpr::Device* dvc, TexturePool* resource_pool);
         ~ObjModel();
 
-        void Render(const VkCommandBuffer& cmd);
+        void Render(const VkCommandBuffer& cmd, const VkPipelineLayout layout);
         void LoadModelFromFile(const std::string& obj_model_filename, vpr::TransferPool* transfer_pool);
 
         const AABB& GetAABB() const noexcept;
 
     private:
-        static std::map<std::string, std::unique_ptr<Material>> materialsMap;
+
         struct modelPart {
-            std::map<std::string, std::unique_ptr<Material>>::iterator material;
             uint32_t startIdx;
             uint32_t idxCount;
             int32_t vertexOffset;
         };
-        std::vector<modelPart> parts;
+        std::unordered_multimap<size_t, modelPart> parts;
+        size_t numMaterials;
 
         void loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, vpr::TransferPool* transfer_pool);
 
         TexturePool* texturePool;
-        vpr::DescriptorPool* descriptorPool;
         const vpr::Device* device;
         std::string modelName;
         AABB aabb;

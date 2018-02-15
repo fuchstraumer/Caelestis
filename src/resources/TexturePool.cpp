@@ -1,5 +1,6 @@
 #include "resources/TexturePool.hpp"
 #include "command/TransferPool.hpp"
+#include "resource/DescriptorSet.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 namespace vpsk {
@@ -20,6 +21,7 @@ namespace vpsk {
                         // Added a texture, add to material textures.
                         materialTextures.emplace(mtl.name, inserted.first);
                     }
+                    idxNameMap.emplace(idxNameMap.size(), mtl.name);
                 }
             };
 
@@ -65,6 +67,22 @@ namespace vpsk {
             transferPool->Submit();
 
         }
+
+        createDescriptorPool();
+    }
+
+    void TexturePool::BindMaterialAtIdx(const size_t & idx, const VkCommandBuffer cmd, const VkPipelineLayout layout) {
+        const auto& name = idxNameMap.at(idx);
+        const auto& set = materialSets.at(name);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &set->vkHandle(), 0, nullptr);
+    }
+
+    void TexturePool::createDescriptorPool()
+    {
+    }
+
+    void TexturePool::createDescriptorSets()
+    {
     }
 
 }

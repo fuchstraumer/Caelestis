@@ -11,11 +11,17 @@ namespace vpsk {
     ObjModel::~ObjModel() {
     }
 
-    void ObjModel::Render(const VkCommandBuffer& cmd) {
+    void ObjModel::Render(const VkCommandBuffer& cmd, const VkPipelineLayout layout) {
         bindBuffers(cmd);
-        for (auto& part : parts) {
-            vkCmdDrawIndexed(cmd, part.idxCount, 1, part.startIdx, part.vertexOffset, 0);
+        for (size_t i = 0; i < numMaterials; ++i) {
+            auto range = parts.equal_range(i);
+            texturePool->BindMaterialAtIdx(i, cmd, layout);
+            for (auto iter = range.first; iter != range.second; ++iter) {
+                const auto& part = iter->second;
+                vkCmdDrawIndexed(cmd, part.idxCount, 1, part.startIdx, part.vertexOffset, 0);
+            }
         }
+        
     }
 
     void ObjModel::LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool) {
@@ -33,22 +39,21 @@ namespace vpsk {
 
         modelName = shapes.front().name;
         texturePool->AddMaterials(materials, "SponzaOBJ/");
-
+        numMaterials = materials.size();
         loadMeshes(shapes, attrib, transfer_pool);
         
     }
 
     void ObjModel::loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, TransferPool* transfer_pool) {
        
-        std::unordered_map<vertex_t, uint32_t> unique_vertices{};
         
+        int32_t vtx_offset = 0;
         for (const auto& shape : shapes) {
             modelPart part;
             part.startIdx = indices.size();
-            part.vertexOffset = 0;
+            part.vertexOffset = vtx_offset;
+            std::unordered_map<vertex_t, uint32_t> unique_vertices{};
             for (const auto& idx : shape.mesh.indices) {
-
-                ReserveIndices(NumIndices() + shape.mesh.indices.size());
                 vertex_t vert;
                 vert.pos = { attrib.vertices[3 * idx.vertex_index], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2] };
                 vert.normal = { attrib.normals[3 * idx.normal_index], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2] };
@@ -62,7 +67,8 @@ namespace vpsk {
             }
 
             part.idxCount = indices.size();
-            parts.push_back(part);
+            vtx_offset += unique_vertices.size();
+            parts.insert(std::make_pair(shape.mesh.material_ids.front(), part));
         }
 
         UpdatePosition(aabb.Center());
