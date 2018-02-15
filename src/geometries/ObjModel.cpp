@@ -6,10 +6,10 @@
 using namespace vpr;
 
 namespace vpsk {
+
     ObjModel::ObjModel(const vpr::Device * dvc, TexturePool * resource_pool) : device(dvc), texturePool(resource_pool) {}
 
-    ObjModel::~ObjModel() {
-    }
+    ObjModel::~ObjModel() {}
 
     void ObjModel::Render(const VkCommandBuffer& cmd, const VkPipelineLayout layout) {
         bindBuffers(cmd);

@@ -10,7 +10,7 @@
 #include "render/Renderpass.hpp"
 #include "render/Swapchain.hpp"
 #include "render/DepthStencil.hpp"
-#include "render/Multisampling.hpp"
+#include "resources/Multisampling.hpp"
 #include "render/GraphicsPipeline.hpp"
 #include "resource/Buffer.hpp"
 #include "resource/DescriptorPool.hpp"
@@ -57,9 +57,6 @@ namespace vpsk {
         window->SetWindowUserPointer(this);
 
         LOG_IF(verbose_logging, INFO) << "VkInstance created.";
-
-        Multisampling::SampleCount = BaseScene::SceneConfiguration.MSAA_SampleCount;
-        LOG_IF(verbose_logging, INFO) << "MSAA level set to " << std::to_string(Multisampling::SampleCount);
 
         device = std::make_unique<Device>(instance.get(), instance->GetPhysicalDevice(), true);
 

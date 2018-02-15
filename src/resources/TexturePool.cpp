@@ -1,6 +1,7 @@
 #include "resources/TexturePool.hpp"
 #include "command/TransferPool.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "resource/DescriptorPool.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 namespace vpsk {
