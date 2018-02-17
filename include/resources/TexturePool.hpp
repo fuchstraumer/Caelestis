@@ -9,6 +9,8 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <unordered_set>
+
 namespace vpsk {
 
     struct misc_material_data_t {
@@ -59,6 +61,18 @@ namespace vpsk {
         texture_pool_buffer_entry_t buffer;
     };
 
+    struct loaded_texture_t {
+        loaded_texture_t(const loaded_texture_t&) = delete;
+        loaded_texture_t& operator=(const loaded_texture_t&) = delete;
+        loaded_texture_t(const std::string& path);
+        loaded_texture_t(loaded_texture_t&& other) noexcept;
+        loaded_texture_t(loaded_texture_t&& other) noexcept;
+        VkExtent2D Extents;
+        VkFormat Format;
+        std::string Filename;
+        stbi_uc* Pixels;
+    };
+
     class TexturePool {
         TexturePool(const TexturePool&) = delete;
         TexturePool& operator=(const TexturePool&) = delete;
@@ -76,11 +90,14 @@ namespace vpsk {
 
         void BindMaterialAtIdx(const size_t& idx, const VkCommandBuffer cmd, const VkPipelineLayout layout);
 
+
     private:
 
         void createDescriptorPool();
         void createDescriptorSets();
 
+        
+        
         std::map<size_t, std::string> idxNameMap;
 
         std::unordered_map<std::string, VkDescriptorImageInfo> textureDescriptors;
@@ -102,6 +119,30 @@ namespace vpsk {
         std::unordered_map<std::string, std::unique_ptr<vpr::DescriptorSet>> materialSets;
     };
 
+}
+
+namespace std {
+
+    template<>
+    struct hash<VkExtent2D> {
+        size_t operator()(const VkExtent2D& ex) const {
+            return std::hash<uint32_t>()(ex.width) ^ std::hash<uint32_t>()(ex.height);
+        }
+    };
+
+    template<>
+    struct hash<VkFormat> {
+        size_t operator()(const VkFormat& format) const {
+            return std::hash<uint32_t>()(static_cast<uint32_t>(format));
+        }
+    };
+
+    template<>
+    struct hash<vpsk::loaded_texture_t> {
+        size_t operator()(const vpsk::loaded_texture_t& tex) const {
+            return (std::hash<VkExtent2D>()(tex.Extents) << 16) ^ (std::hash<VkFormat>()(tex.Format));
+        }
+    };
 }
 
 #endif //!VPSK_TEXTURE_POOL_HPP

@@ -22,9 +22,11 @@ namespace vpsk {
                         // Added a texture, add to material textures.
                         materialTextures.emplace(mtl.name, inserted.first);
                     }
-                    idxNameMap.emplace(idxNameMap.size(), mtl.name);
+                    
                 }
             };
+
+            idxNameMap.emplace(idxNameMap.size(), mtl.name);
 
             auto load_texture_buffer_data = [&]() {
                 auto inserted = materialUboData.try_emplace(mtl.name, material_ubo_data_t{
