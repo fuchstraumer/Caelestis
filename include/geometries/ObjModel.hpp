@@ -6,7 +6,8 @@
 #include "resource/Buffer.hpp"
 #include "resources/Material.hpp"
 #include "util/AABB.hpp"
-#include <unordered_map>
+#include <map>
+#include <set>
 namespace vpsk {
 
     class TexturePool;
@@ -30,17 +31,33 @@ namespace vpsk {
             uint32_t startIdx;
             uint32_t idxCount;
             int32_t vertexOffset;
+            uint32_t mtlIdx;
+            bool operator==(const modelPart& other) const noexcept {
+                return (idxCount == other.idxCount) && (mtlIdx == other.mtlIdx);
+            }
+            bool operator<(const modelPart& other) const noexcept {
+                if (mtlIdx == other.mtlIdx) {
+                    return idxCount < other.idxCount;
+                }
+                else {
+                    return mtlIdx < other.mtlIdx;
+                }
+            }
         };
-        std::unordered_multimap<size_t, modelPart> parts;
+
+        std::unique_ptr<vpr::Buffer> indirectDrawBuffer;
+        std::multiset<modelPart> parts;
+        std::multimap<size_t, VkDrawIndexedIndirectCommand> indirectCommands;
         size_t numMaterials;
 
         void loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, vpr::TransferPool* transfer_pool);
-
+        void generateIndirectDraws();
+        void createIndirectDrawBuffer();
         TexturePool* texturePool;
         const vpr::Device* device;
         std::string modelName;
         AABB aabb;
-        
+        const bool multiDrawIndirect;
     };
 
 }

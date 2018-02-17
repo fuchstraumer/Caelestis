@@ -2,24 +2,24 @@
 #include "resources/TexturePool.hpp"
 #include "command/TransferPool.hpp"
 #include "util/easylogging++.h"
-
+#include "core/LogicalDevice.hpp"
+#include "core/PhysicalDevice.hpp"
 using namespace vpr;
 
 namespace vpsk {
 
-    ObjModel::ObjModel(const vpr::Device * dvc, TexturePool * resource_pool) : device(dvc), texturePool(resource_pool) {}
+    bool supports_multidraw_indirect(const vpr::Device* dvc) {
+        return dvc->GetPhysicalDeviceProperties().limits.maxDrawIndirectCount != 1;
+    }
+
+    ObjModel::ObjModel(const vpr::Device * dvc, TexturePool * resource_pool) : device(dvc), texturePool(resource_pool), multiDrawIndirect(supports_multidraw_indirect(dvc)) {}
 
     ObjModel::~ObjModel() {}
 
     void ObjModel::Render(const VkCommandBuffer& cmd, const VkPipelineLayout layout) {
         bindBuffers(cmd);
         for (size_t i = 0; i < numMaterials; ++i) {
-            auto range = parts.equal_range(i);
-            texturePool->BindMaterialAtIdx(i, cmd, layout);
-            for (auto iter = range.first; iter != range.second; ++iter) {
-                const auto& part = iter->second;
-                vkCmdDrawIndexed(cmd, part.idxCount, 1, part.startIdx, part.vertexOffset, 0);
-            }
+            
         }
         
     }
@@ -41,18 +41,41 @@ namespace vpsk {
         texturePool->AddMaterials(materials, "SponzaOBJ/");
         numMaterials = materials.size();
         loadMeshes(shapes, attrib, transfer_pool);
+        generateIndirectDraws();
+        createIndirectDrawBuffer();
         
     }
 
     void ObjModel::loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, TransferPool* transfer_pool) {
        
-        
+        size_t num_vertices_loaded = 0;
+
+        auto sort_parts = [](const tinyobj::shape_t& p0, const tinyobj::shape_t& p1) {
+            if (p0.mesh.material_ids.front() == p1.mesh.material_ids.front()) {
+                return p0.mesh.indices.size() < p1.mesh.indices.size();
+            }
+            else {
+                return p0.mesh.material_ids.front() < p1.mesh.material_ids.front();
+            }
+        };
+
+
+        std::vector<tinyobj::shape_t> sorted_shapes{ shapes.begin(), shapes.end() };
+        auto remove_iter = std::remove_if(sorted_shapes.begin(), sorted_shapes.end(), [](const tinyobj::shape_t& shape) {
+            return std::any_of(shape.mesh.material_ids.cbegin(), shape.mesh.material_ids.cend(), [](const int& i) { return i == -1; });
+        });
+        sorted_shapes.erase(remove_iter, sorted_shapes.end());
+        std::sort(sorted_shapes.begin(), sorted_shapes.end(), sort_parts);
+
+
         int32_t vtx_offset = 0;
-        for (const auto& shape : shapes) {
+        for (const auto& shape : sorted_shapes) {
             modelPart part;
-            part.startIdx = indices.size();
+            part.startIdx = static_cast<uint32_t>(indices.size());
             part.vertexOffset = vtx_offset;
             std::unordered_map<vertex_t, uint32_t> unique_vertices{};
+            uint32_t idx_count = 0;
+            uint32_t vtx_count = 0;
             for (const auto& idx : shape.mesh.indices) {
                 vertex_t vert;
                 vert.pos = { attrib.vertices[3 * idx.vertex_index], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2] };
@@ -61,26 +84,57 @@ namespace vpsk {
                 aabb.Include(vert.pos);
                 if (unique_vertices.count(vert) == 0) {
                     unique_vertices[vert] = AddVertex(vert);
+                    ++vtx_count;
                 }
 
                 AddIndex(unique_vertices[vert]);
+                ++idx_count;
             }
 
-            part.idxCount = indices.size();
-            vtx_offset += unique_vertices.size();
-            parts.insert(std::make_pair(shape.mesh.material_ids.front(), part));
+            part.idxCount = idx_count;
+            part.mtlIdx = shape.mesh.material_ids.front();
+            vtx_offset += static_cast<int32_t>(unique_vertices.size());
+            parts.insert(part);
         }
-
         UpdatePosition(aabb.Center());
+        
 
         CreateBuffers(device);
         LOG(INFO) << "Loaded mesh data from .obj file, uploading to device now...";
         auto& cmd = transfer_pool->Begin();
         RecordTransferCommands(cmd);
-        
         transfer_pool->Submit();
         LOG(INFO) << "Mesh data upload complete.";
 
+    }
+
+    void ObjModel::generateIndirectDraws() {
+        for (auto& idx_group : parts) {
+            if (indirectCommands.count(idx_group.mtlIdx)) {
+                auto range = indirectCommands.equal_range(idx_group.mtlIdx);
+                auto same_idx_entry = std::find_if(range.first, range.second, [idx_group](const decltype(indirectCommands)::value_type& elem) { return elem.second.indexCount == idx_group.idxCount; });
+                if (same_idx_entry == indirectCommands.end()) {
+                    indirectCommands.emplace(idx_group.mtlIdx, VkDrawIndexedIndirectCommand{ idx_group.idxCount, 1, idx_group.startIdx, idx_group.vertexOffset, 0 });
+                }
+                else {
+                    same_idx_entry->second.instanceCount++;
+                }
+            }
+            else {
+                indirectCommands.emplace(idx_group.mtlIdx, VkDrawIndexedIndirectCommand{ idx_group.idxCount, 1, idx_group.startIdx, idx_group.vertexOffset, 0 });
+            }
+        }
+    }
+
+    void ObjModel::createIndirectDrawBuffer() {
+        indirectDrawBuffer = std::make_unique<vpr::Buffer>(device);
+        indirectDrawBuffer->CreateBuffer(VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(VkDrawIndexedIndirectCommand) * indirectCommands.size());
+        std::vector<VkDrawIndexedIndirectCommand> indirect_buffer; indirect_buffer.reserve(indirectCommands.size());
+        for (auto& drawCmd : indirectCommands) {
+            indirect_buffer.push_back(drawCmd.second);
+        }
+        indirectDrawBuffer->CopyToMapped(indirect_buffer.data(), indirectDrawBuffer->Size(), 0);
+        LOG(INFO) << "Generated indexed indirect draw commands for an obj file. Initial part count: " << std::to_string(parts.size()) << " . Indirect draw count: " << std::to_string(indirect_buffer.size());
     }
 
 }
