@@ -16,7 +16,7 @@ namespace vpsk {
 
     ObjModel::~ObjModel() {}
 
-    void ObjModel::Render(const DrawInfo & info) {
+    void ObjModel::Render(const DrawInfo info) {
         commandOffset = 0;
 
         auto bind_for_no_textures = [&](const VkCommandBuffer cmd) {

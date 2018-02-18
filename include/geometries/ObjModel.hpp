@@ -31,7 +31,7 @@ namespace vpsk {
         ObjModel(const vpr::Device* dvc, TexturePool* resource_pool);
         ~ObjModel();
 
-        void Render(const DrawInfo& info);
+        void Render(const DrawInfo info);
         
         void LoadModelFromFile(const std::string& obj_model_filename, vpr::TransferPool* transfer_pool);
 
