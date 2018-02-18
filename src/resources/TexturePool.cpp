@@ -9,24 +9,26 @@ namespace vpsk {
     TexturePool::TexturePool(const vpr::Device * dvc, const vpr::TransferPool * transfer_pool) : device(dvc), transferPool(transfer_pool) {}
 
     void TexturePool::AddMaterials(const std::vector<tinyobj::material_t>& materials, const std::string& path_prefix) {
-        // Go through the given material and all the texture data to the texture data map.
+        // Go through the given material and all the texture data to the texture data maps
         for (const auto& mtl : materials) {
-            auto load_texture_data = [&](const std::string& tex) {
+
+            auto cmd = transferPool->Begin();
+            idxNameMap.emplace(idxNameMap.size(), mtl.name);
+
+            auto load_texture_data = [&](const std::string& tex)->decltype(stbTextures)::const_iterator {
                 if (tex.empty()) {
-                    return;
+                    return stbTextures.cend();
+                }
+                else if (stbTextures.count(tex)) {
+                    return stbTextures.find(tex);
                 }
                 else {
                     auto inserted = stbTextures.try_emplace(tex, std::make_unique<vpr::Texture<vpr::texture_2d_t>>(device));
                     inserted.first->second->CreateFromFile(std::string(path_prefix + tex).c_str());
-                    if (inserted.second) {
-                        // Added a texture, add to material textures.
-                        materialTextures.emplace(mtl.name, inserted.first);
-                    }
-                    
+                    inserted.first->second->TransferToDevice(cmd);
+                    return inserted.first;
                 }
             };
-
-            idxNameMap.emplace(idxNameMap.size(), mtl.name);
 
             auto load_texture_buffer_data = [&]() {
                 auto inserted = materialUboData.try_emplace(mtl.name, material_ubo_data_t{
@@ -48,25 +50,70 @@ namespace vpsk {
                 }
             }; 
 
-            load_texture_data(mtl.ambient_texname);
-            load_texture_data(mtl.diffuse_texname);
-            load_texture_data(mtl.specular_texname);
-            load_texture_data(mtl.specular_highlight_texname);
-            load_texture_data(mtl.bump_texname);
-            load_texture_data(mtl.displacement_texname);
-            load_texture_data(mtl.alpha_texname);
-            load_texture_data(mtl.reflection_texname);
-            load_texture_data(mtl.roughness_texname);
-            load_texture_data(mtl.metallic_texname);
-            load_texture_data(mtl.sheen_texname);
-            load_texture_data(mtl.normal_texname);
-            load_texture_buffer_data();
+            materialTextures.emplace(mtl.name, material_texture_data_t());
 
-            auto bounds = materialTextures.equal_range(mtl.name);
-            auto& cmd = transferPool->Begin();
-            for (auto iter = bounds.first; iter != bounds.second; ++iter) {
-                iter->second->second->TransferToDevice(cmd);
+            auto ambient_iter = load_texture_data(mtl.ambient_texname);
+            if (ambient_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Ambient = ambient_iter;
             }
+            
+            auto diffuse_iter = load_texture_data(mtl.diffuse_texname);
+            if (diffuse_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Diffuse = diffuse_iter;
+            }
+
+            auto specular_iter = load_texture_data(mtl.specular_texname);
+            if (specular_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Specular = specular_iter;
+            }
+
+            auto highlight_iter = load_texture_data(mtl.specular_highlight_texname);
+            if (highlight_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).SpecularHighlight = highlight_iter;
+            }
+
+            auto bump_iter = load_texture_data(mtl.bump_texname);
+            if (bump_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Bump = bump_iter;
+            }
+
+            auto displ_iter = load_texture_data(mtl.displacement_texname);
+            if (displ_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Displacement = displ_iter;
+            }
+
+            auto alpha_iter = load_texture_data(mtl.alpha_texname);
+            if (alpha_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Alpha = alpha_iter;
+            }
+
+            auto refl_iter = load_texture_data(mtl.reflection_texname);
+            if (refl_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Reflection = refl_iter;
+            }
+
+            auto rough_iter = load_texture_data(mtl.roughness_texname);
+            if (rough_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Roughness = rough_iter;
+            }
+
+            auto metallic_iter = load_texture_data(mtl.metallic_texname);
+            if (metallic_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Roughness = rough_iter;
+            }
+
+            auto sheen_iter = load_texture_data(mtl.sheen_texname);
+            if (sheen_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Sheen = sheen_iter;
+            }
+
+            auto normal_iter = load_texture_data(mtl.normal_texname);
+            if (normal_iter != stbTextures.cend()) {
+                materialTextures.at(mtl.name).Normal = normal_iter;
+            }
+
+            load_texture_buffer_data();
+            // We've been recording all our commands - now submit.
             transferPool->Submit();
 
         }
@@ -80,12 +127,21 @@ namespace vpsk {
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &set->vkHandle(), 0, nullptr);
     }
 
-    void TexturePool::createDescriptorPool()
-    {
+    void TexturePool::createDescriptorPool() {
+        descriptorPool = std::make_unique<vpr::DescriptorPool>(device, idxNameMap.size());
+        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, idxNameMap.size());
+        descriptorPool->Create();
     }
 
-    void TexturePool::createDescriptorSets()
-    {
+    void TexturePool::createDescriptorSets() {
+
+        for (auto& entry : idxNameMap) {
+            const auto& name = entry.second;
+            materialSets.emplace(name, std::make_unique<vpr::DescriptorSet>(device));
+            const auto& idx = entry.first;
+            
+            
+        }
     }
 
 }
