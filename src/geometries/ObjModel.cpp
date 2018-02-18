@@ -31,14 +31,14 @@ namespace vpsk {
         std::vector<tinyobj::material_t> materials;
         std::string tinyobj_err;
 
-        if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_err, obj_model_filename.c_str(), "SponzaOBJ/")) {
+        if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_err, obj_model_filename.c_str(), "../rsrc/crytekSponza/")) {
             LOG(ERROR) << "TinyObjLoader failed to load model file " << obj_model_filename << " , exiting.";
             LOG(ERROR) << "Load failed with error: " << tinyobj_err;
             throw std::runtime_error(tinyobj_err.c_str());
         }
 
         modelName = shapes.front().name;
-        texturePool->AddMaterials(materials, "SponzaOBJ/");
+        texturePool->AddMaterials(materials, "../rsrc/crytekSponza/");
         numMaterials = materials.size();
         loadMeshes(shapes, attrib, transfer_pool);
         generateIndirectDraws();

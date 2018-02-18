@@ -965,6 +965,6 @@ namespace vpsk {
 int main(int argc, char* argv[]) {
     using namespace vpsk;
     using namespace vpr;
-    ClusteredForward fwd("SponzaOBJ/sponza.obj");
+    ClusteredForward fwd("../rsrc/crytekSponza/sponza.obj");
     return 0;
 }
