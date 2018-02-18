@@ -295,8 +295,10 @@ namespace vpsk {
         void submitPrecomputePass(frame_data_t & frame);
         void recordComputePass(frame_data_t & frame);
         void submitComputePass(frame_data_t & frame);
+        void recordOnscreenPass(frame_data_t & frame);
+        void submitOnscreenPass(frame_data_t & frame);
+        void resetTexelBuffers(const VkCommandBuffer cmd);
         void recordCommands();
-        void submitCommands();
         void presentBackBuffer();
 
         void createShaders();
@@ -366,12 +368,15 @@ namespace vpsk {
         VkBufferMemoryBarrier Barriers[2]{ vk_buffer_memory_barrier_info_base, vk_buffer_memory_barrier_info_base };
 
         std::unique_ptr<ObjModel> sponza;
+
         VkViewport offscreenViewport, onscreenViewport;
         VkRect2D offscreenScissor, onscreenScissor;
 
         constexpr static VkPipelineStageFlags OffscreenFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         constexpr static VkPipelineStageFlags ComputeFlags = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+        std::vector<std::unique_ptr<vpr::Framebuffer>> framebuffers;
         
     };
     
@@ -565,13 +570,79 @@ namespace vpsk {
         vkQueueSubmit(device->ComputeQueue(), 1, &submission, frame.ComputeCmd.Fence);
     }
 
+    void ClusteredForward::recordOnscreenPass(frame_data_t& frame) {
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.RenderCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
+        vkResetFences(device->vkHandle(), 1, &frame.RenderCmd.Fence);
+
+        onscreenPass->UpdateBeginInfo(framebuffers[frame.idx]->vkHandle());
+        auto& cmd = frame.RenderCmd.Cmd;
+        constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
+        vkBeginCommandBuffer(cmd, &begin_info);
+            vkCmdBeginRenderPass(cmd, &onscreenPass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
+            const VkDescriptorSet first_two_sets[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Layout->vkHandle(), 0, 2, first_two_sets, 0, nullptr);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), true, true, 2 });
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Transparent.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), false, true, 2 });
+            vkCmdEndRenderPass(cmd);
+            resetTexelBuffers(cmd);
+        vkEndCommandBuffer(cmd);
+    }
+
+    void ClusteredForward::resetTexelBuffers(const VkCommandBuffer cmd) {
+        std::vector<VkBufferMemoryBarrier> transfer_barriers{ 4, VkBufferMemoryBarrier{
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
+            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+            VK_NULL_HANDLE, 0, 0
+        } };
+
+        transfer_barriers[0].buffer = LightBuffers.Flags->vkHandle(); transfer_barriers[0].size = LightBuffers.Flags->Size();
+        transfer_barriers[1].buffer = LightBuffers.LightCounts->vkHandle(); transfer_barriers[1].size = LightBuffers.LightCounts->Size();
+        transfer_barriers[2].buffer = LightBuffers.LightCountOffsets->vkHandle(); transfer_barriers[2].size = LightBuffers.LightCountOffsets->Size();
+        transfer_barriers[3].buffer = LightBuffers.LightList->vkHandle(); transfer_barriers[3].size = LightBuffers.LightList->Size();
+
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 4, transfer_barriers.data(), 0, nullptr);
+        vkCmdFillBuffer(cmd, LightBuffers.Flags->vkHandle(), 0, LightBuffers.Flags->Size(), 0);
+        vkCmdFillBuffer(cmd, LightBuffers.Bounds->vkHandle(), 0, LightBuffers.Bounds->Size(), 0);
+        vkCmdFillBuffer(cmd, LightBuffers.LightCounts->vkHandle(), 0, LightBuffers.LightCounts->Size(), 0);
+        vkCmdFillBuffer(cmd, LightBuffers.LightCountOffsets->vkHandle(), 0, LightBuffers.LightCountOffsets->Size(), 0);
+        vkCmdFillBuffer(cmd, LightBuffers.LightCountTotal->vkHandle(), 0, LightBuffers.LightCountTotal->Size(), 0);
+        vkCmdFillBuffer(cmd, LightBuffers.LightList->vkHandle(), 0, LightBuffers.LightList->Size(), 0);
+        vkCmdFillBuffer(cmd, LightBuffers.LightCountsCompare->vkHandle(), 0, LightBuffers.LightCountsCompare->Size(), 0);
+        for (auto& barrier : transfer_barriers) {
+            // just invert the access masks before submitting another barrier.
+            std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
+        }
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 4, transfer_barriers.data(), 0, nullptr);
+
+    }
+
+    void ClusteredForward::submitOnscreenPass(frame_data_t& frame) {
+        VkSubmitInfo submission = vk_submit_info_base;
+        submission.commandBufferCount = 1;
+        submission.pCommandBuffers = &frame.RenderCmd.Cmd;
+        submission.waitSemaphoreCount = 1;
+        submission.pWaitSemaphores = &acquiredBackBuffer.Compute;
+        submission.signalSemaphoreCount = 1;
+        submission.pSignalSemaphores = &acquiredBackBuffer.Render;
+        submission.pWaitDstStageMask = &RenderFlags;
+        vkQueueSubmit(device->GraphicsQueue(), 1, &submission, frame.RenderCmd.Fence);
+    }
+
+
     void ClusteredForward::recordCommands() {
         constexpr static VkDeviceSize Offsets[1]{ 0 };
-        
-
         auto& frame_data = FrameData[CurrFrameDataIdx];
+
+        recordPrecomputePass(frame_data);
+        submitPrecomputePass(frame_data);
         recordComputePass(frame_data);
-        
+        submitComputePass(frame_data);
+        recordOnscreenPass(frame_data);
+        submitOnscreenPass(frame_data);
+
     }
 
     void ClusteredForward::presentBackBuffer() {
@@ -713,7 +784,7 @@ namespace vpsk {
     void ClusteredForward::createMainPipelines() {
 
         Pipelines.Opaque.Layout = std::make_unique<PipelineLayout>(device.get());
-        const VkDescriptorSetLayout set_layouts[3]{ sponza->GetMaterialSetLayout(), texelBuffersLayout->vkHandle(), frameDataLayout->vkHandle() };
+        const VkDescriptorSetLayout set_layouts[3]{ texelBuffersLayout->vkHandle(), frameDataLayout->vkHandle(), sponza->GetMaterialSetLayout() };
         Pipelines.Opaque.Layout->Create(set_layouts, 3);
 
         const uint16_t hash_id = static_cast<uint16_t>(std::hash<std::string>()("main-pipeline"));
