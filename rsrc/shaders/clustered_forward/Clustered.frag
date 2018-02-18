@@ -24,7 +24,7 @@ layout (location = 3) in vec2 vUV;
 layout (location = 0) out vec4 fragColor; 
 
 // Global uniforms
-layout (set = 2, binding = 0) uniform _ubo {
+layout (set = 1, binding = 0) uniform _ubo {
     mat4 model;
     mat4 view;
     mat4 projectionClip;
@@ -34,25 +34,38 @@ layout (set = 2, binding = 0) uniform _ubo {
 } UBO;
 
 // Clustered-forward technique uniforms
-layout (set = 2, binding = 1, rgba32f) uniform readonly imageBuffer positionRanges;
-layout (set = 2, binding = 2, rgba8) uniform readonly imageBuffer lightColors;
-layout (set = 3, binding = 0, r8ui) uniform readonly uimageBuffer flags;
-layout (set = 3, binding = 2, r32ui) uniform readonly uimageBuffer lightCounts;
-layout (set = 3, binding = 4, r32ui) uniform readonly uimageBuffer lightCountOffsets;
-layout (set = 3, binding = 5, r32ui) uniform readonly uimageBuffer lightList;
+layout (set = 1, binding = 1, rgba32f) uniform readonly imageBuffer positionRanges;
+layout (set = 1, binding = 2, rgba8) uniform readonly imageBuffer lightColors;
+layout (set = 0, binding = 0, r8ui) uniform readonly uimageBuffer flags;
+layout (set = 0, binding = 2, r32ui) uniform readonly uimageBuffer lightCounts;
+layout (set = 0, binding = 4, r32ui) uniform readonly uimageBuffer lightCountOffsets;
+layout (set = 0, binding = 5, r32ui) uniform readonly uimageBuffer lightList;
 
 // Per-material uniforms
-layout (set = 0, binding = 0) uniform _mtl {
+layout (set = 2, binding = 4) uniform _mtl {
     vec4 ambient;
-    vec4 diffuse; // .a is alpha 
-    vec4 specular; // .a is exponent
-    vec4 emissive;
+    vec4 diffuse; 
+    vec4 specular;
+    vec4 transmittance;
+    vec4 emission;
+    layout (offset = 80) float shininess;
+    layout (offset = 84) float ior;
+    layout (offset = 88) float alpha;
+    layout (offset = 92) int illuminationModel;
+    layout (offset = 96) float roughness;
+    layout (offset = 100) float metallic;
+    layout (offset = 104) float sheen;
+    layout (offset = 108) float clearcoatThickness;
+    layout (offset = 112) float clearcoatRoughness;
+    layout (offset = 116) float anisotropy;
+    layout (offset = 120) float anisotropyRotation;
+    layout (offset = 124) float padding;
 } Material;
 
-layout (set = 1, binding = 0) uniform sampler2D diffuse_map;
-layout (set = 1, binding = 1) uniform sampler2D opacity;
-layout (set = 1, binding = 2) uniform sampler2D specular_map;
-layout (set = 1, binding = 3) uniform sampler2D normal_map;
+layout (set = 2, binding = 0) uniform sampler2D diffuse;
+layout (set = 2, binding = 1) uniform sampler2D bump;
+layout (set = 2, binding = 2) uniform sampler2D roughness;
+layout (set = 2, binding = 3) uniform sampler2D metallic;
 
 uint CoordToIdx(uint i, uint j, uint k) {
     return TileCountX * TileCountY * k + TileCountX * j + i;
