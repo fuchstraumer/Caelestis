@@ -365,6 +365,7 @@ namespace vpsk {
         std::map<std::string, std::unique_ptr<ShaderModule>> shaders;
         VkBufferMemoryBarrier Barriers[2]{ vk_buffer_memory_barrier_info_base, vk_buffer_memory_barrier_info_base };
 
+        std::unique_ptr<ObjModel> sponza;
         VkViewport offscreenViewport, onscreenViewport;
         VkRect2D offscreenScissor, onscreenScissor;
 
@@ -712,7 +713,7 @@ namespace vpsk {
     void ClusteredForward::createMainPipelines() {
 
         Pipelines.Opaque.Layout = std::make_unique<PipelineLayout>(device.get());
-        const VkDescriptorSetLayout set_layouts[3]{ modelLayout->vkHandle(), texelBuffersLayout->vkHandle(), frameDataLayout->vkHandle() };
+        const VkDescriptorSetLayout set_layouts[3]{ sponza->GetMaterialSetLayout(), texelBuffersLayout->vkHandle(), frameDataLayout->vkHandle() };
         Pipelines.Opaque.Layout->Create(set_layouts, 3);
 
         const uint16_t hash_id = static_cast<uint16_t>(std::hash<std::string>()("main-pipeline"));
