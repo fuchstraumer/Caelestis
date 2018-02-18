@@ -5,11 +5,6 @@ PROJECT(VulpesSceneKit)
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-ExternalProject_Add(glm
-    PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/download/glm"
-    GIT_REPOSITORY "https://github.com/g-truc/glm.git"
-)
-
 FILE(GLOB GEOMETRIES "${CMAKE_CURRENT_SOURCE_DIR}/include/geometries/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/geometries/*.cpp")
 FILE(GLOB CAMERAS "${CMAKE_CURRENT_SOURCE_DIR}/include/camera/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/camera/*.cpp")
 FILE(GLOB LIGHTS "${CMAKE_CURRENT_SOURCE_DIR}/include/lights/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/lights/*.cpp")
@@ -50,7 +45,6 @@ ADD_SUBDIRECTORY("third_party/vulpesrender")
 ADD_LIBRARY(VulpesSceneKit STATIC ${RESOURCES} ${GEOMETRIES} ${FEATURES} ${PASSES} ${SHADER_TOOLS} ${RENDER} 
                                   ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS} 
                                   ${SHADERS})
-ADD_DEPENDENCIES(VulpesSceneKit glm)
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC $<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}>)
 TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE ${Vulkan_LIBRARIES})
 
