@@ -213,7 +213,6 @@ namespace vpsk {
         struct cmd_buffer_block_t {
             VkCommandBuffer Cmd = VK_NULL_HANDLE;
             VkFence Fence = VK_NULL_HANDLE;
-            VkSubmitInfo Info = vk_submit_info_base;
         };
 
         void UpdateUBO() {
@@ -292,7 +291,8 @@ namespace vpsk {
         void createUBO();
 
         void acquireBackBuffer();
-        void recordComputePass(frame_data_t& frame);
+        void recordPrecomputePass(frame_data_t& frame);
+        void submitPrecomputePass(frame_data_t & frame);
         void recordCommands();
         void submitCommands();
         void presentBackBuffer();
@@ -337,7 +337,6 @@ namespace vpsk {
         std::unique_ptr<DescriptorPool> descriptorPool;
         std::unique_ptr<DescriptorSetLayout> frameDataLayout;
         std::unique_ptr<DescriptorSetLayout> texelBuffersLayout;
-        std::unique_ptr<DescriptorSetLayout> modelLayout;
         std::unique_ptr<CommandPool> primaryPool;
         std::unique_ptr<CommandPool> computePool;
         std::unique_ptr<Image> offscreenRenderTarget;
@@ -471,11 +470,11 @@ namespace vpsk {
         Backbuffers.pop_front();
     }
 
-    void ClusteredForward::recordComputePass(frame_data_t& frame) {
+    void ClusteredForward::recordPrecomputePass(frame_data_t& frame) {
         VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.OffscreenCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
         vkResetFences(device->vkHandle(), 1, &frame.OffscreenCmd.Fence);
 
-        
+
         Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
         Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         Barriers[0].buffer = frame.ubo->vkHandle();
@@ -486,14 +485,36 @@ namespace vpsk {
 
         computePass->UpdateBeginInfo(offscreenFramebuffer->vkHandle());
         auto& cmd = frame.OffscreenCmd.Cmd;
-        const VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
+        constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
         vkBeginCommandBuffer(cmd, &begin_info);
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &Barriers[0], 0, nullptr);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &Barriers[0], 0, nullptr);
+        vkCmdBeginRenderPass(cmd, &computePass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
             vkCmdSetViewport(cmd, 0, 1, &offscreenViewport);
             vkCmdSetScissor(cmd, 0, 1, &offscreenScissor);
-            vkCmdBeginRenderPass(cmd, &computePass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Depth.Layout->vkHandle(), 0, 1, &frame.descriptor->vkHandle(), 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Depth.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.Depth.Layout->vkHandle(), true, false, 0 });
+        vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Layout->vkHandle(), 0, 1, &frame.descriptor->vkHandle(), 0, nullptr);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), true, false, 2 });
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Transparent.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), false, false, 2 });
+        vkCmdEndRenderPass(cmd);
+        vkEndCommandBuffer(cmd);
+
+    }
+
+    void ClusteredForward::submitPrecomputePass(frame_data_t& frame) {
+        VkSubmitInfo submission = vk_submit_info_base;
+        submission.commandBufferCount = 1;
+        submission.pCommandBuffers = &frame.OffscreenCmd.Cmd;
+        submission.waitSemaphoreCount = 1;
+        submission.pWaitSemaphores = &acquiredBackBuffer.ImageAcquire;
+        submission.signalSemaphoreCount = 1;
+        submission.pSignalSemaphores = &acquiredBackBuffer.PreCompute;
+        submission.pWaitDstStageMask = &OffscreenFlags;
+        vkQueueSubmit(device->GraphicsQueue(), 1, &submission, frame.OffscreenCmd.Fence);
     }
 
     void ClusteredForward::recordCommands() {
