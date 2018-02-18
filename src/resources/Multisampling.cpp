@@ -1,5 +1,5 @@
 #include "vpr_stdafx.h"
-#include "render/Multisampling.hpp"
+#include "resources/Multisampling.hpp"
 #include "render/Swapchain.hpp"
 #include "resource/Image.hpp"
 #include "core/LogicalDevice.hpp"
