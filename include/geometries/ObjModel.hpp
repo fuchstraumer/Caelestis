@@ -12,6 +12,17 @@ namespace vpsk {
 
     class TexturePool;
 
+    struct DrawInfo {
+        DrawInfo() {}
+        DrawInfo(const VkCommandBuffer cmd, const VkPipelineLayout layout, const bool opaque_only, const bool textured, const size_t num_sets) : 
+            Cmd(cmd), Layout(layout), RenderOnlyOpaque(opaque_only), UseTextures(textured), NumSetsBound(num_sets) {}
+        bool RenderOnlyOpaque = false;
+        bool UseTextures = true;
+        const VkCommandBuffer Cmd = VK_NULL_HANDLE;
+        const VkPipelineLayout Layout = VK_NULL_HANDLE;
+        size_t NumSetsBound = 0;
+    };
+
     class ObjModel : public TriangleMesh {
         ObjModel(const ObjModel&) = delete;
         ObjModel& operator=(const ObjModel&) = delete;
@@ -20,13 +31,18 @@ namespace vpsk {
         ObjModel(const vpr::Device* dvc, TexturePool* resource_pool);
         ~ObjModel();
 
-        void Render(const VkCommandBuffer& cmd, const VkPipelineLayout layout);
+        void Render(const DrawInfo& info);
+        
         void LoadModelFromFile(const std::string& obj_model_filename, vpr::TransferPool* transfer_pool);
 
+        const VkDescriptorSetLayout GetMaterialSetLayout() const noexcept;
         const AABB& GetAABB() const noexcept;
 
     private:
 
+        void drawGeometry(const DrawInfo& info);
+        void renderIdx(const VkCommandBuffer cmd, const VkPipelineLayout layout, const size_t idx);
+        
         struct modelPart {
             uint32_t startIdx;
             uint32_t idxCount;
@@ -49,6 +65,7 @@ namespace vpsk {
         std::multiset<modelPart> parts;
         std::multimap<size_t, VkDrawIndexedIndirectCommand> indirectCommands;
         size_t numMaterials;
+        uint32_t commandOffset = 0;
 
         void loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, vpr::TransferPool* transfer_pool);
         void generateIndirectDraws();

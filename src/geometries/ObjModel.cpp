@@ -16,12 +16,57 @@ namespace vpsk {
 
     ObjModel::~ObjModel() {}
 
-    void ObjModel::Render(const VkCommandBuffer& cmd, const VkPipelineLayout layout) {
-        bindBuffers(cmd);
-        for (size_t i = 0; i < numMaterials; ++i) {
-            
+    void ObjModel::Render(const DrawInfo & info) {
+        commandOffset = 0;
+
+        auto bind_for_no_textures = [&](const VkCommandBuffer cmd) {
+            constexpr VkDeviceSize offset{ 0 };
+            vkCmdBindVertexBuffers(cmd, 0, 1, &vbo0->vkHandle(), &offset);
+            vkCmdBindIndexBuffer(cmd, ebo->vkHandle(), 0, VK_INDEX_TYPE_UINT32);
+        };
+
+        if (!info.UseTextures) {
+            bind_for_no_textures(info.Cmd);
         }
-        
+        else {
+            bindBuffers(info.Cmd);
+        }
+
+        drawGeometry(info);
+
+
+    }
+
+    void ObjModel::drawGeometry(const DrawInfo& info) {
+        for (size_t i = 0; i < numMaterials; ++i) {
+            const auto& ubo = texturePool->GetMaterialUBO(i);
+            if (info.RenderOnlyOpaque ? ubo.data.alpha == 1.0f : ubo.data.alpha < 1.0f) {
+                if (info.UseTextures) {
+                    texturePool->BindMaterialAtIdx(i, info.Cmd, info.Layout, info.NumSetsBound);
+                }
+                renderIdx(info.Cmd, info.Layout, i);
+            }
+            else {
+                auto draw_ranges = indirectCommands.equal_range(i);
+                const auto num_commands = std::distance(draw_ranges.first, draw_ranges.second);
+                commandOffset += static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand) * num_commands);
+            }
+        }
+    }
+
+    void ObjModel::renderIdx(const VkCommandBuffer cmd, const VkPipelineLayout layout, const size_t idx) {
+        auto draw_ranges = indirectCommands.equal_range(idx);
+        const uint32_t num_commands = static_cast<uint32_t>(std::distance(draw_ranges.first, draw_ranges.second));
+        if (multiDrawIndirect) {
+            vkCmdDrawIndexedIndirect(cmd, indirectDrawBuffer->vkHandle(), commandOffset, num_commands, 0);
+            commandOffset += static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand)) * num_commands;
+        }
+        else {
+            for (size_t j = 0; j < num_commands; ++j) {
+                vkCmdDrawIndexedIndirect(cmd, indirectDrawBuffer->vkHandle(), commandOffset, 1, 0);
+                commandOffset += static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand));
+            }
+        }
     }
 
     void ObjModel::LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool) {
@@ -45,6 +90,16 @@ namespace vpsk {
         createIndirectDrawBuffer();
         
     }
+
+    const VkDescriptorSetLayout ObjModel::GetMaterialSetLayout() const noexcept {
+        return texturePool->GetSetLayout();
+    }
+
+    const AABB & ObjModel::GetAABB() const noexcept {
+        return aabb;
+    }
+
+
 
     void ObjModel::loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, TransferPool* transfer_pool) {
        
