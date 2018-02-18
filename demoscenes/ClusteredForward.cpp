@@ -293,6 +293,8 @@ namespace vpsk {
         void acquireBackBuffer();
         void recordPrecomputePass(frame_data_t& frame);
         void submitPrecomputePass(frame_data_t & frame);
+        void recordComputePass(frame_data_t & frame);
+        void submitComputePass(frame_data_t & frame);
         void recordCommands();
         void submitCommands();
         void presentBackBuffer();
@@ -515,6 +517,51 @@ namespace vpsk {
         submission.pSignalSemaphores = &acquiredBackBuffer.PreCompute;
         submission.pWaitDstStageMask = &OffscreenFlags;
         vkQueueSubmit(device->GraphicsQueue(), 1, &submission, frame.OffscreenCmd.Fence);
+    }
+
+    void ClusteredForward::recordComputePass(frame_data_t& frame) {
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.ComputeCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
+        vkResetFences(device->vkHandle(), 1, &frame.ComputeCmd.Fence);
+
+        Lights.update();
+
+        Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+        Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        Barriers[0].buffer = frame.LightPositions->vkHandle();
+        Barriers[0].size = frame.LightPositions->Size();
+
+        auto& cmd = frame.ComputeCmd.Cmd;
+        constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
+        vkBeginCommandBuffer(cmd, &begin_info);
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, Barriers, 0, nullptr);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("LightGrids")]);
+            VkDescriptorSet compute_sets[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.PipelineLayout->vkHandle(), 0, 2, compute_sets, 0, nullptr);
+            vkCmdDispatch(cmd, (ProgramState.NumLights - 1) / 32 + 1, 1, 1);
+            Barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            Barriers[0].buffer = LightBuffers.Bounds->vkHandle(); Barriers[0].size = LightBuffers.Bounds->Size(); Barriers[1] = Barriers[0];
+            Barriers[1].buffer = LightBuffers.LightCounts->vkHandle(); Barriers[1].size = LightBuffers.LightCounts->Size();
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 2, Barriers, 0, nullptr);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("GridOffsets")]);
+            vkCmdDispatch(cmd, (ProgramState.TileCountX - 1) / 16 + 1, (ProgramState.TileCountY - 1) / 16 + 1, ProgramState.TileCountZ);
+            Barriers[0].buffer = LightBuffers.LightCountTotal->vkHandle(); Barriers[0].size = LightBuffers.LightCountTotal->Size();
+            Barriers[1].buffer = LightBuffers.LightCountOffsets->vkHandle(); Barriers[1].size = LightBuffers.LightCountOffsets->Size();
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 2, Barriers, 0, nullptr);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("LightList")]);
+            vkCmdDispatch(cmd, (ProgramState.NumLights - 1) / 32 + 1, 1, 1);
+        vkEndCommandBuffer(cmd);
+    }
+
+    void ClusteredForward::submitComputePass(frame_data_t& frame) {
+        VkSubmitInfo submission = vk_submit_info_base;
+        submission.commandBufferCount = 1;
+        submission.pCommandBuffers = &frame.ComputeCmd.Cmd;
+        submission.waitSemaphoreCount = 1;
+        submission.pWaitSemaphores = &acquiredBackBuffer.PreCompute;
+        submission.signalSemaphoreCount = 1;
+        submission.pSignalSemaphores = &acquiredBackBuffer.Compute;
+        submission.pWaitDstStageMask = &ComputeFlags;
+        vkQueueSubmit(device->ComputeQueue(), 1, &submission, frame.ComputeCmd.Fence);
     }
 
     void ClusteredForward::recordCommands() {
