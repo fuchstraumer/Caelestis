@@ -51,11 +51,14 @@ namespace vpsk {
         ~TexturePool() = default;
 
         void AddMaterials(const std::vector<tinyobj::material_t>& material, const std::string& path_prefix);
-        void BindMaterialAtIdx(const size_t& idx, const VkCommandBuffer cmd, const VkPipelineLayout layout);
+        void BindMaterialAtIdx(const size_t & idx, const VkCommandBuffer cmd, const VkPipelineLayout layout, const size_t num_sets_prev_bound);
+        const material_ubo_data_t& GetMaterialUBO(const size_t& idx) const;
+        const VkDescriptorSetLayout GetSetLayout() const noexcept;
 
     private:
 
         void createDescriptorPool();
+        void createDescriptorSetLayout();
         void createDescriptorSets();
         
         std::map<size_t, std::string> idxNameMap;
@@ -84,7 +87,8 @@ namespace vpsk {
         const vpr::Device* device;
 
         std::unique_ptr<vpr::DescriptorPool> descriptorPool;
-        std::unordered_map<std::string, std::unique_ptr<vpr::DescriptorSet>> materialSets;
+        std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
+        std::map<std::string, std::unique_ptr<vpr::DescriptorSet>> materialSets;
     };
 
 }

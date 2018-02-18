@@ -2,6 +2,8 @@
 #include "command/TransferPool.hpp"
 #include "resource/DescriptorSet.hpp"
 #include "resource/DescriptorPool.hpp"
+#include "resource/DescriptorSetLayout.hpp"
+#include "util/easylogging++.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 namespace vpsk {
@@ -99,7 +101,7 @@ namespace vpsk {
 
             auto metallic_iter = load_texture_data(mtl.metallic_texname);
             if (metallic_iter != stbTextures.cend()) {
-                materialTextures.at(mtl.name).Roughness = rough_iter;
+                materialTextures.at(mtl.name).Metallic = rough_iter;
             }
 
             auto sheen_iter = load_texture_data(mtl.sheen_texname);
@@ -119,28 +121,54 @@ namespace vpsk {
         }
 
         createDescriptorPool();
+        createDescriptorSetLayout();
+        createDescriptorSets();
     }
 
-    void TexturePool::BindMaterialAtIdx(const size_t & idx, const VkCommandBuffer cmd, const VkPipelineLayout layout) {
+    void TexturePool::BindMaterialAtIdx(const size_t & idx, const VkCommandBuffer cmd, const VkPipelineLayout layout, const size_t num_sets_prev_bound) {
         const auto& name = idxNameMap.at(idx);
         const auto& set = materialSets.at(name);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &set->vkHandle(), 0, nullptr);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, num_sets_prev_bound, 1, &set->vkHandle(), 0, nullptr);
+    }
+
+    const material_ubo_data_t & TexturePool::GetMaterialUBO(const size_t & idx) const {
+        return materialUboData.at(idxNameMap.at(idx));
+    }
+
+    const VkDescriptorSetLayout TexturePool::GetSetLayout() const noexcept {
+        return setLayout->vkHandle();
     }
 
     void TexturePool::createDescriptorPool() {
         descriptorPool = std::make_unique<vpr::DescriptorPool>(device, idxNameMap.size());
-        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, idxNameMap.size());
+        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, stbTextures.size());
+        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, materialBuffers.size());
         descriptorPool->Create();
     }
 
-    void TexturePool::createDescriptorSets() {
+    void TexturePool::createDescriptorSetLayout() {
+        setLayout = std::make_unique<vpr::DescriptorSetLayout>(device);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3);
+        setLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 4);
+    }
 
+    void TexturePool::createDescriptorSets() {
         for (auto& entry : idxNameMap) {
             const auto& name = entry.second;
-            materialSets.emplace(name, std::make_unique<vpr::DescriptorSet>(device));
-            const auto& idx = entry.first;
-            
-            
+            auto emplaced = materialSets.emplace(name, std::make_unique<vpr::DescriptorSet>(device));
+            if (!emplaced.second) {
+                LOG(ERROR) << "Couldn't create a descriptor set for material " << name << "!";
+                throw std::runtime_error("Failed to create a descriptor set required for a material.");
+            }
+            materialSets.at(name)->AddDescriptorInfo(materialTextures.at(name).Diffuse->second->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0);
+            materialSets.at(name)->AddDescriptorInfo(materialTextures.at(name).Bump->second->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+            materialSets.at(name)->AddDescriptorInfo(materialTextures.at(name).Roughness->second->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2);
+            materialSets.at(name)->AddDescriptorInfo(materialTextures.at(name).Metallic->second->GetDescriptor(), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3);
+            materialSets.at(name)->AddDescriptorInfo(materialBuffers.at(name)->GetDescriptor(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4);
+            materialSets.at(name)->Init(descriptorPool.get(), setLayout.get());
         }
     }
 
