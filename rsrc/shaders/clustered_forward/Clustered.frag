@@ -8,13 +8,10 @@ layout (constant_id =  2) const uint LightListMax = 512;
 // TileSize vector in sample code
 layout (constant_id =  3) const uint TileWidthX = 64;
 layout (constant_id =  4) const uint TileWidthY = 64;
-// Grid dimension vector in sampler code.
-layout (constant_id =  5) const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-layout (constant_id =  6) const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
 layout (constant_id =  7) const uint TileCountZ = 256;
 layout (constant_id =  8) const float NearPlane = 0.1f;
 layout (constant_id =  9) const float FarPlane = 3000.0f;
-layout (constant_id = 10) const float AmbientGlobal = 0.20f;
+layout (constant_id = 10) const float AmbientGlobal = 0.04f;
 
 layout (location = 0) in vec4 vPosition;
 layout (location = 1) in vec4 vNormal;
@@ -62,10 +59,13 @@ layout (set = 2, binding = 4) uniform _mtl {
     layout (offset = 124) float padding;
 } Material;
 
-layout (set = 2, binding = 0) uniform sampler2D diffuse;
-layout (set = 2, binding = 1) uniform sampler2D bump;
-layout (set = 2, binding = 2) uniform sampler2D roughness;
-layout (set = 2, binding = 3) uniform sampler2D metallic;
+layout (set = 2, binding = 0) uniform sampler2D diffuseMap;
+layout (set = 2, binding = 1) uniform sampler2D normalMap;
+layout (set = 2, binding = 2) uniform sampler2D roughnessMap;
+layout (set = 2, binding = 3) uniform sampler2D metallicMap;
+
+const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
+const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
 
 uint CoordToIdx(uint i, uint j, uint k) {
     return TileCountX * TileCountY * k + TileCountX * j + i;
@@ -78,24 +78,50 @@ vec3 viewPosToGrid(vec2 frag_pos, float view_z) {
     return c;
 }
 
-void main() {
-    vec3 diffuse_color = texture(diffuse_map, vUV).rgb * Material.diffuse.rgb;
-    vec3 ambient = AmbientGlobal * Material.ambient.rgb;
+vec3 fresnelSchlick(float cos_theta, vec3 F0) {
+    return F0 + (1.0f - F0) * pow(1.0f - cos_theta, 5.0f);
+}
 
-    vec3 bitangent = cross(vTangent.xyz, vNormal.xyz);
+float DistributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    a *= a;
+    float NdotH = max(dot(N,H),0.0f);
+    NdotH *= NdotH;
+    float denom = (NdotH * (a - 1.0f) + 1.0f);
+    denom *= (3.14159f * denom);
+    return a / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness) {
+    float r = (roughness + 1.0f);
+    float k = (r * r) / 8.0f;
+    return (NdotV * (1.0f - k) + k) / NdotV;
+}
+
+float GeometrySmith(vec3 n, vec3 v, vec3 l, float roughness) {
+    float NdotV = max(dot(n,v),0.0f);
+    float NdotL = max(dot(n,l),0.0f);
+    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+    return ggx1 * ggx2;
+}
+
+void main() {
+
+    const vec3 bitangent = cross(vTangent.xyz, vNormal.xyz);
     const mat3 inv_btn = inverse(transpose(mat3(vTangent,normalize(bitangent),vNormal)));
-    vec3 normal_sample = texture(normal_map, vUV).rgb * vec3(2.0f) - vec3(1.0f);
+    vec3 normal_sample = texture(normalMap, vUV).rgb * vec3(2.0f) - vec3(1.0f);
     vec3 world_normal = inv_btn * normal_sample;
 
-    vec3 view_dir = normalize(UBO.viewPosition.xyz - vPosition.xyz);
-    if ((Material.diffuse.a < 1.0f) && (dot(view_dir, world_normal) < 0.0f)) {
-        discard;
-    }
+    const float metallic = texture(metallicMap, vUV).r;
+    const float roughness = texture(roughnessMap, vUV).r;
+    const vec3 albedo = texture(diffuseMap, vUV).rgb;
+    const float ao = 1.0f;
 
-    const float r0 = 0.02f;
-    const float fresnel = max(0.0f, r0 + (1.0f - r0) * pow(1.0f - max(dot(view_dir, world_normal), 0.0f), 5.0f));
-    vec3 specular = texture(specular_map, vUV).rgb * Material.specular.rgb;
-    vec3 fresnel_specular = specular * (1.0f - specular) * fresnel;
+    vec3 view_dir = normalize(UBO.viewPosition.xyz - vPosition.xyz);
+
+    vec3 F0 = vec3(0.04f);
+    F0 = mix(F0, albedo, metallic);
 
     vec3 view_pos = (UBO.view * vPosition).xyz;
     uvec3 grid_coord = uvec3(viewPosToGrid(gl_FragCoord.xy, view_pos.z));
@@ -111,26 +137,32 @@ void main() {
             vec4 light_pos_range = imageLoad(positionRanges, light_idx);
             float dist = distance(light_pos_range.xyz, vPosition.xyz);
             if (dist < light_pos_range.w) {
-                vec3 l = normalize(light_pos_range.xyz - vPosition.xyz);
-                vec3 h = normalize(0.5f * (view_dir + l));
-                
-                float lambertian = max(dot(world_normal, vec3(1.0f)), 0.0f);
+                const vec3 light_color = imageLoad(lightColors, light_idx).rgb;
+                const vec3 l = normalize(light_pos_range.xyz - vPosition.xyz);
+                const vec3 h = normalize(0.5f * (view_dir + l));
                 float atten = max(1.0f - max(0.0f, dist / light_pos_range.w), 0.0f);
+                vec3 radiance = light_color * atten;
+                
+                float ndf = DistributionGGX(world_normal, h, roughness);
+                float G = GeometrySmith(world_normal, view_dir, l, roughness);
+                vec3 F = fresnelSchlick(max(dot(h, view_dir), 0.0f), F0);
+                vec3 kd = vec3(1.0f) - F;
+                kd *= 1.0f - metallic;
 
-                vec3 specular;
-                if (Material.specular.a > 0.0f) {
-                    vec3 bl_ph_spec = specular * pow(max(0.0f,dot(h,world_normal)),Material.specular.a);
-                    specular = fresnel_specular + bl_ph_spec;
-                }
-                else {
-                    specular = 0.50f * fresnel_specular;
-                }
+                float denom = 3.0f * max(dot(world_normal, view_dir), 0.0f) * max(dot(world_normal, l), 0.0f);
+                vec3 specular = (ndf * G * F) / max(denom, 0.001f);
 
-                vec3 light_color = imageLoad(lightColors, light_idx).rgb;
-                lighting += light_color * lambertian * atten * (diffuse_color + specular);
+                float ndotl = max(dot(world_normal, l), 0.0f);
+                lighting += (kd * albedo / (3.14159f + specular)) * radiance * ndotl;
             }
         }
     }
 
-    fragColor = vec4(lighting + ambient, Material.diffuse.a + (1.0f - Material.diffuse.a) * fresnel);
+    vec3 ambient = AmbientGlobal * albedo * Material.ambient.rgb;
+    vec3 color = ambient + lighting;
+
+    color = color / (color + vec3(1.0f));
+    color = pow(color, vec3(1.0f / 2.20f));
+
+    fragColor = vec4(color, Material.alpha);
 }
