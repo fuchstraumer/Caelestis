@@ -490,6 +490,7 @@ namespace vpsk {
         createFrameData();
         createFrameDataSetLayout();
         createTexelBufferSetLayout();
+        createTexelBufferDescriptorSet();
         createComputePass();
         createOnscreenPass();
         createDepthPipeline();
@@ -588,7 +589,8 @@ namespace vpsk {
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Depth.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.Depth.Layout->vkHandle(), true, false, 0 });
         vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Layout->vkHandle(), 0, 1, &frame.descriptor->vkHandle(), 0, nullptr);
+            const VkDescriptorSet descriptors[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Layout->vkHandle(), 0, 2, descriptors, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), true, false, 2 });
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingTransparent.Pipeline->vkHandle());
