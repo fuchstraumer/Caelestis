@@ -22,6 +22,9 @@
 #include "resource/DescriptorSet.hpp"
 #include "resources/TexturePool.hpp"
 #include "geometries/ObjModel.hpp"
+#include "scene/Window.hpp"
+#include "resources/Multisampling.hpp"
+#include "render/DepthStencil.hpp"
 #include <memory>
 #include <map>
 #include <random>
@@ -215,10 +218,6 @@ namespace vpsk {
             VkFence Fence = VK_NULL_HANDLE;
         };
 
-        void UpdateUBO() {
-            ubo->CopyToMapped(&GlobalUBO, sizeof(GlobalUBO), 0);
-        }
-
         cmd_buffer_block_t OffscreenCmd;
         cmd_buffer_block_t ComputeCmd;
         cmd_buffer_block_t RenderCmd;
@@ -226,7 +225,6 @@ namespace vpsk {
         const Device* device;
         std::unique_ptr<Buffer> LightPositions;
         std::unique_ptr<Buffer> LightColors;
-        std::unique_ptr<Buffer> ubo;
         std::unique_ptr<DescriptorSet> descriptor;
         uint32_t idx;
     };
@@ -244,7 +242,6 @@ namespace vpsk {
     struct compute_pipelines_t {
         std::array<VkPipeline, 3> Handles;
         std::array<VkComputePipelineCreateInfo, 3> Infos;
-        std::unique_ptr<PipelineLayout> PipelineLayout;
         std::unique_ptr<PipelineCache> Cache;
     };
 
@@ -256,10 +253,11 @@ namespace vpsk {
         g_pipeline_items_t Transparent;
         g_pipeline_items_t Particles;
         compute_pipelines_t ComputePipelines;
+        std::unique_ptr<PipelineLayout> ComputeLayout;
     };
 
     struct backbuffer_data_t {
-        backbuffer_data_t() = default;
+        backbuffer_data_t();
         backbuffer_data_t(const backbuffer_data_t&) = delete;
         backbuffer_data_t& operator=(const backbuffer_data_t&) = delete;
         backbuffer_data_t(backbuffer_data_t&& other) noexcept;
@@ -278,8 +276,11 @@ namespace vpsk {
     class ClusteredForward : public BaseScene {
     public:
 
+        void UpdateUBO();
+
         ClusteredForward(const std::string& obj_file);
-        void RecordCommands() final {};
+        void RecordCommands() final;
+        void RenderLoop() final;
 
     private:
 
@@ -288,7 +289,6 @@ namespace vpsk {
         void endFrame(const size_t& curr_idx) final {}
 
         void updateUniforms();
-        void createUBO();
 
         void acquireBackBuffer();
         void recordPrecomputePass(frame_data_t& frame);
@@ -310,7 +310,6 @@ namespace vpsk {
 
         void createComputeCmdPool();
         void createPrimaryCmdPool();
-        void createSecondaryCmdPool();
 
         void createDescriptorPool();
         void createFrameDataSetLayout();
@@ -320,6 +319,7 @@ namespace vpsk {
 
         void createFrameData();
         void createBackbuffers();
+        void createUBO();
 
         void createOnscreenAttachmentDescriptions();
         void createOnscreenAttachmentReferences();
@@ -335,6 +335,10 @@ namespace vpsk {
         void createOffscreenRenderTarget();
         void createOffscreenFramebuffer();
 
+        void createRenderTargets();
+
+        std::unique_ptr<Multisampling> msaa;
+        std::unique_ptr<DepthStencil> depthStencil;
         
         light_buffers_t LightBuffers;
         clustered_forward_pipelines_t Pipelines;
@@ -366,8 +370,9 @@ namespace vpsk {
         VkSubmitInfo OffscreenSubmit, ComputeSubmit, RenderSubmit;
         std::map<std::string, std::unique_ptr<ShaderModule>> shaders;
         VkBufferMemoryBarrier Barriers[2]{ vk_buffer_memory_barrier_info_base, vk_buffer_memory_barrier_info_base };
-
+        std::unique_ptr<Buffer> ubo;
         std::unique_ptr<ObjModel> sponza;
+        std::unique_ptr<TexturePool> texturePool;
 
         VkViewport offscreenViewport, onscreenViewport;
         VkRect2D offscreenScissor, onscreenScissor;
@@ -376,9 +381,13 @@ namespace vpsk {
         constexpr static VkPipelineStageFlags ComputeFlags = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-        std::vector<std::unique_ptr<vpr::Framebuffer>> framebuffers;
+        std::vector<VkFramebuffer> framebuffers;
         
     };
+
+    void ClusteredForward::UpdateUBO() {
+        ubo->CopyToMapped(&GlobalUBO, sizeof(GlobalUBO), 0);
+    }
     
     light_buffers_t::light_buffers_t(light_buffers_t && other) noexcept : Flags(std::move(other.Flags)), Bounds(std::move(other.Bounds)), LightCounts(std::move(other.LightCounts)),
         LightCountTotal(std::move(other.LightCountTotal)), LightCountOffsets(std::move(other.LightCountOffsets)), LightList(std::move(other.LightList)), LightCountsCompare(std::move(other.LightCountsCompare)) {}
@@ -411,16 +420,29 @@ namespace vpsk {
         LightCountsCompare->CreateBuffer(buffer_flags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint32_t) * max_grid_count);
     }
 
-    backbuffer_data_t::backbuffer_data_t(backbuffer_data_t && other) noexcept : idx(std::move(other.idx)), ImageAcquire(std::move(other.ImageAcquire)), PreCompute(std::move(other.PreCompute)), 
-        Compute(std::move(other.Compute)), Render(std::move(other.Render)), QueueSubmit(std::move(other.QueueSubmit)), device(std::move(other.device)) {}
+    backbuffer_data_t::backbuffer_data_t() : idx(0), ImageAcquire(VK_NULL_HANDLE), PreCompute(VK_NULL_HANDLE), Compute(VK_NULL_HANDLE), Render(VK_NULL_HANDLE), QueueSubmit(VK_NULL_HANDLE), device(nullptr) {}
+
+    backbuffer_data_t::backbuffer_data_t(backbuffer_data_t && other) noexcept : idx(std::move(other.idx)), ImageAcquire(std::move(other.ImageAcquire)), PreCompute(std::move(other.PreCompute)),
+        Compute(std::move(other.Compute)), Render(std::move(other.Render)), QueueSubmit(std::move(other.QueueSubmit)), device(std::move(other.device)) {
+        other.ImageAcquire = VK_NULL_HANDLE;
+        other.PreCompute = VK_NULL_HANDLE;
+        other.Compute = VK_NULL_HANDLE;
+        other.Render = VK_NULL_HANDLE;
+        other.QueueSubmit = VK_NULL_HANDLE;
+    }
 
     backbuffer_data_t& backbuffer_data_t::operator=(backbuffer_data_t&& other) noexcept {
         idx = std::move(other.idx);
         ImageAcquire = std::move(other.ImageAcquire);
+        other.ImageAcquire = VK_NULL_HANDLE;
         PreCompute = std::move(other.PreCompute);
+        other.PreCompute = VK_NULL_HANDLE;
         Compute = std::move(other.Compute);
+        other.Compute = VK_NULL_HANDLE;
         Render = std::move(other.Render);
+        other.Render = VK_NULL_HANDLE;
         QueueSubmit = std::move(other.QueueSubmit);
+        other.QueueSubmit = VK_NULL_HANDLE;
         device = std::move(other.device);
         return *this;
     }
@@ -432,6 +454,7 @@ namespace vpsk {
         result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &PreCompute); VkAssert(result);
         result = vkCreateSemaphore(device->vkHandle(), &vk_semaphore_create_info_base, nullptr, &ImageAcquire); VkAssert(result);
         VkFenceCreateInfo fence_info = vk_fence_create_info_base;
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
         result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &QueueSubmit); VkAssert(result);
     }
 
@@ -454,9 +477,71 @@ namespace vpsk {
     }
 
     ClusteredForward::ClusteredForward(const std::string & obj_file) : BaseScene(1440, 900) {
-        TexturePool pool(device.get(), transferPool.get());
-        ObjModel model(device.get(), &pool);
-        model.LoadModelFromFile(obj_file, transferPool.get());
+        texturePool = std::make_unique<TexturePool>(device.get(), transferPool.get());
+        sponza = std::make_unique<ObjModel>(device.get(), texturePool.get());
+        sponza->LoadModelFromFile(obj_file, transferPool.get());
+        GenerateLights(sponza->GetAABB());
+        createBackbuffers();
+        createShaders();
+        createUBO();
+        createDescriptorPool();
+        createComputeCmdPool();
+        createPrimaryCmdPool();
+        createFrameData();
+        createFrameDataSetLayout();
+        createTexelBufferSetLayout();
+        createComputePass();
+        createOnscreenPass();
+        createDepthPipeline();
+        createMainPipelines();
+        createDepthPipeline();
+        createLightingPipelines();
+        createOffscreenRenderTarget();
+        createOffscreenFramebuffer();
+        createComputePipelines();
+        createMainPipelines();
+        createRenderTargets();
+    }
+
+    void ClusteredForward::RecordCommands() {
+
+    }
+
+    void ClusteredForward::RenderLoop() {
+
+        offscreenViewport.width = swapchain->Extent().width;
+        offscreenViewport.height = swapchain->Extent().height;
+        offscreenViewport.minDepth = 0.0f;
+        offscreenViewport.maxDepth = 1.0f;
+        offscreenViewport.x = 0;
+        offscreenViewport.y = 0;
+        offscreenScissor.offset.x = 0;
+        offscreenScissor.offset.y = 0;
+        offscreenScissor.extent.width = swapchain->Extent().width;
+        offscreenScissor.extent.height = swapchain->Extent().height;
+
+        while (!glfwWindowShouldClose(window->glfwWindow())) {
+            glfwPollEvents();
+            if (ShouldResize.exchange(false)) {
+                RecreateSwapchain();
+            }
+
+            updateUniforms();
+
+            limitFrame();
+            UpdateMouseActions();
+            //if (SceneConfiguration.EnableGUI) {
+             //   gui->NewFrame(window->glfwWindow());
+            //}
+
+            UpdateMovement(BaseScene::SceneConfiguration.FrameTimeMs / 1000.0f);
+
+            acquireBackBuffer();
+            recordCommands();
+            presentBackBuffer();
+            
+
+        }
     }
 
     void ClusteredForward::updateUniforms() {
@@ -469,8 +554,8 @@ namespace vpsk {
     void ClusteredForward::acquireBackBuffer() {
         auto& curr = Backbuffers.front();
 
-        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
-        vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
+        //VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
+        //vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
 
         vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 2e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
         Backbuffers.push_back(std::move(acquiredBackBuffer));
@@ -485,10 +570,10 @@ namespace vpsk {
 
         Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
         Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        Barriers[0].buffer = frame.ubo->vkHandle();
-        Barriers[0].size = frame.ubo->Size();
+        Barriers[0].buffer = ubo->vkHandle();
+        Barriers[0].size = ubo->Size();
 
-        frame.UpdateUBO();
+        UpdateUBO();
         frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
 
         computePass->UpdateBeginInfo(offscreenFramebuffer->vkHandle());
@@ -542,7 +627,7 @@ namespace vpsk {
             vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, Barriers, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("LightGrids")]);
             VkDescriptorSet compute_sets[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.PipelineLayout->vkHandle(), 0, 2, compute_sets, 0, nullptr);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputeLayout->vkHandle(), 0, 2, compute_sets, 0, nullptr);
             vkCmdDispatch(cmd, (ProgramState.NumLights - 1) / 32 + 1, 1, 1);
             Barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
             Barriers[0].buffer = LightBuffers.Bounds->vkHandle(); Barriers[0].size = LightBuffers.Bounds->Size(); Barriers[1] = Barriers[0];
@@ -574,11 +659,13 @@ namespace vpsk {
         VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.RenderCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
         vkResetFences(device->vkHandle(), 1, &frame.RenderCmd.Fence);
 
-        onscreenPass->UpdateBeginInfo(framebuffers[frame.idx]->vkHandle());
+        onscreenPass->UpdateBeginInfo(framebuffers[frame.idx]);
         auto& cmd = frame.RenderCmd.Cmd;
         constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
         vkBeginCommandBuffer(cmd, &begin_info);
             vkCmdBeginRenderPass(cmd, &onscreenPass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdSetViewport(cmd, 0, 1, &offscreenViewport);
+            vkCmdSetScissor(cmd, 0, 1, &offscreenScissor);
             const VkDescriptorSet first_two_sets[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Layout->vkHandle(), 0, 2, first_two_sets, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Pipeline->vkHandle());
@@ -631,7 +718,6 @@ namespace vpsk {
         vkQueueSubmit(device->GraphicsQueue(), 1, &submission, frame.RenderCmd.Fence);
     }
 
-
     void ClusteredForward::recordCommands() {
         constexpr static VkDeviceSize Offsets[1]{ 0 };
         auto& frame_data = FrameData[CurrFrameDataIdx];
@@ -649,8 +735,11 @@ namespace vpsk {
         VkPresentInfoKHR present_info = vk_present_info_base;
         present_info.pImageIndices = &acquiredBackBuffer.idx;
         present_info.pWaitSemaphores = &acquiredBackBuffer.Render;
+        present_info.waitSemaphoreCount = 1;
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain->vkHandle();
+        VkResult result = vkQueuePresentKHR(device->GraphicsQueue(), &present_info);
+        VkAssert(result);
     }
 
     void ClusteredForward::createFrameData() {
@@ -660,12 +749,22 @@ namespace vpsk {
             FrameData.back().ComputeCmd.Cmd = computePool->GetCmdBuffer(i);
             FrameData.back().OffscreenCmd.Cmd = primaryPool->GetCmdBuffer(i * 2);
             FrameData.back().RenderCmd.Cmd = primaryPool->GetCmdBuffer(i * 2 + 1); 
+        }  
+    }
+
+    void ClusteredForward::createBackbuffers() {
+        for (size_t i = 0; i < swapchain->ImageCount(); ++i) {
+            Backbuffers.push_back(std::move(backbuffer_data_t{ device.get() }));
         }
-        
+    }
+
+    void ClusteredForward::createUBO() {
+        ubo = std::make_unique<Buffer>(device.get());
+        ubo->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, sizeof(GlobalUBO));
     }
 
     frame_data_t::frame_data_t(const Device* dvc, const uint32_t _idx)  : idx(_idx), LightPositions(std::make_unique<Buffer>(dvc)), 
-        LightColors(std::make_unique<Buffer>(dvc)), ubo(std::make_unique<Buffer>(dvc)), device(dvc) {
+        LightColors(std::make_unique<Buffer>(dvc)), device(dvc) {
         constexpr static VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         VkBufferCreateInfo create_info = vk_buffer_create_info_base;
         uint32_t queue_indices[2]{ 0, 0 };
@@ -704,6 +803,9 @@ namespace vpsk {
         Pipelines.Depth.Layout = std::make_unique<PipelineLayout>(device.get());
         const VkDescriptorSetLayout* set_layout = &frameDataLayout->vkHandle();
         Pipelines.Depth.Layout->Create(set_layout, 1);
+
+        static const size_t name_hash = std::hash<std::string>()("depth-pipeline");
+        Pipelines.Depth.Cache = std::make_unique<PipelineCache>(device.get(), name_hash);
 
         GraphicsPipelineInfo info;
         info.VertexInfo.vertexAttributeDescriptionCount = 1;
@@ -763,13 +865,19 @@ namespace vpsk {
 
         PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 
+        constexpr static VkDynamicState states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        PipelineInfo.DynamicStateInfo.dynamicStateCount = 2;
+        PipelineInfo.DynamicStateInfo.pDynamicStates = states;
+
         VkGraphicsPipelineCreateInfo create_info = PipelineInfo.GetPipelineCreateInfo();
         create_info.layout = Pipelines.LightingOpaque.Layout->vkHandle();
-        const VkPipelineShaderStageCreateInfo shader_infos[2]{ shaders.at("Lighting.vert")->PipelineInfo(), shaders.at("Lighting.frag")->PipelineInfo() };
+        const VkPipelineShaderStageCreateInfo shader_infos[2]{ shaders.at("Light.vert")->PipelineInfo(), shaders.at("Light.frag")->PipelineInfo() };
         const uint16_t hash_id = static_cast<uint16_t>(std::hash<std::string>()("lighting-pipeline-opaque"));
         Pipelines.LightingOpaque.Cache = std::make_unique<PipelineCache>(device.get(), hash_id);
         create_info.subpass = 1;
         create_info.renderPass = computePass->vkHandle();
+        create_info.stageCount = 2;
+        create_info.pStages = shader_infos;
 
         Pipelines.LightingOpaque.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
         Pipelines.LightingOpaque.Pipeline->Init(create_info, Pipelines.LightingOpaque.Cache->vkHandle());
@@ -817,6 +925,11 @@ namespace vpsk {
         create_info.layout = Pipelines.Opaque.Layout->vkHandle();
         create_info.renderPass = onscreenPass->vkHandle();
 
+        const VkPipelineShaderStageCreateInfo stages[2]{ shaders.at("Clustered.vert")->PipelineInfo(), shaders.at("Clustered.frag")->PipelineInfo() };
+
+        create_info.stageCount = 2;
+        create_info.pStages = stages;
+
         Pipelines.Opaque.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
         Pipelines.Opaque.Pipeline->Init(create_info, Pipelines.Opaque.Cache->vkHandle());
 
@@ -846,10 +959,13 @@ namespace vpsk {
 
     void ClusteredForward::createComputePipelines() {
         Pipelines.ComputePipelines.Infos.fill(VkComputePipelineCreateInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0, VkPipelineShaderStageCreateInfo{}, VK_NULL_HANDLE, VK_NULL_HANDLE, -1 });
-        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
-        Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
-        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].layout = Pipelines.ComputePipelines.PipelineLayout->vkHandle();
-        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].stage = shaders.at("LightGrids.comp")->PipelineInfo();
+        Pipelines.ComputeLayout = std::make_unique<PipelineLayout>(device.get());
+        const VkDescriptorSetLayout layouts[2]{ frameDataLayout->vkHandle(), texelBuffersLayout->vkHandle() };
+        Pipelines.ComputeLayout->Create(layouts, 2);
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].layout = Pipelines.ComputeLayout->vkHandle();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].layout = Pipelines.ComputeLayout->vkHandle();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].layout = Pipelines.ComputeLayout->vkHandle();
+        Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].stage = shaders.at("LightGrid.comp")->PipelineInfo();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].stage = shaders.at("GridOffsets.comp")->PipelineInfo();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightList")].stage = shaders.at("LightList.comp")->PipelineInfo();
         Pipelines.ComputePipelines.Cache = std::make_unique<PipelineCache>(device.get(), static_cast<uint16_t>(std::hash<std::string>()("compute-pipeline-cache")));
@@ -874,6 +990,14 @@ namespace vpsk {
         frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, vfc_flags, 0);
         frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 1);
         frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 2);
+
+        for (auto& frame : FrameData) {
+            frame.descriptor = std::make_unique<DescriptorSet>(device.get());
+            frame.descriptor->AddDescriptorInfo(ubo->GetDescriptor(), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0);
+            frame.descriptor->AddDescriptorInfo(frame.LightPositions->GetDescriptor(), frame.LightPositions->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1);
+            frame.descriptor->AddDescriptorInfo(frame.LightColors->GetDescriptor(), frame.LightColors->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 2);
+            frame.descriptor->Init(descriptorPool.get(), frameDataLayout.get());
+        }
     }
 
     void ClusteredForward::createTexelBufferSetLayout() {
@@ -921,17 +1045,20 @@ namespace vpsk {
     }
 
     void ClusteredForward::createOnscreenAttachmentDescriptions() {
+        onscreenDescr[0] = vk_attachment_description_base;
         onscreenDescr[0].format = swapchain->ColorFormat();
         onscreenDescr[0].samples = VK_SAMPLE_COUNT_4_BIT;
         onscreenDescr[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         onscreenDescr[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         onscreenDescr[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+        onscreenDescr[1] = vk_attachment_description_base;
         onscreenDescr[1].format = swapchain->ColorFormat();
         onscreenDescr[1].samples = VK_SAMPLE_COUNT_1_BIT;
         onscreenDescr[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         onscreenDescr[1].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+        onscreenDescr[2] = vk_attachment_description_base;
         onscreenDescr[2].format = device->FindDepthFormat();
         onscreenDescr[2].samples = VK_SAMPLE_COUNT_4_BIT;
         onscreenDescr[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1067,7 +1194,7 @@ namespace vpsk {
     }
 
     void ClusteredForward::createShaders() {
-        const std::string prefix("clustered_forward/");
+        const std::string prefix("../rsrc/shaders/clustered_forward/");
         shaders["Simple.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Simple.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
         shaders["Light.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
         shaders["Light.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -1084,9 +1211,12 @@ namespace vpsk {
         offscreenRenderTarget = std::make_unique<Image>(device.get());
         VkImageCreateInfo create_info = vk_image_create_info_base;
         create_info.extent = VkExtent3D{ swapchain->Extent().width, swapchain->Extent().height, 1 };
+        create_info.arrayLayers = 1;
+        create_info.mipLevels = 1;
         create_info.imageType = VK_IMAGE_TYPE_2D;
         create_info.format = device->FindDepthFormat();
         create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         offscreenRenderTarget->Create(create_info);
         offscreenRenderTarget->CreateView(VK_IMAGE_ASPECT_DEPTH_BIT);
     }
@@ -1096,9 +1226,33 @@ namespace vpsk {
         create_info.attachmentCount = 1;
         create_info.pAttachments = &offscreenRenderTarget->View();
         create_info.renderPass = computePass->vkHandle();
+        create_info.width = swapchain->Extent().width;
+        create_info.height = swapchain->Extent().height;
+        create_info.layers = 1;
         offscreenFramebuffer = std::make_unique<Framebuffer>(device.get(), create_info);
     }
 
+    void ClusteredForward::createRenderTargets() {
+        msaa = std::make_unique<Multisampling>(device.get(), swapchain.get(), VK_SAMPLE_COUNT_4_BIT);
+        depthStencil = std::make_unique<DepthStencil>(device.get(), VkExtent3D{ swapchain->Extent().width, swapchain->Extent().height, 1 });
+
+        std::array<VkImageView, 3> attachments{ msaa->ColorBufferMS->View(), VK_NULL_HANDLE, msaa->DepthBufferMS->View() };
+        VkFramebufferCreateInfo create_info = vk_framebuffer_create_info_base;
+        create_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+        create_info.pAttachments = attachments.data();
+        create_info.renderPass = onscreenPass->vkHandle();
+        create_info.width = swapchain->Extent().width;
+        create_info.height = swapchain->Extent().height;
+        create_info.layers = 1;
+
+        for (uint32_t i = 0; i < swapchain->ImageCount(); ++i) {
+            attachments[1] = swapchain->ImageView(i);
+            VkFramebuffer fbuff;
+            VkResult result = vkCreateFramebuffer(device->vkHandle(), &create_info, nullptr, &fbuff);
+            VkAssert(result);
+            framebuffers.push_back(fbuff);
+        }
+    }
 
 }
 
@@ -1106,5 +1260,6 @@ int main(int argc, char* argv[]) {
     using namespace vpsk;
     using namespace vpr;
     ClusteredForward fwd("../rsrc/crytekSponza/sponza.obj");
+    fwd.RenderLoop();
     return 0;
 }
