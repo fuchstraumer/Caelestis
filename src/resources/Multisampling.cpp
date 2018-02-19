@@ -51,6 +51,9 @@ namespace vpr {
         image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         image_info.arrayLayers = 1;
         image_info.mipLevels = 1;
+        image_info.extent.width = swapchain->Extent().width;
+        image_info.extent.height = swapchain->Extent().height;
+        image_info.extent.depth = 1;
         DepthBufferMS->Create(image_info);
 
         VkImageViewCreateInfo msaa_view_info = vk_image_view_create_info_base;
