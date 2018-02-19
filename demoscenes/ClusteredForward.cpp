@@ -554,8 +554,8 @@ namespace vpsk {
     void ClusteredForward::acquireBackBuffer() {
         auto& curr = Backbuffers.front();
 
-        //VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
-        //vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
+        vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
 
         vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 2e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
         Backbuffers.push_back(std::move(acquiredBackBuffer));
@@ -588,11 +588,11 @@ namespace vpsk {
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Depth.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.Depth.Layout->vkHandle(), true, false, 0 });
         vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Layout->vkHandle(), 0, 1, &frame.descriptor->vkHandle(), 0, nullptr);
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Pipeline->vkHandle());
-            sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), true, false, 2 });
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Transparent.Pipeline->vkHandle());
-            sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), false, false, 2 });
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Layout->vkHandle(), 0, 1, &frame.descriptor->vkHandle(), 0, nullptr);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), true, false, 2 });
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingTransparent.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), false, false, 2 });
         vkCmdEndRenderPass(cmd);
         vkEndCommandBuffer(cmd);
 
