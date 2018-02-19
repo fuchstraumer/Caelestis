@@ -58,12 +58,12 @@ namespace vpsk {
         auto draw_ranges = indirectCommands.equal_range(idx);
         const uint32_t num_commands = static_cast<uint32_t>(std::distance(draw_ranges.first, draw_ranges.second));
         if (multiDrawIndirect) {
-            vkCmdDrawIndexedIndirect(cmd, indirectDrawBuffer->vkHandle(), commandOffset, num_commands, 0);
+            vkCmdDrawIndexedIndirect(cmd, indirectDrawBuffer->vkHandle(), commandOffset, num_commands, sizeof(VkDrawIndexedIndirectCommand));
             commandOffset += static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand)) * num_commands;
         }
         else {
             for (size_t j = 0; j < num_commands; ++j) {
-                vkCmdDrawIndexedIndirect(cmd, indirectDrawBuffer->vkHandle(), commandOffset, 1, 0);
+                vkCmdDrawIndexedIndirect(cmd, indirectDrawBuffer->vkHandle(), commandOffset, 1, sizeof(VkDrawIndexedIndirectCommand));
                 commandOffset += static_cast<uint32_t>(sizeof(VkDrawIndexedIndirectCommand));
             }
         }
