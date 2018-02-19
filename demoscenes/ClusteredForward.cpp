@@ -1077,13 +1077,13 @@ namespace vpsk {
 
     void ClusteredForward::createTexelBufferDescriptorSet() {
         texelBufferSet = std::make_unique<DescriptorSet>(device.get());
-        texelBufferSet->AddDescriptorInfo(LightBuffers.Flags->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 0);
-        texelBufferSet->AddDescriptorInfo(LightBuffers.Bounds->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1);
-        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCounts->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 2);
-        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountTotal->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 3);
-        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountOffsets->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 4);
-        texelBufferSet->AddDescriptorInfo(LightBuffers.LightList->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 5);
-        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountsCompare->GetDescriptor(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 6);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.Flags->GetDescriptor(), LightBuffers.Flags->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 0);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.Bounds->GetDescriptor(), LightBuffers.Bounds->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCounts->GetDescriptor(), LightBuffers.LightCounts->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 2);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountTotal->GetDescriptor(), LightBuffers.LightCountTotal->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 3);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountOffsets->GetDescriptor(), LightBuffers.LightCountOffsets->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 4);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightList->GetDescriptor(), LightBuffers.LightList->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 5);
+        texelBufferSet->AddDescriptorInfo(LightBuffers.LightCountsCompare->GetDescriptor(), LightBuffers.LightCountsCompare->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 6);
         texelBufferSet->Init(descriptorPool.get(), texelBuffersLayout.get());
     }
 
