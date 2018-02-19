@@ -477,6 +477,8 @@ namespace vpsk {
     }
 
     ClusteredForward::ClusteredForward(const std::string & obj_file) : BaseScene(1440, 900) {
+        ProgramState.TileCountX = ProgramState.ResolutionX / ProgramState.TileWidth;
+        ProgramState.TileCountY = ProgramState.ResolutionY / ProgramState.TileHeight;
         texturePool = std::make_unique<TexturePool>(device.get(), transferPool.get());
         sponza = std::make_unique<ObjModel>(device.get(), texturePool.get());
         sponza->LoadModelFromFile(obj_file, transferPool.get());
