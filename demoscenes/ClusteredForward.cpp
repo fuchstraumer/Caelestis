@@ -111,10 +111,12 @@ namespace vpsk {
         std::unique_ptr<Buffer> LightCountsCompare;
     };
 
-    std::uniform_real_distribution<float> rand_distr;
+    std::uniform_real_distribution<float> rand_distr(0.0f, 1.0f);
+    std::random_device rd;
+    std::mt19937 rng(rd());
 
     float random_unit_float() {
-        return rand_distr(std::mt19937());
+        return rand_distr(rng);
     }
 
     float random_range(const float l, const float h) {
@@ -166,9 +168,13 @@ namespace vpsk {
         }
     }
 
-    constexpr static std::array<const VkClearValue, 3> ClearValues {
-        VkClearValue{ 0.0f, 0.0f, 0.0f, 1.0f },
-        VkClearValue{ 0.0f, 0.0f, 0.0f, 1.0f },
+    constexpr static std::array<const VkClearValue, 3> OnscreenClearValues {
+        VkClearValue{ 0.1f, 0.1f, 0.15f, 1.0f },
+        VkClearValue{ 0.1f, 0.1f, 0.15f, 1.0f },
+        VkClearValue{ 1.0f, 0 }
+    };
+
+    constexpr static std::array<const VkClearValue, 1> OffscreenClearValues{
         VkClearValue{ 1.0f, 0 }
     };
 
