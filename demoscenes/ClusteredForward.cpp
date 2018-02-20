@@ -25,6 +25,7 @@
 #include "scene/Window.hpp"
 #include "resources/Multisampling.hpp"
 #include "render/DepthStencil.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 #include <memory>
 #include <map>
 #include <random>
