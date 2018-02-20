@@ -7,8 +7,7 @@ layout(early_fragment_tests) in;
 layout(location = 0) in vec4 vPosition;
 
 layout (constant_id =  0) const int ResolutionX = 1440;
-layout (constant_id =  11) const int ResolutionY = 900;
-layout (constant_id =  2) const int LightListMax = 512;
+layout (constant_id =  1) const int ResolutionY = 900;
 // TileSize vector in sample code
 layout (constant_id =  3) const int TileWidthX = 64;
 layout (constant_id =  4) const int TileWidthY = 64;
@@ -17,8 +16,8 @@ layout (constant_id =  7) const int TileCountZ = 256;
 layout (constant_id =  8) const float NearPlane = 0.1f;
 layout (constant_id =  9) const float FarPlane = 3000.0f;
 
-const int TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-const int TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+const int TileCountX = (ResolutionX - 1) / TileWidthX + 1;
+const int TileCountY = (ResolutionY - 1) / TileWidthY + 1;
 
 
 layout (set = 0, binding = 0) uniform _ubo {
@@ -34,8 +33,8 @@ layout (set = 1, binding = 0, r8ui) uniform uimageBuffer Flags;
 
 uvec3 viewPosToGrid(vec2 frag_pos, float view_z) {
     vec3 c;
-    c.xy = frag_pos / vec2(float(TileWidthX),float(TileWidthY));
-    c.z = min(float(TileCountZ - 1), max(0.f, float(TileCountZ) * log((-view_z - NearPlane) / (FarPlane - NearPlane) + 1.0f)));
+    c.xy = (frag_pos - 0.50f) / vec2(float(TileWidthX),float(TileWidthY));
+    c.z = min(float(TileCountZ - 1), max(0.0f, float(TileCountZ) * log((-view_z - NearPlane) / (FarPlane - NearPlane) + 1.0f)));
     return uvec3(c);
 }
 

@@ -15,8 +15,8 @@ layout (constant_id =  8) const float NearPlane = 0.1f;
 layout (constant_id =  9) const float FarPlane = 3000.0f;
 layout (constant_id = 10) const float AmbientGlobal = 0.20f;
 
-const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+const uint TileCountX = (ResolutionX - 1) / TileWidthX + 1;
+const uint TileCountY = (ResolutionY - 1) / TileWidthY + 1;
 
 layout (set = 0, binding = 0) uniform _ubo {
     mat4 model;

@@ -6,7 +6,7 @@
 layout(local_size_x = 16, local_size_y  = 16) in;
 layout (constant_id =  0) const uint ResolutionX = 1440;
 layout (constant_id =  1) const uint ResolutionY = 900;
-layout (constant_id =  2) const uint LightListMax = 512;
+layout (constant_id =  2) const uint LightListMax = 4092;
 // TileSize vector in sample code
 layout (constant_id =  3) const uint TileWidthX = 64;
 layout (constant_id =  4) const uint TileWidthY = 64;
@@ -16,8 +16,8 @@ layout (constant_id =  8) const float NearPlane = 0.1f;
 layout (constant_id =  9) const float FarPlane = 3000.0f;
 layout (constant_id = 10) const float AmbientGlobal = 0.20f;
 
-const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+const uint TileCountX = (ResolutionX - 1) / TileWidthX + 1;
+const uint TileCountY = (ResolutionY - 1) / TileWidthY + 1;
 
 layout (set = 0, binding = 0) uniform _ubo {
     mat4 model;
@@ -42,18 +42,17 @@ void main() {
         uint idx = CoordToIdx(gl_GlobalInvocationID.z, gl_GlobalInvocationID.y, gl_GlobalInvocationID.x); 
         // Get quantity of lights active in this tile
         uint count = imageLoad(gridLightCounts, int(idx)).r;
-        if (count < 0) {
-            return;
-        }
-        // Returned value is total light count up to this point
-        uint offset = imageAtomicAdd(gridLightCountTotal, 0, count);
-        if (offset < LightListMax) {
-            // Still have room left for a light
-            imageStore(gridLightCountOffsets, int(idx), uvec4(offset, 0, 0, 0));
-        }
-        else {
-            // Out of room for lights.
-            imageStore(gridLightCountOffsets, int(idx), uvec4(0));
+        if (count > 0) {
+            // Returned value is total light count up to this point
+            uint offset = imageAtomicAdd(gridLightCountTotal, 0, count);
+            if (offset < LightListMax) {
+                // Still have room left for a light
+                imageStore(gridLightCountOffsets, int(idx), uvec4(offset, 0, 0, 0));
+            }
+            else {
+                // Out of room for lights.
+                imageStore(gridLightCountOffsets, int(idx), uvec4(0));
+            }
         }
     }
 }

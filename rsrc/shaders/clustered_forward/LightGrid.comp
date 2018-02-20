@@ -15,8 +15,8 @@ layout (constant_id =  8) const float NearPlane = 0.1f;
 layout (constant_id =  9) const float FarPlane = 3000.0f;
 layout (constant_id = 10) const float AmbientGlobal = 0.20f;
 
-const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+const uint TileCountX = (ResolutionX - 1) / TileWidthX + 1;
+const uint TileCountY = (ResolutionY - 1) / TileWidthY + 1;
 
 layout (set = 0, binding = 0) uniform _ubo {
     mat4 model;
@@ -93,15 +93,14 @@ void main() {
     vec2 fp_max = max(fp_c, fp_d);
 
     // restrict to frustum
-    bvec4 exit;
-        exit.x = (fp_min.x < 0.0f) && (fp_max.x < 0.0f); 
-        exit.y = (fp_min.y < 0.0f) && (fp_max.y < 0.0f);
-        exit.z = (fp_min.x >= ResolutionX && fp_max.x >= ResolutionX) || (fp_min.y >= ResolutionY && fp_max.y >= ResolutionY);
-        exit.w = (any(greaterThan(fp_min, fp_max)));
-       
+    bool exit = false;
+    exit = exit || (fp_min.x < 0.0f) && (fp_max.x < 0.0f); 
+    exit = exit || (fp_min.y < 0.0f) && (fp_max.y < 0.0f);
+    exit = exit || (fp_min.x >= ResolutionX && fp_max.x >= ResolutionX) || (fp_min.y >= ResolutionY && fp_max.y >= ResolutionY);
+    exit = exit || (fp_min.x > fp_max.x) || (fp_min.y > fp_max.y);
 
-    if (any(exit)) {
-        markLightToSkip(light_idx, pos_range_in.xyzw);
+    if (exit) {
+        markLightToSkip(light_idx, pos_range_in);
         return;
     }
 

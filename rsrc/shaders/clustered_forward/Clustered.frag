@@ -4,7 +4,6 @@
 #extension GL_ARB_shading_language_420pack : enable
 layout (constant_id =  0) const uint ResolutionX = 1440;
 layout (constant_id =  1) const uint ResolutionY = 900;
-layout (constant_id =  2) const uint LightListMax = 512;
 // TileSize vector in sample code
 layout (constant_id =  3) const uint TileWidthX = 64;
 layout (constant_id =  4) const uint TileWidthY = 64;
@@ -64,8 +63,8 @@ layout (set = 2, binding = 1) uniform sampler2D normalMap;
 layout (set = 2, binding = 2) uniform sampler2D roughnessMap;
 layout (set = 2, binding = 3) uniform sampler2D metallicMap;
 
-const uint TileCountX = (ResolutionX - 1) / (TileWidthX + 1);
-const uint TileCountY = (ResolutionY - 1) / (TileWidthY + 1);
+const uint TileCountX = (ResolutionX - 1) / TileWidthX + 1;
+const uint TileCountY = (ResolutionY - 1) / TileWidthY + 1;
 
 uint CoordToIdx(uint i, uint j, uint k) {
     return TileCountX * TileCountY * k + TileCountX * j + i;
@@ -108,10 +107,8 @@ float GeometrySmith(vec3 n, vec3 v, vec3 l, float roughness) {
 
 void main() {
 
-    const vec3 bitangent = cross(vTangent.xyz, vNormal.xyz);
-    const mat3 inv_btn = inverse(transpose(mat3(vTangent,normalize(bitangent),vNormal)));
     vec3 normal_sample = texture(normalMap, vUV).rgb * vec3(2.0f) - vec3(1.0f);
-    vec3 world_normal = inv_btn * normal_sample;
+    vec3 world_normal = mat3(UBO.normal) * normal_sample;
 
     const float metallic = texture(metallicMap, vUV).r;
     const float roughness = texture(roughnessMap, vUV).r;
