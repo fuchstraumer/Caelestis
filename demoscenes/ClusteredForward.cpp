@@ -1164,16 +1164,16 @@ namespace vpsk {
 
     void ClusteredForward::createOnscreenAttachmentReferences() {
         onscreenReferences[0] = VkAttachmentReference{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-        onscreenReferences[1] = VkAttachmentReference{ 2, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-        onscreenReferences[2] = VkAttachmentReference{ 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        onscreenReferences[1] = VkAttachmentReference{ 1, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR };
+        onscreenReferences[2] = VkAttachmentReference{ 2, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
     }
 
     void ClusteredForward::createOnscreenSubpassDescription() {
         onscreenSbDescr = vk_subpass_description_base;
         onscreenSbDescr.colorAttachmentCount = 1;
         onscreenSbDescr.pColorAttachments = &onscreenReferences[0];
-        onscreenSbDescr.pResolveAttachments = &onscreenReferences[2];
-        onscreenSbDescr.pDepthStencilAttachment = &onscreenReferences[1];
+        onscreenSbDescr.pResolveAttachments = &onscreenReferences[1];
+        onscreenSbDescr.pDepthStencilAttachment = &onscreenReferences[2];
     }
 
     void ClusteredForward::createOnscreenSubpassDependencies() {
@@ -1209,6 +1209,7 @@ namespace vpsk {
         create_info.pDependencies = onscreenDependencies.data();
         
         onscreenPass = std::make_unique<Renderpass>(device.get(), create_info);
+        onscreenPass->SetupBeginInfo(OnscreenClearValues.data(), OnscreenClearValues.size(), swapchain->Extent());
     }
 
     void ClusteredForward::createComputeAttachmentDescriptions() {
@@ -1287,7 +1288,7 @@ namespace vpsk {
         create_info.pDependencies = computeDependencies.data();
 
         computePass = std::make_unique<Renderpass>(device.get(), create_info);
-        computePass->SetupBeginInfo(ClearValues.data(), ClearValues.size(), swapchain->Extent());
+        computePass->SetupBeginInfo(OffscreenClearValues.data(), OffscreenClearValues.size(), swapchain->Extent());
     }
 
     void ClusteredForward::createShaders() {
