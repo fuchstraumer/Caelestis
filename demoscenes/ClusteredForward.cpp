@@ -222,6 +222,7 @@ namespace vpsk {
         struct cmd_buffer_block_t {
             VkCommandBuffer Cmd = VK_NULL_HANDLE;
             VkFence Fence = VK_NULL_HANDLE;
+            bool firstFrame = true;
         };
 
         cmd_buffer_block_t OffscreenCmd;
@@ -385,7 +386,7 @@ namespace vpsk {
 
         constexpr static VkPipelineStageFlags OffscreenFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         constexpr static VkPipelineStageFlags ComputeFlags = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
         std::vector<VkFramebuffer> framebuffers;
         
@@ -482,9 +483,45 @@ namespace vpsk {
         }
     }
 
+    frame_data_t::frame_data_t(const Device* dvc, const uint32_t _idx) : idx(_idx), LightPositions(std::make_unique<Buffer>(dvc)),
+        LightColors(std::make_unique<Buffer>(dvc)), device(dvc) {
+        constexpr static VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        VkBufferCreateInfo create_info = vk_buffer_create_info_base;
+        uint32_t queue_indices[2]{ 0, 0 };
+
+        if (device->QueueFamilyIndices.Compute != device->QueueFamilyIndices.Graphics) {
+            create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+            queue_indices[0] = device->QueueFamilyIndices.Graphics;
+            queue_indices[1] = device->QueueFamilyIndices.Compute;
+            create_info.pQueueFamilyIndices = queue_indices;
+            create_info.queueFamilyIndexCount = 2;
+        }
+        else {
+            create_info.pQueueFamilyIndices = nullptr;
+            create_info.queueFamilyIndexCount = 0;
+        }
+
+        create_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+        create_info.size = sizeof(glm::vec4) * ProgramState.MaxLights;
+        LightPositions->CreateBuffer(create_info, mem_flags);
+        LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
+        LightPositions->CreateView(VK_FORMAT_R32G32B32A32_SFLOAT, LightPositions->Size(), 0);
+        create_info.size = sizeof(uint8_t) * 4 * ProgramState.MaxLights;
+        LightColors->CreateBuffer(create_info, mem_flags);
+        LightColors->CopyToMapped(Lights.Colors.data(), Lights.Colors.size() * sizeof(glm::u8vec4), 0);
+        LightColors->CreateView(VK_FORMAT_R8G8B8A8_UNORM, LightColors->Size(), 0);
+
+        VkFenceCreateInfo fence_info = vk_fence_create_info_base;
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        VkResult result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &OffscreenCmd.Fence); VkAssert(result);
+        result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &ComputeCmd.Fence); VkAssert(result);
+        result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &RenderCmd.Fence); VkAssert(result);
+    }
+
+
     ClusteredForward::ClusteredForward(const std::string & obj_file) : BaseScene(1440, 900) {
-        ProgramState.TileCountX = ProgramState.ResolutionX / ProgramState.TileWidth;
-        ProgramState.TileCountY = ProgramState.ResolutionY / ProgramState.TileHeight;
+        ProgramState.TileCountX = (ProgramState.ResolutionX - 1) / ProgramState.TileWidth + 1;
+        ProgramState.TileCountY = (ProgramState.ResolutionY - 1) / ProgramState.TileHeight + 1;
         texturePool = std::make_unique<TexturePool>(device.get(), transferPool.get());
         sponza = std::make_unique<ObjModel>(device.get(), texturePool.get());
         sponza->LoadModelFromFile(obj_file, transferPool.get());
@@ -503,13 +540,11 @@ namespace vpsk {
         createComputePass();
         createOnscreenPass();
         createDepthPipeline();
-        createMainPipelines();
-        createDepthPipeline();
         createLightingPipelines();
+        createMainPipelines();
         createOffscreenRenderTarget();
         createOffscreenFramebuffer();
         createComputePipelines();
-        createMainPipelines();
         createRenderTargets();
     }
 
@@ -522,13 +557,21 @@ namespace vpsk {
         offscreenViewport.width = swapchain->Extent().width;
         offscreenViewport.height = swapchain->Extent().height;
         offscreenViewport.minDepth = 0.0f;
-        offscreenViewport.maxDepth = 1.0f;
+        offscreenViewport.maxDepth = 3000.0f;
         offscreenViewport.x = 0;
         offscreenViewport.y = 0;
         offscreenScissor.offset.x = 0;
         offscreenScissor.offset.y = 0;
         offscreenScissor.extent.width = swapchain->Extent().width;
         offscreenScissor.extent.height = swapchain->Extent().height;
+        const glm::vec3 eye = sponza->GetAABB().Center() + glm::vec3(0.0f, 20.0f, 50.0f);
+        glm::mat4 view = glm::lookAt(eye, sponza->GetAABB().Center(), glm::vec3(0.0f, 1.0f, 0.0f));
+        GlobalUBO.view = view;
+        GlobalUBO.model = sponza->GetModelMatrix();
+        GlobalUBO.normal = glm::transpose(glm::inverse(GlobalUBO.model));
+
+
+        Buffer::DestroyStagingResources(device.get());
 
         while (!glfwWindowShouldClose(window->glfwWindow())) {
             glfwPollEvents();
@@ -549,34 +592,39 @@ namespace vpsk {
             acquireBackBuffer();
             recordCommands();
             presentBackBuffer();
-            
 
         }
     }
 
     void ClusteredForward::updateUniforms() {
-        GlobalUBO.view = GetViewMatrix();
+        //GlobalUBO.view = GetViewMatrix();
         GlobalUBO.projection = GetProjectionMatrix();
         GlobalUBO.viewPosition = glm::vec4(GetCameraPosition(), 1.0f);
         GlobalUBO.NumLights = ProgramState.NumLights;
     }
 
     void ClusteredForward::acquireBackBuffer() {
+        static bool first_frame = true;
         auto& curr = Backbuffers.front();
 
-        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(2e9)); VkAssert(result);
+        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(1e9)); VkAssert(result);
         vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
 
-        vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 2e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
-        Backbuffers.push_back(std::move(acquiredBackBuffer));
+        vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 1e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
+        if (!first_frame) {
+            Backbuffers.push_back(std::move(acquiredBackBuffer));
+        }
         acquiredBackBuffer = std::move(curr);
         Backbuffers.pop_front();
+        first_frame = false;
     }
 
     void ClusteredForward::recordPrecomputePass(frame_data_t& frame) {
         VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.OffscreenCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
         vkResetFences(device->vkHandle(), 1, &frame.OffscreenCmd.Fence);
-
+        if (!frame.OffscreenCmd.firstFrame) {
+            vkResetCommandBuffer(frame.OffscreenCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+        }
 
         Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
         Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -584,8 +632,8 @@ namespace vpsk {
         Barriers[0].size = ubo->Size();
 
         UpdateUBO();
-        frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
-
+        //frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
+        offscreenViewport.maxDepth = 1.0f;
         computePass->UpdateBeginInfo(offscreenFramebuffer->vkHandle());
         auto& cmd = frame.OffscreenCmd.Cmd;
         constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
@@ -607,6 +655,7 @@ namespace vpsk {
         vkCmdEndRenderPass(cmd);
         vkEndCommandBuffer(cmd);
 
+        frame.OffscreenCmd.firstFrame = false;
     }
 
     void ClusteredForward::submitPrecomputePass(frame_data_t& frame) {
@@ -624,7 +673,9 @@ namespace vpsk {
     void ClusteredForward::recordComputePass(frame_data_t& frame) {
         VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.ComputeCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
         vkResetFences(device->vkHandle(), 1, &frame.ComputeCmd.Fence);
-
+        if (!frame.ComputeCmd.firstFrame) {
+            vkResetCommandBuffer(frame.ComputeCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+        }
         Lights.update();
 
         Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
@@ -652,6 +703,7 @@ namespace vpsk {
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("LightList")]);
             vkCmdDispatch(cmd, (ProgramState.NumLights - 1) / 32 + 1, 1, 1);
         vkEndCommandBuffer(cmd);
+        frame.ComputeCmd.firstFrame = false;
     }
 
     void ClusteredForward::submitComputePass(frame_data_t& frame) {
@@ -669,15 +721,19 @@ namespace vpsk {
     void ClusteredForward::recordOnscreenPass(frame_data_t& frame) {
         VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.RenderCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
         vkResetFences(device->vkHandle(), 1, &frame.RenderCmd.Fence);
+        if (!frame.RenderCmd.firstFrame) {
+            vkResetCommandBuffer(frame.RenderCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+        }
 
-        onscreenPass->UpdateBeginInfo(framebuffers[frame.idx]);
+        offscreenViewport.maxDepth = 3000.0f;
+        onscreenPass->UpdateBeginInfo(framebuffers[acquiredBackBuffer.idx]);
         auto& cmd = frame.RenderCmd.Cmd;
         constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
         vkBeginCommandBuffer(cmd, &begin_info);
             vkCmdBeginRenderPass(cmd, &onscreenPass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
             vkCmdSetViewport(cmd, 0, 1, &offscreenViewport);
             vkCmdSetScissor(cmd, 0, 1, &offscreenScissor);
-            const VkDescriptorSet first_two_sets[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
+            const VkDescriptorSet first_two_sets[2]{ texelBufferSet->vkHandle(), frame.descriptor->vkHandle() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Layout->vkHandle(), 0, 2, first_two_sets, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), true, true, 2 });
@@ -686,6 +742,8 @@ namespace vpsk {
             vkCmdEndRenderPass(cmd);
             resetTexelBuffers(cmd);
         vkEndCommandBuffer(cmd);
+
+        frame.RenderCmd.firstFrame = false;
     }
 
     void ClusteredForward::resetTexelBuffers(const VkCommandBuffer cmd) {
@@ -740,6 +798,7 @@ namespace vpsk {
         recordOnscreenPass(frame_data);
         submitOnscreenPass(frame_data);
 
+        CurrFrameDataIdx = (CurrFrameDataIdx + 1) % 3;
     }
 
     void ClusteredForward::presentBackBuffer() {
@@ -792,7 +851,7 @@ namespace vpsk {
             buffer_info.queueFamilyIndexCount = 0;
         }
 
-        buffer_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+        buffer_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
         const uint32_t max_grid_count = ((ProgramState.ResolutionX - 1) / ProgramState.TileWidth + 1) * ((ProgramState.ResolutionY - 1) / ProgramState.TileHeight + 1) * ProgramState.TileCountZ;
 
@@ -833,40 +892,8 @@ namespace vpsk {
 
     }
 
-    frame_data_t::frame_data_t(const Device* dvc, const uint32_t _idx)  : idx(_idx), LightPositions(std::make_unique<Buffer>(dvc)), 
-        LightColors(std::make_unique<Buffer>(dvc)), device(dvc) {
-        constexpr static VkMemoryPropertyFlags mem_flags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        VkBufferCreateInfo create_info = vk_buffer_create_info_base;
-        uint32_t queue_indices[2]{ 0, 0 };
-
-        if (device->QueueFamilyIndices.Compute != device->QueueFamilyIndices.Graphics) {
-            create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-            queue_indices[0] = device->QueueFamilyIndices.Graphics;
-            queue_indices[1] = device->QueueFamilyIndices.Compute;
-            create_info.pQueueFamilyIndices = queue_indices;
-            create_info.queueFamilyIndexCount = 2;
-        }
-        else {
-            create_info.pQueueFamilyIndices = nullptr;
-            create_info.queueFamilyIndexCount = 0;
-        }
-
-        create_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
-        create_info.size = sizeof(glm::vec4) * ProgramState.MaxLights;
-        LightPositions->CreateBuffer(create_info, mem_flags);
-        LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
-        LightPositions->CreateView(VK_FORMAT_R32G32B32A32_SFLOAT, LightPositions->Size(), 0);
-        create_info.size = sizeof(uint8_t) * 4 * ProgramState.MaxLights;
-        LightColors->CreateBuffer(create_info, mem_flags);
-        LightColors->CopyToMapped(Lights.Colors.data(), Lights.Colors.size() * sizeof(glm::u8vec4), 0);
-        LightColors->CreateView(VK_FORMAT_R8G8B8A8_UNORM, LightColors->Size(), 0);
-
-        VkFenceCreateInfo fence_info = vk_fence_create_info_base;
-        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-        VkResult result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &OffscreenCmd.Fence); VkAssert(result);
-        result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &ComputeCmd.Fence); VkAssert(result);
-        result = vkCreateFence(device->vkHandle(), &fence_info, nullptr, &RenderCmd.Fence); VkAssert(result);
-    }
+    GraphicsPipelineInfo PipelineInfo;
+    static constexpr VkDynamicState States[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
     void ClusteredForward::createDepthPipeline() {
 
