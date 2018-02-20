@@ -40,6 +40,9 @@ namespace vpsk {
 
     using namespace vpr;
 
+    const glm::mat4 clip{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f };
+    const glm::mat4 proj = glm::perspective(glm::radians(60.0f), 1.333f, 0.1f, 3000.0f);
+
     struct program_state_t {
         uint32_t ResolutionX = 1440;
         uint32_t ResolutionY = 900;
@@ -558,7 +561,7 @@ namespace vpsk {
         offscreenViewport.width = swapchain->Extent().width;
         offscreenViewport.height = swapchain->Extent().height;
         offscreenViewport.minDepth = 0.0f;
-        offscreenViewport.maxDepth = 3000.0f;
+        offscreenViewport.maxDepth = 1.0f;
         offscreenViewport.x = 0;
         offscreenViewport.y = 0;
         offscreenScissor.offset.x = 0;
@@ -599,7 +602,7 @@ namespace vpsk {
 
     void ClusteredForward::updateUniforms() {
         //GlobalUBO.view = GetViewMatrix();
-        GlobalUBO.projection = GetProjectionMatrix();
+        GlobalUBO.projection = clip * proj;
         GlobalUBO.viewPosition = glm::vec4(GetCameraPosition(), 1.0f);
         GlobalUBO.NumLights = ProgramState.NumLights;
     }
@@ -607,9 +610,6 @@ namespace vpsk {
     void ClusteredForward::acquireBackBuffer() {
         static bool first_frame = true;
         auto& curr = Backbuffers.front();
-
-        VkResult result = vkWaitForFences(device->vkHandle(), 1, &curr.QueueSubmit, VK_TRUE, static_cast<uint64_t>(1e9)); VkAssert(result);
-        vkResetFences(device->vkHandle(), 1, &curr.QueueSubmit);
 
         vkAcquireNextImageKHR(device->vkHandle(), swapchain->vkHandle(), 1e9, curr.ImageAcquire, VK_NULL_HANDLE, &curr.idx);
         if (!first_frame) {
@@ -649,10 +649,10 @@ namespace vpsk {
         vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
             const VkDescriptorSet descriptors[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Layout->vkHandle(), 0, 2, descriptors, 0, nullptr);
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Pipeline->vkHandle());
-            sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), true, false, 2 });
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingTransparent.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), false, false, 2 });
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), true, false, 2 });
         vkCmdEndRenderPass(cmd);
         vkEndCommandBuffer(cmd);
 
@@ -725,8 +725,7 @@ namespace vpsk {
         if (!frame.RenderCmd.firstFrame) {
             vkResetCommandBuffer(frame.RenderCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
         }
-
-        offscreenViewport.maxDepth = 3000.0f;
+        
         onscreenPass->UpdateBeginInfo(framebuffers[acquiredBackBuffer.idx]);
         auto& cmd = frame.RenderCmd.Cmd;
         constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
@@ -893,8 +892,6 @@ namespace vpsk {
 
     }
 
-    GraphicsPipelineInfo PipelineInfo;
-    static constexpr VkDynamicState States[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
     void ClusteredForward::createDepthPipeline() {
 
@@ -914,13 +911,8 @@ namespace vpsk {
         info.VertexInfo.pVertexAttributeDescriptions = &attr;
         info.VertexInfo.pVertexBindingDescriptions = &bind;
 
-        info.RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-        info.RasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
         info.DepthStencilInfo.depthTestEnable = VK_TRUE;
         info.DepthStencilInfo.depthWriteEnable = VK_TRUE;
-        info.DepthStencilInfo.depthBoundsTestEnable = VK_FALSE;
-        info.DepthStencilInfo.stencilTestEnable = VK_FALSE;
 
         info.ColorBlendInfo.attachmentCount = 0;
         info.ColorBlendInfo.pAttachments = nullptr;
@@ -1007,12 +999,10 @@ namespace vpsk {
 
         PipelineInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
         PipelineInfo.MultisampleInfo.minSampleShading = 0.25f;
-        PipelineInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_8_BIT;
+        PipelineInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
 
         PipelineInfo.ColorBlendInfo.attachmentCount = 1;
         PipelineInfo.ColorBlendInfo.pAttachments = &attachment_state;
-
-        PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 
         PipelineInfo.DynamicStateInfo.dynamicStateCount = 2;
         constexpr static VkDynamicState states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1027,13 +1017,14 @@ namespace vpsk {
 
         create_info.stageCount = 2;
         create_info.pStages = stages;
+        attachment_state.blendEnable = VK_FALSE;
 
         Pipelines.Opaque.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
         Pipelines.Opaque.Pipeline->Init(create_info, Pipelines.Opaque.Cache->vkHandle());
 
         PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
-        attachment_state.blendEnable = VK_FALSE;
         PipelineInfo.DepthStencilInfo.depthWriteEnable = VK_FALSE;
+        attachment_state.blendEnable = VK_TRUE;
 
         Pipelines.Transparent.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
         Pipelines.Transparent.Pipeline->Init(create_info, Pipelines.Opaque.Cache->vkHandle());
@@ -1358,6 +1349,8 @@ namespace vpsk {
 int main(int argc, char* argv[]) {
     using namespace vpsk;
     using namespace vpr;
+    BaseScene::SceneConfiguration.EnableMouseLocking = true;
+    BaseScene::SceneConfiguration.MovementSpeed = 10.0f;
     ClusteredForward fwd("../rsrc/crytekSponza/sponza.obj");
     fwd.RenderLoop();
     return 0;
