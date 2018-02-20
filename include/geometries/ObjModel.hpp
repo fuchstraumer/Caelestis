@@ -62,7 +62,7 @@ namespace vpsk {
         };
 
         std::unique_ptr<vpr::Buffer> indirectDrawBuffer;
-        std::multiset<modelPart> parts;
+        std::set<modelPart> parts;
         std::multimap<size_t, VkDrawIndexedIndirectCommand> indirectCommands;
         size_t numMaterials;
         uint32_t commandOffset = 0;

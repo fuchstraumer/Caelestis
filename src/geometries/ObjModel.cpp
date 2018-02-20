@@ -99,56 +99,73 @@ namespace vpsk {
         return aabb;
     }
 
-
+    struct material_group_t {
+        std::vector<glm::vec3> positions;
+        std::vector<TriangleMesh::vertex_data_t> data;
+        std::vector<uint32_t> indices;
+    };
 
     void ObjModel::loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, TransferPool* transfer_pool) {
        
         size_t num_vertices_loaded = 0;
 
-        auto sort_parts = [](const tinyobj::shape_t& p0, const tinyobj::shape_t& p1) {
-            if (p0.mesh.material_ids.front() == p1.mesh.material_ids.front()) {
-                return p0.mesh.indices.size() < p1.mesh.indices.size();
+        std::vector<material_group_t> groups(numMaterials + 1);
+        std::vector<std::unordered_map<vertex_t, uint32_t>> uniqueVertices(numMaterials + 1);
+
+        auto appendVert = [&groups, &uniqueVertices](const vertex_t& vert, const int material_id) {
+            auto& unique_verts = uniqueVertices[material_id + 1];
+            auto& group = groups[material_id + 1];
+            if (unique_verts.count(vert) == 0) {
+                unique_verts[vert] = group.positions.size();
+                group.positions.push_back(vert.pos);
+                group.data.push_back(TriangleMesh::vertex_data_t{ vert.normal, glm::vec3(0.0f), vert.uv });
             }
-            else {
-                return p0.mesh.material_ids.front() < p1.mesh.material_ids.front();
-            }
+            group.indices.push_back(unique_verts[vert]);
         };
 
+        for (const auto& shape : shapes) {
+            size_t idxOffset = 0;
+            for (size_t i = 0; i < shape.mesh.num_face_vertices.size(); ++i) {
+                auto ngon = shape.mesh.num_face_vertices[i];
+                auto material_id = shape.mesh.material_ids[i];
+                for (size_t j = 0; j < ngon; ++j) {
+                    const auto& idx = shape.mesh.indices[idxOffset + j];
 
-        std::vector<tinyobj::shape_t> sorted_shapes{ shapes.begin(), shapes.end() };
-        auto remove_iter = std::remove_if(sorted_shapes.begin(), sorted_shapes.end(), [](const tinyobj::shape_t& shape) {
-            return std::any_of(shape.mesh.material_ids.cbegin(), shape.mesh.material_ids.cend(), [](const int& i) { return i == -1; });
-        });
-        sorted_shapes.erase(remove_iter, sorted_shapes.end());
-        std::sort(sorted_shapes.begin(), sorted_shapes.end(), sort_parts);
+                    vertex_t vert;
+                    vert.pos = glm::vec3{
+                        attrib.vertices[3 * idx.vertex_index + 0],
+                        attrib.vertices[3 * idx.vertex_index + 1],
+                        attrib.vertices[3 * idx.vertex_index + 2]
+                    };
+                    vert.normal = glm::vec3{
+                        attrib.normals[3 * idx.normal_index + 0],
+                        attrib.normals[3 * idx.normal_index + 1],
+                        attrib.normals[3 * idx.normal_index + 2]
+                    };
+                    vert.uv = glm::vec2{
+                        attrib.texcoords[2 * idx.texcoord_index + 0],
+                        1.0f - attrib.texcoords[2 * idx.texcoord_index + 1]
+                    };
 
-
-        int32_t vtx_offset = 0;
-        for (const auto& shape : sorted_shapes) {
-            modelPart part;
-            part.startIdx = static_cast<uint32_t>(indices.size());
-            part.vertexOffset = 0;
-            std::unordered_map<vertex_t, uint32_t> unique_vertices{};
-            uint32_t idx_count = 0;
-            uint32_t vtx_count = 0;
-            for (const auto& idx : shape.mesh.indices) {
-                vertex_t vert;
-                vert.pos = { attrib.vertices[3 * idx.vertex_index], attrib.vertices[3 * idx.vertex_index + 1], attrib.vertices[3 * idx.vertex_index + 2] };
-                vert.normal = { attrib.normals[3 * idx.normal_index], attrib.normals[3 * idx.normal_index + 1], attrib.normals[3 * idx.normal_index + 2] };
-                vert.uv = { attrib.texcoords[2 * idx.texcoord_index], 1.0f - attrib.texcoords[2 * idx.texcoord_index + 1] };
-                aabb.Include(vert.pos);
-                if (unique_vertices.count(vert) == 0) {
-                    unique_vertices[vert] = AddVertex(vert);
-                    ++vtx_count;
+                    appendVert(vert, material_id);
                 }
 
-                AddIndex(unique_vertices[vert]);
-                ++idx_count;
+                idxOffset += ngon;
             }
+        }
 
-            part.idxCount = idx_count;
-            part.mtlIdx = shape.mesh.material_ids.front();
-            parts.insert(part);
+        int mtl_idx = -1;
+        for (auto& group : groups) {
+            modelPart new_part;
+            new_part.vertexOffset = vertexPositions.size();
+            vertexPositions.insert(vertexPositions.end(), group.positions.begin(), group.positions.end());
+            vertexData.insert(vertexData.end(), group.data.begin(), group.data.end());
+            new_part.startIdx = indices.size();
+            indices.insert(indices.end(), group.indices.begin(), group.indices.end());
+            new_part.idxCount = group.indices.size();
+            new_part.mtlIdx = mtl_idx;
+            ++mtl_idx;
+            parts.insert(new_part);
         }
 
         CreateBuffers(device);
@@ -162,6 +179,9 @@ namespace vpsk {
 
     void ObjModel::generateIndirectDraws() {
         for (auto& idx_group : parts) {
+            if (idx_group.mtlIdx > numMaterials + 1) {
+                continue;
+            }
             if (indirectCommands.count(idx_group.mtlIdx)) {
                 auto range = indirectCommands.equal_range(idx_group.mtlIdx);
                 auto same_idx_entry = std::find_if(range.first, range.second, [idx_group](const decltype(indirectCommands)::value_type& elem) { return elem.second.indexCount == idx_group.idxCount; });
