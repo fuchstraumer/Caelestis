@@ -12,7 +12,7 @@ namespace vpsk {
         return dvc->GetPhysicalDeviceProperties().limits.maxDrawIndirectCount != 1;
     }
 
-    ObjModel::ObjModel(const vpr::Device * dvc, TexturePool * resource_pool) : device(dvc), texturePool(resource_pool), multiDrawIndirect(supports_multidraw_indirect(dvc)) {}
+    ObjModel::ObjModel(const vpr::Device * dvc, TexturePool * resource_pool) : TriangleMesh(glm::vec3(0.0f)), device(dvc), texturePool(resource_pool), multiDrawIndirect(supports_multidraw_indirect(dvc)) {}
 
     ObjModel::~ObjModel() {}
 
@@ -127,7 +127,7 @@ namespace vpsk {
         for (const auto& shape : sorted_shapes) {
             modelPart part;
             part.startIdx = static_cast<uint32_t>(indices.size());
-            part.vertexOffset = vtx_offset;
+            part.vertexOffset = 0;
             std::unordered_map<vertex_t, uint32_t> unique_vertices{};
             uint32_t idx_count = 0;
             uint32_t vtx_count = 0;
@@ -148,11 +148,8 @@ namespace vpsk {
 
             part.idxCount = idx_count;
             part.mtlIdx = shape.mesh.material_ids.front();
-            vtx_offset += static_cast<int32_t>(unique_vertices.size());
             parts.insert(part);
         }
-        UpdatePosition(aabb.Center());
-        
 
         CreateBuffers(device);
         LOG(INFO) << "Loaded mesh data from .obj file, uploading to device now...";
