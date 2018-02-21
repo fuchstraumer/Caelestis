@@ -112,13 +112,14 @@ namespace vpsk {
         std::vector<material_group_t> groups(numMaterials + 1);
         std::vector<std::unordered_map<vertex_t, uint32_t>> uniqueVertices(numMaterials + 1);
 
-        auto appendVert = [&groups, &uniqueVertices](const vertex_t& vert, const int material_id) {
+        auto appendVert = [&groups, &uniqueVertices](const vertex_t& vert, const int material_id, AABB& bounds) {
             auto& unique_verts = uniqueVertices[material_id + 1];
             auto& group = groups[material_id + 1];
             if (unique_verts.count(vert) == 0) {
                 unique_verts[vert] = group.positions.size();
                 group.positions.push_back(vert.pos);
                 group.data.push_back(TriangleMesh::vertex_data_t{ vert.normal, glm::vec3(0.0f), vert.uv });
+                bounds.Include(vert.pos);
             }
             group.indices.push_back(unique_verts[vert]);
         };
@@ -147,7 +148,7 @@ namespace vpsk {
                         1.0f - attrib.texcoords[2 * idx.texcoord_index + 1]
                     };
 
-                    appendVert(vert, material_id);
+                    appendVert(vert, material_id, aabb);
                 }
 
                 idxOffset += ngon;

@@ -48,7 +48,7 @@ namespace vpsk {
         uint32_t ResolutionY = 900;
         uint32_t MinLights = 1024;
         uint32_t MaxLights = 4096;
-        uint32_t NumLights = 2048;
+        uint32_t NumLights = 4096;
         bool GenerateLights = false;
         uint32_t TileWidth = 64;
         uint32_t TileHeight = 64;
@@ -523,7 +523,7 @@ namespace vpsk {
     }
 
 
-    ClusteredForward::ClusteredForward(const std::string & obj_file) : BaseScene(1440, 900) {
+    ClusteredForward::ClusteredForward(const std::string & obj_file) : BaseScene(1920, 1080) {
         ProgramState.TileCountX = (ProgramState.ResolutionX - 1) / ProgramState.TileWidth + 1;
         ProgramState.TileCountY = (ProgramState.ResolutionY - 1) / ProgramState.TileHeight + 1;
         texturePool = std::make_unique<TexturePool>(device.get(), transferPool.get());
@@ -568,7 +568,8 @@ namespace vpsk {
         offscreenScissor.offset.y = 0;
         offscreenScissor.extent.width = swapchain->Extent().width;
         offscreenScissor.extent.height = swapchain->Extent().height;
-        const glm::vec3 eye = sponza->GetAABB().Center() + glm::vec3(0.0f, 20.0f, 50.0f);
+        const glm::vec3 eye = sponza->GetAABB().Center() + glm::vec3(0.0f, 50.0f, 50.0f);
+        SetCameraPosition(eye);
         glm::mat4 view = glm::lookAt(eye, sponza->GetAABB().Center(), glm::vec3(0.0f, 1.0f, 0.0f));
         GlobalUBO.view = view;
         GlobalUBO.model = sponza->GetModelMatrix();
@@ -576,10 +577,11 @@ namespace vpsk {
 
 
         Buffer::DestroyStagingResources(device.get());
+        static bool first_frame = true;
 
         while (!glfwWindowShouldClose(window->glfwWindow())) {
             glfwPollEvents();
-            if (ShouldResize.exchange(false)) {
+            if (ShouldResize.exchange(false) && !first_frame) {
                 RecreateSwapchain();
             }
 
@@ -597,11 +599,14 @@ namespace vpsk {
             recordCommands();
             presentBackBuffer();
 
+            //Lights.update();
+
+            first_frame = false;
         }
     }
 
     void ClusteredForward::updateUniforms() {
-        //GlobalUBO.view = GetViewMatrix();
+        GlobalUBO.view = GetViewMatrix();
         GlobalUBO.projection = clip * proj;
         GlobalUBO.viewPosition = glm::vec4(GetCameraPosition(), 1.0f);
         GlobalUBO.NumLights = ProgramState.NumLights;
@@ -633,7 +638,8 @@ namespace vpsk {
         Barriers[0].size = ubo->Size();
 
         UpdateUBO();
-        //frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
+        frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
+        frame.LightColors->CopyToMapped(Lights.Colors.data(), Lights.Colors.size() * sizeof(glm::u8vec4), 0);
         offscreenViewport.maxDepth = 1.0f;
         computePass->UpdateBeginInfo(offscreenFramebuffer->vkHandle());
         auto& cmd = frame.OffscreenCmd.Cmd;
@@ -913,6 +919,7 @@ namespace vpsk {
 
         info.DepthStencilInfo.depthTestEnable = VK_TRUE;
         info.DepthStencilInfo.depthWriteEnable = VK_TRUE;
+        info.DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
         info.ColorBlendInfo.attachmentCount = 0;
         info.ColorBlendInfo.pAttachments = nullptr;
@@ -954,6 +961,7 @@ namespace vpsk {
         PipelineInfo.ColorBlendInfo.pAttachments = nullptr;
 
         PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+        PipelineInfo.DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
         constexpr static VkDynamicState states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
         PipelineInfo.DynamicStateInfo.dynamicStateCount = 2;
@@ -1003,6 +1011,7 @@ namespace vpsk {
 
         PipelineInfo.ColorBlendInfo.attachmentCount = 1;
         PipelineInfo.ColorBlendInfo.pAttachments = &attachment_state;
+        PipelineInfo.DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
         PipelineInfo.DynamicStateInfo.dynamicStateCount = 2;
         constexpr static VkDynamicState states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };

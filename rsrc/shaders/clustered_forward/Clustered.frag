@@ -10,7 +10,7 @@ layout (constant_id =  4) const uint TileWidthY = 64;
 layout (constant_id =  7) const uint TileCountZ = 256;
 layout (constant_id =  8) const float NearPlane = 0.1f;
 layout (constant_id =  9) const float FarPlane = 3000.0f;
-layout (constant_id = 10) const float AmbientGlobal = 0.04f;
+layout (constant_id = 10) const float AmbientGlobal = 0.2f;
 
 layout (location = 0) in vec4 vPosition;
 layout (location = 1) in vec4 vNormal;
@@ -110,7 +110,7 @@ void main() {
     vec3 normal_sample = texture(normalMap, vUV).rgb * vec3(2.0f) - vec3(1.0f);
     vec3 world_normal = mat3(UBO.normal) * normal_sample;
 
-    const float metallic = texture(metallicMap, vUV).r;
+    const float metallic = texture(metallicMap, vUV).r * Material.metallic;
     const float roughness = texture(roughnessMap, vUV).r;
     const vec3 albedo = texture(diffuseMap, vUV).rgb;
     const float ao = 1.0f;

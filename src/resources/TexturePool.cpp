@@ -101,7 +101,7 @@ namespace vpsk {
 
             auto metallic_iter = load_texture_data(mtl.metallic_texname);
             if (metallic_iter != stbTextures.cend()) {
-                materialTextures.at(mtl.name).Metallic = rough_iter;
+                materialTextures.at(mtl.name).Metallic = metallic_iter;
             }
 
             auto sheen_iter = load_texture_data(mtl.sheen_texname);

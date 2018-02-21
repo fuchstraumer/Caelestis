@@ -95,11 +95,11 @@ namespace vpsk {
 
         if (SceneConfiguration.CameraType == cameraType::FPS) {
             fpsCamera.SetNearClipPlaneDistance(0.1f);
-            fpsCamera.SetFarClipPlaneDistance(2000.0f);
+            fpsCamera.SetFarClipPlaneDistance(200.0f);
         }
         else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
             arcballCamera.SetNearClipPlaneDistance(0.1f);
-            arcballCamera.SetFarClipPlaneDistance(2000.0f);
+            arcballCamera.SetFarClipPlaneDistance(200.0f);
         }
 
         LOG_IF(verbose_logging, INFO) << "BaseScene setup complete.";
@@ -244,11 +244,11 @@ namespace vpsk {
         input_handler::LastY = swapchain->Extent().height / 2.0f;
         if (SceneConfiguration.CameraType == cameraType::FPS) {
             fpsCamera.SetNearClipPlaneDistance(0.1f);
-            fpsCamera.SetFarClipPlaneDistance(2000.0f);
+            fpsCamera.SetFarClipPlaneDistance(200.0f);
         }
         else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
             arcballCamera.SetNearClipPlaneDistance(0.1f);
-            arcballCamera.SetFarClipPlaneDistance(2000.0f);
+            arcballCamera.SetFarClipPlaneDistance(200.0f);
         }
 
         RecreateObjects();
