@@ -39,14 +39,8 @@ SOURCE_GROUP("feature" FILES ${FEATURES})
 SOURCE_GROUP("resources" FILES ${RESOURCES})
 
 FIND_PACKAGE(Vulkan REQUIRED)
-SET(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "If the supplementary tools for Assimp are built in addition to the library.")
-SET(ASSIMP_BUILD_TESTS OFF CACHE BOOL "If the test suite for Assimp is built in addition to the library.")
-SET(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "default value of all ASSIMP_BUILD_XXX_IMPORTER value")
-SET(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "build the obj importer")
-SET(ASSIMP_INCLUDE_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" CACHE STRING "Path the header files are installed to")
-SET(ASSIMP_LIB_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build" CACHE STRING "Path the built library files are installed to.")
-ADD_SUBDIRECTORY("third_party/assimp")
-
+SET(TINYOBJLOADER_LIBRARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/")
+ADD_SUBDIRECTORY("third_party/tinyobjloader")
 ADD_SUBDIRECTORY("third_party/vulpesrender")
 ADD_LIBRARY(VulpesSceneKit STATIC ${RESOURCES} ${GEOMETRIES} ${FEATURES} ${PASSES} ${SHADER_TOOLS} ${RENDER} 
                                   ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS} 
