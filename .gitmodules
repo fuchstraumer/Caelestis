@@ -10,6 +10,3 @@
 [submodule "third_party/shadergen"]
 	path = third_party/shadergen
 	url = https://github.com/fuchstraumer/shadergen
-[submodule "third_party/assimp"]
-	path = third_party/assimp
-	url = https://github.com/assimp/assimp
