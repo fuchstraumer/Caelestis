@@ -6,8 +6,8 @@
 layout(early_fragment_tests) in;
 layout(location = 0) in vec4 vPosition;
 
-layout (constant_id =  0) const int ResolutionX = 1440;
-layout (constant_id =  1) const int ResolutionY = 900;
+layout (constant_id =  0) const uint ResolutionX = 1920;
+layout (constant_id =  1) const uint ResolutionY = 1080;
 // TileSize vector in sample code
 layout (constant_id =  3) const int TileWidthX = 64;
 layout (constant_id =  4) const int TileWidthY = 64;

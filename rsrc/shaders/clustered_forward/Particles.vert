@@ -2,8 +2,8 @@
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
-layout (constant_id =  0) const uint ResolutionX = 1440;
-layout (constant_id =  1) const uint ResolutionY = 900;
+layout (constant_id =  0) const uint ResolutionX = 1920;
+layout (constant_id =  1) const uint ResolutionY = 1080;
 layout (constant_id =  2) const uint LightListMax = 512;
 // TileSize vector in sample code
 layout (constant_id =  3) const uint TileWidthX = 64;
