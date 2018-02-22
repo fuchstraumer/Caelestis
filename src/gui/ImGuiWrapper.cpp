@@ -245,8 +245,8 @@ namespace vpsk {
 
         pipelineStateInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 
-        pipelineStateInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
-        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
+        pipelineStateInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_8_BIT;
+        pipelineStateInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
 
     }
 

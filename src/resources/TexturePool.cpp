@@ -123,6 +123,7 @@ namespace vpsk {
         createDescriptorPool();
         createDescriptorSetLayout();
         createDescriptorSets();
+
     }
 
     void TexturePool::BindMaterialAtIdx(const size_t & idx, const VkCommandBuffer cmd, const VkPipelineLayout layout, const size_t num_sets_prev_bound) {
