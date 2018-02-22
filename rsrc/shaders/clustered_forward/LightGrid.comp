@@ -5,7 +5,6 @@
 layout(local_size_x = 32) in;
 layout (constant_id =  0) const uint ResolutionX = 1920;
 layout (constant_id =  1) const uint ResolutionY = 1080;
-layout (constant_id =  2) const uint LightListMax = 2048;
 // TileSize vector in sample code
 layout (constant_id =  3) const uint TileWidthX = 64;
 layout (constant_id =  4) const uint TileWidthY = 64;
@@ -56,7 +55,7 @@ uvec3 viewPosToGrid(vec2 frag_pos, float view_z) {
 
 
 void markLightToSkip(uint light_idx, vec4 light_pos) {
-    imageStore(positionRanges, int(light_idx), light_pos);
+    imageStore(positionRanges, int(light_idx), vec4(light_pos.xyz, 0.0f));
 }
 
 void main() {

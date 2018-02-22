@@ -17,6 +17,5 @@ out gl_PerVertex {
 };
 
 void main() {
-    vec4 vPosition = UBO.model * vec4(pos,1.0f);
-    gl_Position = UBO.projectionClip * UBO.view * vPosition;
+    gl_Position = UBO.projectionClip * UBO.view * UBO.model * vec4(pos,1.0f);
 }

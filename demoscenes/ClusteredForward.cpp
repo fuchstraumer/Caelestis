@@ -48,12 +48,12 @@ namespace vpsk {
         uint32_t ResolutionY = 1080;
         uint32_t MinLights = 1024;
         uint32_t MaxLights = 4096;
-        uint32_t NumLights = 2048;
+        uint32_t NumLights = 4096;
         bool GenerateLights = false;
         uint32_t TileWidth = 64;
         uint32_t TileHeight = 64;
-        uint32_t TileCountX = 0;
-        uint32_t TileCountY = 0;
+        uint32_t TileCountX = (1920 - 1) / 64 + 1;
+        uint32_t TileCountY = (1080 - 1) / 64 + 1;
         uint32_t TileCountZ = 256;
     } ProgramState;
 
@@ -309,6 +309,7 @@ namespace vpsk {
         void recordOnscreenPass(frame_data_t & frame);
         void submitOnscreenPass(frame_data_t & frame);
         void resetTexelBuffers(const VkCommandBuffer cmd);
+        void renderParticles(const VkCommandBuffer cmd);
         void recordCommands();
         void presentBackBuffer();
 
@@ -641,12 +642,13 @@ namespace vpsk {
         Barriers[0].buffer = ubo->vkHandle();
         Barriers[0].size = ubo->Size();
 
+        frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
         offscreenViewport.maxDepth = 1.0f;
         computePass->UpdateBeginInfo(offscreenFramebuffer->vkHandle());
         auto& cmd = frame.OffscreenCmd.Cmd;
         constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
         vkBeginCommandBuffer(cmd, &begin_info);
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &Barriers[0], 0, nullptr);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, Barriers, 0, nullptr);
         vkCmdBeginRenderPass(cmd, &computePass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
             vkCmdSetViewport(cmd, 0, 1, &offscreenViewport);
             vkCmdSetScissor(cmd, 0, 1, &offscreenScissor);
@@ -751,6 +753,7 @@ namespace vpsk {
             gui->DrawFrame(cmd);
             vkCmdEndRenderPass(cmd);
             resetTexelBuffers(cmd);
+            renderParticles(cmd);
         vkEndCommandBuffer(cmd);
 
         frame.RenderCmd.firstFrame = false;
@@ -785,6 +788,10 @@ namespace vpsk {
 
     }
 
+    void ClusteredForward::renderParticles(const VkCommandBuffer cmd) {
+
+    }
+
     void ClusteredForward::submitOnscreenPass(frame_data_t& frame) {
         VkSubmitInfo submission = vk_submit_info_base;
         submission.commandBufferCount = 1;
@@ -799,6 +806,7 @@ namespace vpsk {
 
     void ClusteredForward::recordCommands() {
         constexpr static VkDeviceSize Offsets[1]{ 0 };
+        CurrFrameDataIdx = acquiredBackBuffer.idx;
         auto& frame_data = FrameData[CurrFrameDataIdx];
 
         recordPrecomputePass(frame_data);
@@ -808,7 +816,7 @@ namespace vpsk {
         recordOnscreenPass(frame_data);
         submitOnscreenPass(frame_data);
 
-        CurrFrameDataIdx = (CurrFrameDataIdx + 1) % 3;
+        
     }
 
     void ClusteredForward::presentBackBuffer() {
