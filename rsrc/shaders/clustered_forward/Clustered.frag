@@ -5,12 +5,11 @@
 layout (constant_id =  0) const uint ResolutionX = 1920;
 layout (constant_id =  1) const uint ResolutionY = 1080;
 // TileSize vector in sample code
-layout (constant_id =  3) const uint TileWidthX = 64;
-layout (constant_id =  4) const uint TileWidthY = 64;
-layout (constant_id =  7) const uint TileCountZ = 256;
-layout (constant_id =  8) const float NearPlane = 0.1f;
-layout (constant_id =  9) const float FarPlane = 3000.0f;
-layout (constant_id = 10) const float AmbientGlobal = 0.2f;
+layout (constant_id =  2) const uint TileCountX = (1920 - 1) / 64 + 1;
+layout (constant_id =  3) const uint TileCountY = (1080 - 1) / 64 + 1;
+layout (constant_id =  4) const uint TileWidth = 64;
+layout (constant_id =  5) const uint TileHeight = 64;
+layout (constant_id =  6) const uint TileCountZ = 256;
 
 layout (location = 0) in vec4 vPosition;
 layout (location = 1) in vec4 vNormal;
@@ -26,6 +25,7 @@ layout (set = 1, binding = 0) uniform _ubo {
     mat4 projectionClip;
     mat4 normal;
     vec4 viewPosition;
+    vec2 depth;
     uint numLights;
 } UBO;
 
@@ -63,8 +63,6 @@ layout (set = 2, binding = 1) uniform sampler2D normalMap;
 layout (set = 2, binding = 2) uniform sampler2D roughnessMap;
 layout (set = 2, binding = 3) uniform sampler2D metallicMap;
 
-const uint TileCountX = (ResolutionX - 1) / TileWidthX + 1;
-const uint TileCountY = (ResolutionY - 1) / TileWidthY + 1;
 
 uint CoordToIdx(uint i, uint j, uint k) {
     return TileCountX * TileCountY * k + TileCountX * j + i;
@@ -72,8 +70,8 @@ uint CoordToIdx(uint i, uint j, uint k) {
 
 vec3 viewPosToGrid(vec2 frag_pos, float view_z) {
     vec3 c;
-    c.xy = frag_pos / vec2(float(TileWidthX),float(TileWidthY));
-    c.z = min(float(TileCountZ - 1), max(0.f, float(TileCountZ) * log((-view_z - NearPlane) / (FarPlane - NearPlane) + 1.0f)));
+    c.xy = frag_pos / vec2(float(TileWidth),float(TileHeight));
+    c.z = min(float(TileCountZ - 1), max(0.f, float(TileCountZ) * log((-view_z - UBO.depth.x) / (UBO.depth.y - UBO.depth.x) + 1.0f)));
     return c;
 }
 
@@ -132,6 +130,9 @@ void main() {
         for (uint i = 0; i < light_count; ++i) {
             int light_idx = int(imageLoad(lightList, int(offset + i).r));
             vec4 light_pos_range = imageLoad(positionRanges, light_idx);
+            if (light_pos_range.w == 0.0f) {
+                continue;
+            }
             float dist = distance(light_pos_range.xyz, vPosition.xyz);
             if (dist < light_pos_range.w) {
                 const vec3 light_color = imageLoad(lightColors, light_idx).rgb;
@@ -155,7 +156,7 @@ void main() {
         }
     }
 
-    vec3 ambient = AmbientGlobal * albedo * Material.ambient.rgb;
+    vec3 ambient = 0.4f * albedo * Material.ambient.rgb;
     vec3 color = ambient + lighting;
 
     color = color / (color + vec3(1.0f));

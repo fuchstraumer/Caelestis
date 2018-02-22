@@ -6,16 +6,11 @@ layout(local_size_x = 32) in;
 layout (constant_id =  0) const uint ResolutionX = 1920;
 layout (constant_id =  1) const uint ResolutionY = 1080;
 // TileSize vector in sample code
-layout (constant_id =  3) const uint TileWidthX = 64;
-layout (constant_id =  4) const uint TileWidthY = 64;
-// Grid dimension vector in sampler code.
-layout (constant_id =  7) const uint TileCountZ = 256;
-layout (constant_id =  8) const float NearPlane = 0.1f;
-layout (constant_id =  9) const float FarPlane = 3000.0f;
-layout (constant_id = 10) const float AmbientGlobal = 0.20f;
-
-const uint TileCountX = (ResolutionX - 1) / TileWidthX + 1;
-const uint TileCountY = (ResolutionY - 1) / TileWidthY + 1;
+layout (constant_id =  2) const uint TileCountX = (1920 - 1) / 64 + 1;
+layout (constant_id =  3) const uint TileCountY = (1080 - 1) / 64 + 1;
+layout (constant_id =  4) const uint TileWidth = 64;
+layout (constant_id =  5) const uint TileHeight = 64;
+layout (constant_id =  6) const uint TileCountZ = 256;
 
 layout (set = 0, binding = 0) uniform _ubo {
     mat4 model;
@@ -23,6 +18,7 @@ layout (set = 0, binding = 0) uniform _ubo {
     mat4 projectionClip;
     mat4 normal;
     vec4 viewPosition;
+    vec2 depth;
     uint numLights;
 } UBO;
 
@@ -48,8 +44,8 @@ vec2 viewPosToFragPos(vec3 view_pos) {
 
 uvec3 viewPosToGrid(vec2 frag_pos, float view_z) {
     vec3 c;
-    c.xy = frag_pos / vec2(float(TileWidthX),float(TileWidthY));
-    c.z = min(float(TileCountZ - 1), max(0.f, float(TileCountZ) * log((-view_z - NearPlane) / (FarPlane - NearPlane) + 1.0f)));
+    c.xy = frag_pos / vec2(float(TileWidth),float(TileHeight));
+    c.z = min(float(TileCountZ - 1), max(0.f, float(TileCountZ) * log((-view_z - UBO.depth.x) / (UBO.depth.y - UBO.depth.x) + 1.0f)));
     return uvec3(c);
 }
 
@@ -76,13 +72,13 @@ void main() {
     vp_max.yz = vp.yz - pos_range_in.w;
 
     // restrict view z as it should be
-    if ((vp_max.z >= -NearPlane) || (vp_max.z <= -FarPlane)) {
+    if ((vp_max.z >= -UBO.depth.x) || (vp_max.z <= -UBO.depth.y)) {
         markLightToSkip(light_idx, pos_range_in);
         return;
     }
 
-    vp_min.z = min(-NearPlane, vp_min.z);
-    vp_max.z = max(-FarPlane, vp_max.z);
+    vp_min.z = min(-UBO.depth.x, vp_min.z);
+    vp_max.z = max(-UBO.depth.y, vp_max.z);
 
     vec2 fp_a = viewPosToFragPos(vec3(vp_min.xy, vp_min.z));
     vec2 fp_b = viewPosToFragPos(vec3(vp_min.xy, vp_max.z));
@@ -93,9 +89,8 @@ void main() {
 
     // restrict to frustum
     bool exit = false;
-    exit = exit || (fp_min.x < 0.0f) && (fp_max.x < 0.0f); 
-    exit = exit || (fp_min.y < 0.0f) && (fp_max.y < 0.0f);
-    exit = exit || (fp_min.x >= ResolutionX && fp_max.x >= ResolutionX) || (fp_min.y >= ResolutionY && fp_max.y >= ResolutionY);
+    exit = exit || (fp_min.x < 0.0f) && (fp_max.x < 0.0f)|| (fp_min.y < 0.0f) && (fp_max.y < 0.0f);
+    exit = exit || (fp_min.x >= float(ResolutionX) && fp_max.x >= float(ResolutionX)) || (fp_min.y >= float(ResolutionY) && fp_max.y >= float(ResolutionY));
     exit = exit || (fp_min.x > fp_max.x) || (fp_min.y > fp_max.y);
 
     if (exit) {

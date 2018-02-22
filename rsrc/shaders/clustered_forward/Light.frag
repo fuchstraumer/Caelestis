@@ -6,19 +6,14 @@
 layout(early_fragment_tests) in;
 layout(location = 0) in vec4 vPosition;
 
-layout (constant_id =  0) const int ResolutionX = 1920;
-layout (constant_id =  1) const int ResolutionY = 1080;
+layout (constant_id =  0) const uint ResolutionX = 1920;
+layout (constant_id =  1) const uint ResolutionY = 1080;
 // TileSize vector in sample code
-layout (constant_id =  3) const int TileWidthX = 64;
-layout (constant_id =  4) const int TileWidthY = 64;
-// Grid dimension vector in sampler code.
-layout (constant_id =  7) const int TileCountZ = 256;
-layout (constant_id =  8) const float NearPlane = 0.1f;
-layout (constant_id =  9) const float FarPlane = 3000.0f;
-
-const int TileCountX = (ResolutionX - 1) / TileWidthX + 1;
-const int TileCountY = (ResolutionY - 1) / TileWidthY + 1;
-
+layout (constant_id =  2) const uint TileCountX = (1920 - 1) / 64 + 1;
+layout (constant_id =  3) const uint TileCountY = (1080 - 1) / 64 + 1;
+layout (constant_id =  4) const uint TileWidth = 64;
+layout (constant_id =  5) const uint TileHeight = 64;
+layout (constant_id =  6) const uint TileCountZ = 256;
 
 layout (set = 0, binding = 0) uniform _ubo {
     mat4 model;
@@ -26,6 +21,7 @@ layout (set = 0, binding = 0) uniform _ubo {
     mat4 projectionClip;
     mat4 normal;
     vec4 viewPosition;
+    vec2 depth;
     uint numLights;
 } UBO;
 
@@ -33,13 +29,12 @@ layout (set = 1, binding = 0, r8ui) uniform uimageBuffer Flags;
 
 uvec3 viewPosToGrid(vec2 frag_pos, float view_z) {
     vec3 c;
-    c.xy = (frag_pos - 0.50f) / vec2(float(TileWidthX),float(TileWidthY));
-    c.z = min(float(TileCountZ - 1), max(0.0f, float(TileCountZ) * log((-view_z - NearPlane) / (FarPlane - NearPlane) + 1.0f)));
+    c.xy = (frag_pos - 0.50f) / vec2(float(TileWidth),float(TileHeight));
+    c.z = min(float(TileCountZ - 1), max(0.0f, float(TileCountZ) * log((-view_z - UBO.depth.x) / (UBO.depth.y - UBO.depth.x) + 1.0f)));
     return uvec3(c);
 }
 
 int CoordToIdx(uvec3 c) {
-    
     return int(TileCountX * TileCountY * c.z + TileCountX * c.y + c.x);
 }
 
