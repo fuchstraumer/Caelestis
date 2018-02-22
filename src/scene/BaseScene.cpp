@@ -31,8 +31,7 @@ namespace vpsk {
 
     vulpesSceneConfig BaseScene::SceneConfiguration = vulpesSceneConfig();
     bool BaseScene::CameraLock = false;
-    PerspectiveCamera BaseScene::fpsCamera = PerspectiveCamera(1440, 900, 70.0f);
-    ArcballCamera BaseScene::arcballCamera = ArcballCamera(1440, 900, 70.9f, UtilitySphere(glm::vec3(0.0f), 7.0f));
+    fpsCamera BaseScene::camera = fpsCamera();
     vpsk_state_t BaseScene::VPSKState = vpsk_state_t();
     std::atomic<bool> BaseScene::ShouldResize(false);
 
@@ -92,15 +91,6 @@ namespace vpsk {
 
         input_handler::LastX = swapchain->Extent().width / 2.0f;
         input_handler::LastY = swapchain->Extent().height / 2.0f;
-
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.SetNearClipPlaneDistance(0.1f);
-            fpsCamera.SetFarClipPlaneDistance(200.0f);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.SetNearClipPlaneDistance(0.1f);
-            arcballCamera.SetFarClipPlaneDistance(200.0f);
-        }
 
         LOG_IF(verbose_logging, INFO) << "BaseScene setup complete.";
 
@@ -162,41 +152,18 @@ namespace vpsk {
     }
 
     void BaseScene::mouseDrag(const int& button, const float & rot_x, const float & rot_y) {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.MouseDrag(button, rot_x, rot_y);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.MouseDrag(button, rot_x, rot_y);
-        }
-
-        ImGui::ResetMouseDragDelta();
     }
 
     void BaseScene::mouseScroll(const int& button, const float & zoom_delta) {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.MouseScroll(button, zoom_delta);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.MouseScroll(button, zoom_delta);
-        }
+
     }
 
     void BaseScene::mouseDown(const int& button, const float& x, const float& y) {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.MouseDown(button, x, y);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.MouseDown(button, x, y);
-        }
+
     }
 
     void BaseScene::mouseUp(const int& button, const float & x, const float & y) {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.MouseUp(button, x, y);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.MouseUp(button, x, y);
-        }
+
     }
 
     void BaseScene::PipelineCacheCreated(const uint16_t & cache_id) {
@@ -238,18 +205,8 @@ namespace vpsk {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize.x = static_cast<float>(swapchain->Extent().width);
         io.DisplaySize.y = static_cast<float>(swapchain->Extent().height);
-        BaseScene::fpsCamera = PerspectiveCamera(swapchain->Extent().width, swapchain->Extent().height, 70.0f);
-        BaseScene::arcballCamera = ArcballCamera(swapchain->Extent().width, swapchain->Extent().height, 70.0f, UtilitySphere(glm::vec3(0.0f), 7.0f));
         input_handler::LastX = swapchain->Extent().width / 2.0f;
         input_handler::LastY = swapchain->Extent().height / 2.0f;
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.SetNearClipPlaneDistance(0.1f);
-            fpsCamera.SetFarClipPlaneDistance(200.0f);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.SetNearClipPlaneDistance(0.1f);
-            arcballCamera.SetFarClipPlaneDistance(200.0f);
-        }
 
         RecreateObjects();
         vkDeviceWaitIdle(device->vkHandle());
@@ -312,25 +269,25 @@ namespace vpsk {
 
         if (input_handler::Keys[GLFW_KEY_W]) {
             if (SceneConfiguration.CameraType == cameraType::FPS) {
-                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() + SceneConfiguration.MovementSpeed * fpsCamera.GetViewDirection() * 0.1f);
+                camera.SetPosition(camera.GetPosition() + SceneConfiguration.MovementSpeed * camera.GetFrontVector() * 0.1f);
             }
         }
 
         if (input_handler::Keys[GLFW_KEY_A]) {
             if (SceneConfiguration.CameraType == cameraType::FPS) {
-                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() - SceneConfiguration.MovementSpeed * fpsCamera.GetRightDirection() * 0.1f);
+                camera.SetPosition(camera.GetPosition() - SceneConfiguration.MovementSpeed * camera.GetRightVector() * 0.1f);
             }
         }
 
         if (input_handler::Keys[GLFW_KEY_D]) {
             if (SceneConfiguration.CameraType == cameraType::FPS) {
-                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() + SceneConfiguration.MovementSpeed * fpsCamera.GetRightDirection() * 0.1f);
+                camera.SetPosition(camera.GetPosition() + SceneConfiguration.MovementSpeed * camera.GetRightVector() * 0.1f);
             }
         }
 
         if (input_handler::Keys[GLFW_KEY_S]) {
             if (SceneConfiguration.CameraType == cameraType::FPS) {
-                fpsCamera.SetEyeLocation(fpsCamera.GetEyeLocation() - SceneConfiguration.MovementSpeed * fpsCamera.GetViewDirection() * 0.1f);
+                camera.SetPosition(camera.GetPosition() - SceneConfiguration.MovementSpeed * camera.GetFrontVector() * 0.1f);
             }
         }
 
@@ -356,7 +313,6 @@ namespace vpsk {
     }
 
     void BaseScene::submitExtra(const uint32_t frame_idx) {
-
         return;
     }
 
@@ -445,68 +401,23 @@ namespace vpsk {
     }
 
     glm::mat4 BaseScene::GetViewMatrix() const noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            return fpsCamera.GetViewMatrix();
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            return arcballCamera.GetViewMatrix();
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            return fpsCamera.GetViewMatrix();
-        }
+        return camera.GetView();
     }
 
     glm::mat4 BaseScene::GetProjectionMatrix() const noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            return fpsCamera.GetProjectionMatrix();
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            return arcballCamera.GetProjectionMatrix();
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            return fpsCamera.GetProjectionMatrix();
-        }
+        return camera.GetProjection();
     }
 
     const glm::vec3 & BaseScene::GetCameraPosition() const noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            return fpsCamera.GetEyeLocation();
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            return arcballCamera.GetEyeLocation();
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            return fpsCamera.GetEyeLocation();
-        }
+        return camera.GetPosition();
     }
 
     void BaseScene::SetCameraPosition(const glm::vec3& new_camera_pos) noexcept {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.SetEyeLocation(new_camera_pos);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.SetEyeLocation(new_camera_pos);
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            fpsCamera.SetEyeLocation(new_camera_pos);
-        }
+        camera.SetPosition(new_camera_pos);
     }
 
     void BaseScene::SetCameraTarget(const glm::vec3& target_pos) {
-        if (SceneConfiguration.CameraType == cameraType::FPS) {
-            fpsCamera.LookAtTarget(target_pos);
-        }
-        else if (SceneConfiguration.CameraType == cameraType::ARCBALL) {
-            arcballCamera.LookAtTarget(target_pos);
-        }
-        else {
-            LOG(ERROR) << "Invalid camera type detected: defaulting to FPS camera.";
-            fpsCamera.LookAtTarget(target_pos);
-        }
+        camera.LookAt(camera.GetPosition(), target_pos);
     }
 
     void BaseScene::AddFrameCmdBuffer(const VkCommandBuffer & buffer_to_submit) {

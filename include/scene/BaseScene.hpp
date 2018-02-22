@@ -141,8 +141,7 @@ namespace vpsk {
         static std::vector<uint16_t> pipelineCacheHandles;
         size_t numSecondaryBuffers;
         
-        static PerspectiveCamera fpsCamera;
-        static ArcballCamera arcballCamera;
+        static fpsCamera camera;
     };
 
 

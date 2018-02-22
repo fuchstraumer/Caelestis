@@ -6,7 +6,7 @@
 
 namespace vpsk {
 
-    ArcballCamera::ArcballCamera(const size_t& pixel_width, const size_t& pixel_height, const float& field_of_view, const UtilitySphere & _sphere) : PerspectiveCamera(pixel_width, pixel_height, 70.0f), sphere(_sphere), initialOrientation(glm::quat()), fromVector(0.0f), toVector(0.0f), constraintAxis(0.0f) {}
+    /*ArcballCamera::ArcballCamera(const size_t& pixel_width, const size_t& pixel_height, const float& field_of_view, const UtilitySphere & _sphere) : PerspectiveCamera(pixel_width, pixel_height, 70.0f), sphere(_sphere), initialOrientation(glm::quat()), fromVector(0.0f), toVector(0.0f), constraintAxis(0.0f) {}
 
     void ArcballCamera::MouseDown(const int & button, const float & x, const float & y) {
         if (button == 0) {
@@ -71,6 +71,6 @@ namespace vpsk {
             float screen_radius = std::max(glm::length(axis_a), glm::length(axis_b));
             angle_addition = glm::distance(glm::vec2(pos.x, pos.y) / glm::vec2(window_size.x, window_size.y), closest_screenspace_point) / (screen_radius * 3.14159265359f);
         }
-    }
+    }*/
 
 }

@@ -32,9 +32,8 @@ namespace vpsk {
         layout.reset();
     }
 
-    void ImGuiWrapper::Init(const Device * dvc, const VkRenderPass & renderpass, vpr::DescriptorPool* descriptor_pool) {
-        
-        device = dvc;
+    ImGuiWrapper::ImGuiWrapper(const Device * dvc, const VkRenderPass & renderpass, vpr::DescriptorPool* descriptor_pool) : device(dvc) {
+
         cache = std::make_unique<PipelineCache>(device, static_cast<uint16_t>(typeid(ImGuiWrapper).hash_code()));
 
         createResources();  
@@ -246,7 +245,7 @@ namespace vpsk {
 
         pipelineStateInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 
-        pipelineStateInfo.MultisampleInfo.rasterizationSamples = BaseScene::SceneConfiguration.MSAA_SampleCount;
+        pipelineStateInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
         pipelineStateInfo.MultisampleInfo.sampleShadingEnable = BaseScene::SceneConfiguration.EnableMSAA;
 
     }

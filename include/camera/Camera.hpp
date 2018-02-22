@@ -1,121 +1,52 @@
 #pragma once
-#ifndef VULPES_CAMERA_H
-#define VULPES_CAMERA_H
-
+#ifndef VPSK_CAMERA_HPP
+#define VPSK_CAMERA_HPP
 #include "vpr_stdafx.h"
-#include "math/Ray.hpp"
-#include "glm/vec2.hpp"
 #include "glm/gtc/quaternion.hpp"
-
 namespace vpsk {
 
-    // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
-    enum class Direction : uint8_t {
-        FORWARD,
-        BACKWARD,
-        LEFT,
-        RIGHT,
-        UP,
-        DOWN,
-    };
-
-    class cameraController;
-
-
-    class cameraBase {
+    class Camera {
     public:
 
-        virtual ~cameraBase() = default;
+        virtual ~Camera() = default;
 
-        //virtual void ProcessKeyboard(const Direction& dir, const float& delta_time);
-        virtual void MouseDrag(const int& button, const float& x_offset, const float& y_offset) = 0;
-        virtual void MouseScroll(const int& button, const float& y_scroll) = 0;
-        virtual void MouseDown(const int& button, const float& x, const float& y) = 0;
-        virtual void MouseUp(const int& button, const float& x, const float& y)= 0;
+        glm::mat4 GetProjection() const noexcept;
+        glm::mat4 GetView() const noexcept;
 
-        const glm::vec3& GetEyeLocation() const noexcept;
-        void SetEyeLocation(const glm::vec3& new_eye_position);
-        const glm::vec3& GetViewDirection() const noexcept;
-        const glm::vec3& GetRightDirection() const noexcept;
-        void SetViewDirection(const glm::vec3& new_view_dir);
-        void LookAtTarget(const glm::vec3& target_position);
-        void LookTowardsTarget(const glm::vec3& viewer_position, const glm::vec3& target_position, const glm::vec3& new_up_vec = glm::vec3(0.0f));
-        float GetFieldOfView() const noexcept;
-        void SetFieldOfView(const float& new_fov);
-        float GetHorizontalFieldOfView() const noexcept;
-        void SetHorizontalFieldOfView(const float& new_horizontal_fov);
-        glm::quat GetOrientation() const noexcept;
-        void SetOrientation(const glm::quat& new_orientation);
-        float GetFocalLength() const noexcept;
-        float GetPivotDistance() const noexcept;
-        void SetPivotDistance(const float& new_pivot_distance);
-        glm::vec3 GetPivotPoint() const noexcept;
-        float GetAspectRatio() const noexcept;
-        void SetAspectRatio(const float& new_aspect);
-        float GetNearClipPlaneDistance() const noexcept;
-        void SetNearClipPlaneDistance(const float& new_clip_plane_dist);
-        float GetFarClipPlaneDistance() const noexcept;
-        void SetFarClipPlaneDistance(const float& new_clip_plane_distance);
+        void SetDepthRange(const float& near, const float& far);
+        void SetFOV(const float& fov_degrees);
+        void SetAspectRatio(const float& aspect);
 
-        virtual void GetNearClipPlaneWorldspaceCoords(glm::vec3& top_left, glm::vec3& top_right, glm::vec3& bottom_left, glm::vec3& bottom_right) noexcept;
-        virtual void GetFarClipPlaneWorldspaceCoords(glm::vec3& top_left, glm::vec3& top_right, glm::vec3& bottom_left, glm::vec3& bottom_right) noexcept;
-        virtual void GetFrustumValues(float& left, float& top, float& right, float& bottom, float& _near, float& _far);
-        Ray GetCameraRay(const float& u_pos, const float& v_pos, const float& image_plane_aspect_ratio) noexcept;
-        Ray GetCameraRay(const glm::ivec2& point, const glm::ivec2& window_size) noexcept;
-        void GetVectorsForBillboard(glm::vec3& right, glm::vec3& up) noexcept;
+        glm::vec3 GetFrontVector() const noexcept;
+        glm::vec3 GetRightVector() const noexcept;
+        glm::vec3 GetUpVector() const noexcept;
+        const glm::vec3& GetPosition() const noexcept;
+        const glm::quat& GetRotation() const noexcept;
 
-        glm::vec2 WorldspaceToScreen(const glm::vec3& world_position, const float& screen_width, const float& screen_height) noexcept;
-        glm::vec2 EyespaceToScreen(const glm::vec3& eye_coord, const glm::ivec2& screen_size_in_pixels) noexcept;
-        glm::vec3 WorldspaceToEyespace(const glm::vec3& world_position) noexcept;
-        float WorldspaceToDepth(const glm::vec3& world_position) noexcept;
-        glm::vec3 WorldspaceToNDC(const glm::vec3& world_position) noexcept;
+        void SetPosition(glm::vec3 pos);
+        void SetRotation(glm::quat quat);
+        void LookAt(const glm::vec3& eye_pos, const glm::vec3& look_at_pos, const glm::vec3& world_up = glm::vec3(0.0f, 1.0f, 0.0f));
 
-        virtual const glm::mat4& GetProjectionMatrix() noexcept;
-        virtual const glm::mat4& GetViewMatrix() noexcept;
-        virtual const glm::mat4& GetInvViewMatrix() noexcept;
+        float GetNearPlane() const noexcept;
+        float GetFarPlane() const noexcept;
 
-        virtual bool IsPerspective() const noexcept = 0;
-        virtual void SetController(cameraController* new_controller);
+        void SetTransformation(const glm::mat4& m);
 
     protected:
-
-        cameraBase();
-
-        virtual void updateMatrices();
-        virtual void updateView();
-        virtual void updateProjection();
-        virtual void updateInvView();
-
-        glm::vec3 eyePosition, eyeDirection;
-        glm::quat orientation;
-        glm::vec3 worldUp;
-        glm::vec2 lensShift = glm::vec2(0.0f);
-        float fieldOfView, aspectRatio;
-        float nearClip, farClip;
-        float frustumTop, frustumBottom, frustumLeft, frustumRight;
-        float pivotDistance;
-        glm::mat4 projection, invProjection, view, invView;
-        glm::vec3 right, up, viewDirection;
-        cameraController* controller;
-        bool viewCached, projectionCached, invViewCached, invProjectionCached;
-
+        glm::vec3 position{ 0.0f, 0.0f, 0.0f };
+        glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
+        float fovY{ 0.50f * glm::half_pi<float>() };
+        float aspect{ 16.0f / 9.0f };
+        float zNear{ 0.1f };
+        float zFar{ 3000.0f };
+        float transformZScale{ 1.0f };
     };
 
-    class PerspectiveCamera : public cameraBase {
+    class fpsCamera : public Camera {
     public:
-
-        PerspectiveCamera(const size_t& pixel_width, const size_t& pixel_height, const float& field_of_view);
-        void SetPerspective(const float& vertical_fov_in_degrees, const float& aspect_ratio, const float& near_plane, const float& far_plane);
-        virtual bool IsPerspective() const noexcept override;
-
-        // Perspective camera doesn't do anything for mouse button input.
-        void MouseDrag(const int& button, const float& x_offset, const float& y_offset) override;
-        void MouseScroll(const int& button, const float& y_scroll) override;
-        void MouseDown(const int& button, const float& x, const float& y) override;
-        void MouseUp(const int& button, const float& x, const float& y) override;
-
+        fpsCamera();
+        void MouseMoveUpdate();
     };
-
 }
 
-#endif // !VULPES_CAMERA_H
+#endif // !VPSK_CAMERA_HPP

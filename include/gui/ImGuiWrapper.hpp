@@ -21,10 +21,8 @@ namespace vpsk {
         ImGuiWrapper& operator=(const ImGuiWrapper&) = delete;
     public:
 
-        ImGuiWrapper() = default;
+        ImGuiWrapper(const vpr::Device* dvc, const VkRenderPass& renderpass, vpr::DescriptorPool* descriptor_pool);
         ~ImGuiWrapper();
-
-        void Init(const vpr::Device* dvc, const VkRenderPass& renderpass, vpr::DescriptorPool* descriptor_pool);
         void UploadTextureData(vpr::TransferPool* transfer_pool);
         void NewFrame(GLFWwindow* instance);
         void UpdateBuffers();
