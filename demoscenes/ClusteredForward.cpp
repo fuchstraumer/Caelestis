@@ -44,8 +44,8 @@ namespace vpsk {
     const glm::mat4 proj = glm::perspective(glm::radians(60.0f), 1.333f, 0.1f, 3000.0f);
 
     struct program_state_t {
-        uint32_t ResolutionX = 1440;
-        uint32_t ResolutionY = 900;
+        uint32_t ResolutionX = 1920;
+        uint32_t ResolutionY = 1080;
         uint32_t MinLights = 1024;
         uint32_t MaxLights = 4096;
         uint32_t NumLights = 2048;
@@ -155,7 +155,7 @@ namespace vpsk {
         const float base_range = powf(light_vol, 1.0f / 3.0f);
         const float max_range = base_range * 3.0f;
         const float min_range = base_range / 1.5f;
-        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.30f;
+        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.50f;
         const float pos_radius = std::max(half_size.x, std::max(half_size.y, half_size.z));
         Lights.Positions.reserve(ProgramState.MaxLights);
         Lights.Colors.reserve(ProgramState.MaxLights);
@@ -192,8 +192,8 @@ namespace vpsk {
     } GlobalUBO;
 
     struct specialization_constants_t {
-        uint32_t ResolutionX = 1440;
-        uint32_t ResolutionY = 900;
+        uint32_t ResolutionX = 1920;
+        uint32_t ResolutionY = 1080;
         uint32_t LightListMax = 2048;
         uint32_t TileWidth = 64;
         uint32_t TileHeight = 64;
@@ -577,7 +577,8 @@ namespace vpsk {
         GlobalUBO.view = GetViewMatrix();
         GlobalUBO.model = sponza->GetModelMatrix();
         GlobalUBO.normal = glm::transpose(glm::inverse(GlobalUBO.model));
-        camera.SetFOV(80.0f);
+        camera.SetFOV(75.0f);
+        camera.SetDepthRange(0.25f, 4000.0f);
 
         Buffer::DestroyStagingResources(device.get());
         static bool first_frame = true;
@@ -609,7 +610,7 @@ namespace vpsk {
 
     void ClusteredForward::updateUniforms() {
         GlobalUBO.view = GetViewMatrix();
-        GlobalUBO.projection = clip * GetProjectionMatrix();
+        GlobalUBO.projection = GetProjectionMatrix();
         GlobalUBO.viewPosition = glm::vec4(GetCameraPosition(), 1.0f);
         GlobalUBO.NumLights = ProgramState.NumLights;
         ubo->CopyToMapped(&GlobalUBO, sizeof(GlobalUBO), 0);
@@ -724,8 +725,7 @@ namespace vpsk {
     }
 
     void ClusteredForward::recordOnscreenPass(frame_data_t& frame) {
-        VkResult result = vkWaitForFences(device->vkHandle(), 1, &frame.RenderCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
-        vkResetFences(device->vkHandle(), 1, &frame.RenderCmd.Fence);
+        
         if (!frame.RenderCmd.firstFrame) {
             vkResetCommandBuffer(frame.RenderCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
         }
