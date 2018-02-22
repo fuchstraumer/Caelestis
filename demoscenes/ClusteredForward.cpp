@@ -390,7 +390,7 @@ namespace vpsk {
 
         constexpr static VkPipelineStageFlags OffscreenFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         constexpr static VkPipelineStageFlags ComputeFlags = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
         std::vector<VkFramebuffer> framebuffers;
         
@@ -655,10 +655,10 @@ namespace vpsk {
         vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
             const VkDescriptorSet descriptors[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Layout->vkHandle(), 0, 2, descriptors, 0, nullptr);
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingTransparent.Pipeline->vkHandle());
-            sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), false, false, 2 });
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), true, false, 2 });
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingTransparent.Pipeline->vkHandle());
+            sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), false, false, 2 });
         vkCmdEndRenderPass(cmd);
         vkEndCommandBuffer(cmd);
 
@@ -704,8 +704,7 @@ namespace vpsk {
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("GridOffsets")]);
             vkCmdDispatch(cmd, (ProgramState.TileCountX - 1) / 16 + 1, (ProgramState.TileCountY - 1) / 16 + 1, ProgramState.TileCountZ);
             Barriers[0].buffer = LightBuffers.LightCountTotal->vkHandle(); Barriers[0].size = LightBuffers.LightCountTotal->Size();
-            Barriers[1].buffer = LightBuffers.LightCountOffsets->vkHandle(); Barriers[1].size = LightBuffers.LightCountOffsets->Size();
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 2, Barriers, 0, nullptr);
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, Barriers, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("LightList")]);
             vkCmdDispatch(cmd, (ProgramState.NumLights - 1) / 32 + 1, 1, 1);
         vkEndCommandBuffer(cmd);
@@ -819,8 +818,9 @@ namespace vpsk {
         present_info.waitSemaphoreCount = 1;
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain->vkHandle();
-        VkResult result = vkQueuePresentKHR(device->GraphicsQueue(), &present_info);
-        VkAssert(result);
+        VkResult result = vkQueuePresentKHR(device->GraphicsQueue(), &present_info); VkAssert(result);
+        result = vkWaitForFences(device->vkHandle(), 1, &FrameData[CurrFrameDataIdx].RenderCmd.Fence, VK_TRUE, static_cast<uint64_t>(1.0e9)); VkAssert(result);
+        vkResetFences(device->vkHandle(), 1, &FrameData[CurrFrameDataIdx].RenderCmd.Fence);
     }
 
     void ClusteredForward::createFrameData() {
