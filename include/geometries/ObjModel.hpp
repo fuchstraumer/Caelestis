@@ -14,7 +14,7 @@ namespace vpsk {
 
     struct DrawInfo {
         DrawInfo() {}
-        DrawInfo(const VkCommandBuffer cmd, const VkPipelineLayout layout, const bool opaque_only, const bool textured, const size_t num_sets) : 
+        DrawInfo(const VkCommandBuffer cmd, const VkPipelineLayout layout, const bool opaque_only, const bool textured, const size_t num_sets) :
             Cmd(cmd), Layout(layout), RenderOnlyOpaque(opaque_only), UseTextures(textured), NumSetsBound(num_sets) {}
         bool RenderOnlyOpaque = false;
         bool UseTextures = true;
@@ -32,7 +32,7 @@ namespace vpsk {
         ~ObjModel();
 
         void Render(const DrawInfo info);
-        
+
         void LoadModelFromFile(const std::string& obj_model_filename, vpr::TransferPool* transfer_pool);
 
         const VkDescriptorSetLayout GetMaterialSetLayout() const noexcept;
@@ -42,7 +42,7 @@ namespace vpsk {
 
         void drawGeometry(const DrawInfo& info);
         void renderIdx(const VkCommandBuffer cmd, const VkPipelineLayout layout, const size_t idx);
-        
+
         struct modelPart {
             uint32_t startIdx;
             uint32_t idxCount;
@@ -67,7 +67,7 @@ namespace vpsk {
         size_t numMaterials;
         uint32_t commandOffset = 0;
 
-        void loadMeshes(const std::string& file, vpr::TransferPool* transfer_pool);
+        void loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, vpr::TransferPool* transfer_pool);
         void generateIndirectDraws();
         void createIndirectDrawBuffer();
         TexturePool* texturePool;

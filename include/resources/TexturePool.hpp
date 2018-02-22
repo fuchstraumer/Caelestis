@@ -3,6 +3,7 @@
 #define VPSK_TEXTURE_POOL_HPP
 #include "ForwardDecl.hpp"
 #include "resource/Texture.hpp"
+#include "tinyobjloader/tiny_obj_loader.h"
 #include "gli/gli.hpp"
 #include <unordered_map>
 #include <string>
@@ -49,6 +50,7 @@ namespace vpsk {
         TexturePool(const vpr::Device* dvc, const vpr::TransferPool* transfer_pool);
         ~TexturePool() = default;
 
+        void AddMaterials(const std::vector<tinyobj::material_t>& material, const std::string& path_prefix);
         void BindMaterialAtIdx(const size_t & idx, const VkCommandBuffer cmd, const VkPipelineLayout layout, const size_t num_sets_prev_bound);
         const material_ubo_data_t& GetMaterialUBO(const size_t& idx) const;
         const VkDescriptorSetLayout GetSetLayout() const noexcept;
@@ -58,7 +60,7 @@ namespace vpsk {
         void createDescriptorPool();
         void createDescriptorSetLayout();
         void createDescriptorSets();
-        
+
         std::map<size_t, std::string> idxNameMap;
         std::unordered_map<std::string, material_ubo_data_t> materialUboData;
         std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> materialBuffers;
@@ -80,7 +82,7 @@ namespace vpsk {
 
         };
         std::unordered_map<std::string, material_texture_data_t> materialTextures;
-        
+
         const vpr::TransferPool* transferPool;
         const vpr::Device* device;
 
