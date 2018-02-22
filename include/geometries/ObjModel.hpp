@@ -6,6 +6,7 @@
 #include "resource/Buffer.hpp"
 #include "resources/Material.hpp"
 #include "util/AABB.hpp"
+#include "tinyobjloader/tiny_obj_loader.h"
 #include <map>
 #include <set>
 namespace vpsk {

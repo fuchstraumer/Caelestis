@@ -115,13 +115,10 @@ namespace vpsk {
         auto appendVert = [&groups, &uniqueVertices](const vertex_t& vert, const int material_id, AABB& bounds) {
             auto& unique_verts = uniqueVertices[material_id + 1];
             auto& group = groups[material_id + 1];
-            if (unique_verts.count(vert) == 0) {
-                unique_verts[vert] = group.positions.size();
-                group.positions.push_back(vert.pos);
-                group.data.push_back(TriangleMesh::vertex_data_t{ vert.normal, glm::vec3(0.0f), vert.uv });
-                bounds.Include(vert.pos);
-            }
-            group.indices.push_back(unique_verts[vert]);
+            group.positions.push_back(vert.pos);
+            group.data.push_back(TriangleMesh::vertex_data_t{ vert.normal, glm::vec3(0.0f), vert.uv });
+            bounds.Include(vert.pos);
+            group.indices.push_back(group.positions.size() - 1);
         };
 
         for (const auto& shape : shapes) {
