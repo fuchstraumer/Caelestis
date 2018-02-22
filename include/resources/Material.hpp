@@ -6,7 +6,6 @@
 #include <list>
 #include <memory>
 #include "glm/vec4.hpp"
-#include "tinyobjloader/tiny_obj_loader.h"
 
 namespace vpsk {
 
@@ -48,7 +47,7 @@ namespace vpsk {
         Material(Material&&) noexcept;
         Material& operator=(Material&&) noexcept;
 
-        void Create(const tinyobj::material_t& tinyobj_imported_material, const vpr::Device* dvc, vpr::DescriptorPool* descriptor_pool);
+        
         void UploadToDevice(vpr::TransferPool* transfer_pool);
 
         /** Binds the descriptor set belonging to this object, to which all available textures will have been attached.
@@ -62,9 +61,7 @@ namespace vpsk {
     private:
 
         void createHashCode();
-        void createUBO(const tinyobj::material_t& material_);
-        void createTextures(const tinyobj::material_t& material_);
-        void createPbrTexturePack(const tinyobj::material_t& material_, const uint32_t& curr_binding_idx);
+       
     
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> ambient = nullptr;
         std::unique_ptr<vpr::Texture<vpr::texture_2d_t>> diffuse = nullptr;

@@ -4,6 +4,11 @@
 #include "util/easylogging++.h"
 #include "core/LogicalDevice.hpp"
 #include "core/PhysicalDevice.hpp"
+
+#include "assimp/Importer.hpp"
+#include "assimp/postprocess.h"
+#include "assimp/scene.h"
+#include "assimp/cimport.h"
 using namespace vpr;
 
 namespace vpsk {
@@ -70,23 +75,7 @@ namespace vpsk {
     }
 
     void ObjModel::LoadModelFromFile(const std::string& obj_model_filename, TransferPool* transfer_pool) {
-        
-        tinyobj::attrib_t attrib;
-        std::vector<tinyobj::shape_t> shapes;
-        std::vector<tinyobj::material_t> materials;
-        std::string tinyobj_err;
-
-        if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_err, obj_model_filename.c_str(), "../rsrc/crytekSponza/")) {
-            LOG(ERROR) << "TinyObjLoader failed to load model file " << obj_model_filename << " , exiting.";
-            LOG(ERROR) << "Load failed with error: " << tinyobj_err;
-            throw std::runtime_error(tinyobj_err.c_str());
-        }
-
-        modelName = shapes.front().name;
-        texturePool->AddMaterials(materials, "../rsrc/crytekSponza/");
-        numMaterials = materials.size();
-        loadMeshes(shapes, attrib, transfer_pool);
-        generateIndirectDraws();
+        loadMeshes(obj_model_filename, transfer_pool);
         createIndirectDrawBuffer();
         
     }
@@ -105,96 +94,60 @@ namespace vpsk {
         std::vector<uint32_t> indices;
     };
 
-    void ObjModel::loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, TransferPool* transfer_pool) {
-       
-        size_t num_vertices_loaded = 0;
 
-        std::vector<material_group_t> groups(numMaterials + 1);
-        std::vector<std::unordered_map<vertex_t, uint32_t>> uniqueVertices(numMaterials + 1);
-
-        auto appendVert = [&groups, &uniqueVertices](const vertex_t& vert, const int material_id, AABB& bounds) {
-            auto& unique_verts = uniqueVertices[material_id + 1];
-            auto& group = groups[material_id + 1];
-            if (unique_verts.count(vert) == 0) {
-                unique_verts[vert] = group.positions.size();
-                group.positions.push_back(vert.pos);
-                group.data.push_back(TriangleMesh::vertex_data_t{ vert.normal, glm::vec3(0.0f), vert.uv });
-                bounds.Include(vert.pos);
-            }
-            group.indices.push_back(unique_verts[vert]);
-        };
-
-        for (const auto& shape : shapes) {
-            size_t idxOffset = 0;
-            for (size_t i = 0; i < shape.mesh.num_face_vertices.size(); ++i) {
-                auto ngon = shape.mesh.num_face_vertices[i];
-                auto material_id = shape.mesh.material_ids[i];
-                for (size_t j = 0; j < ngon; ++j) {
-                    const auto& idx = shape.mesh.indices[idxOffset + j];
-
-                    vertex_t vert;
-                    vert.pos = glm::vec3{
-                        attrib.vertices[3 * idx.vertex_index + 0],
-                        attrib.vertices[3 * idx.vertex_index + 1],
-                        attrib.vertices[3 * idx.vertex_index + 2]
-                    };
-                    vert.normal = glm::vec3{
-                        attrib.normals[3 * idx.normal_index + 0],
-                        attrib.normals[3 * idx.normal_index + 1],
-                        attrib.normals[3 * idx.normal_index + 2]
-                    };
-                    vert.uv = glm::vec2{
-                        attrib.texcoords[2 * idx.texcoord_index + 0],
-                        1.0f - attrib.texcoords[2 * idx.texcoord_index + 1]
-                    };
-
-                    appendVert(vert, material_id, aabb);
-                }
-
-                idxOffset += ngon;
-            }
+    void ObjModel::loadMeshes(const std::string & file, vpr::TransferPool * transfer_pool) {
+        Assimp::Importer importer;
+        const aiScene* scene = importer.ReadFile(file, aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices |
+            aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials | aiProcess_OptimizeMeshes | aiProcess_SplitLargeMeshes);
+        if (!scene) {
+            throw std::runtime_error("");
         }
+        else {
 
-        int mtl_idx = -1;
-        for (auto& group : groups) {
-            modelPart new_part;
-            new_part.vertexOffset = vertexPositions.size();
-            vertexPositions.insert(vertexPositions.end(), group.positions.begin(), group.positions.end());
-            vertexData.insert(vertexData.end(), group.data.begin(), group.data.end());
-            new_part.startIdx = indices.size();
-            indices.insert(indices.end(), group.indices.begin(), group.indices.end());
-            new_part.idxCount = group.indices.size();
-            new_part.mtlIdx = mtl_idx;
-            ++mtl_idx;
-            parts.insert(new_part);
-        }
+            uint32_t vertexCount = 0;
+            uint32_t indexCount = 0;
 
-        CreateBuffers(device);
-        LOG(INFO) << "Loaded mesh data from .obj file, uploading to device now...";
-        auto& cmd = transfer_pool->Begin();
-        RecordTransferCommands(cmd);
-        transfer_pool->Submit();
-        LOG(INFO) << "Mesh data upload complete.";
+            for (size_t i = 0; i < scene->mNumMeshes; ++i) {
+                const aiMesh* mesh = scene->mMeshes[i];
+                modelPart part;
+                part.startIdx = indexCount;
+                part.vertexOffset = vertexCount;
+                vertexCount += mesh->mNumVertices;
+                
+                for (size_t j = 0; j < mesh->mNumVertices; ++j) {
+                    const aiVector3D* pos = &(mesh->mVertices[j]);
+                    const aiVector3D* norm = &(mesh->mNormals[j]);
+                    const aiVector3D* tangent = &(mesh->mTangents[j]);
+                    const aiVector3D* bitangent = &(mesh->mBitangents[j]);
+                    const aiVector3D* uv = &(mesh->mTextureCoords[0][j]);
 
-    }
+                    vertex_t vert{
+                        glm::vec3{ pos->x, pos->y, pos->z },
+                        glm::vec3{ norm->x, norm->y, norm->z },
+                        glm::vec3{ tangent->x, tangent->y, tangent->z },
+                        glm::vec2{ uv->x, uv->y }
+                    };
 
-    void ObjModel::generateIndirectDraws() {
-        for (auto& idx_group : parts) {
-            if (idx_group.mtlIdx > numMaterials + 1) {
-                continue;
-            }
-            if (indirectCommands.count(idx_group.mtlIdx)) {
-                auto range = indirectCommands.equal_range(idx_group.mtlIdx);
-                auto same_idx_entry = std::find_if(range.first, range.second, [idx_group](const decltype(indirectCommands)::value_type& elem) { return elem.second.indexCount == idx_group.idxCount; });
-                if (same_idx_entry == indirectCommands.end()) {
-                    indirectCommands.emplace(idx_group.mtlIdx, VkDrawIndexedIndirectCommand{ idx_group.idxCount, 1, idx_group.startIdx, idx_group.vertexOffset, 0 });
+                    aabb.Include(vert.pos);
+                    AddVertex(vert);
                 }
-                else {
-                    same_idx_entry->second.instanceCount++;
+
+                part.startIdx = static_cast<uint32_t>(indices.size());
+                part.idxCount = 0;
+                for (size_t j = 0; j < mesh->mNumFaces; ++j) {
+                    const aiFace& face = mesh->mFaces[j];
+                    if (face.mNumIndices != 3) {
+                        continue;
+                    }
+                    AddIndex(part.startIdx + face.mIndices[0]);
+                    AddIndex(part.startIdx + face.mIndices[1]);
+                    AddIndex(part.startIdx + face.mIndices[2]);
+                    part.idxCount += 3;
                 }
-            }
-            else {
-                indirectCommands.emplace(idx_group.mtlIdx, VkDrawIndexedIndirectCommand{ idx_group.idxCount, 1, idx_group.startIdx, idx_group.vertexOffset, 0 });
+
+                indexCount = static_cast<uint32_t>(indices.size());
+                vertexCount = static_cast<uint32_t>(vertexPositions.size());
+                parts.insert(part);
             }
         }
     }

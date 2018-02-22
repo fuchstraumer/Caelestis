@@ -62,14 +62,12 @@ namespace vpsk {
         };
 
         std::unique_ptr<vpr::Buffer> indirectDrawBuffer;
-        std::multimap<int32_t, modelPart> parts;
+        std::set<modelPart> parts;
         std::multimap<size_t, VkDrawIndexedIndirectCommand> indirectCommands;
         size_t numMaterials;
         uint32_t commandOffset = 0;
 
-        void generateTangentVectors();
-
-        void loadMeshes(const std::vector<tinyobj::shape_t>& shapes, const tinyobj::attrib_t& attrib, vpr::TransferPool* transfer_pool);
+        void loadMeshes(const std::string& file, vpr::TransferPool* transfer_pool);
         void generateIndirectDraws();
         void createIndirectDrawBuffer();
         TexturePool* texturePool;

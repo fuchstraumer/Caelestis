@@ -48,7 +48,7 @@ namespace vpsk {
         uint32_t ResolutionY = 900;
         uint32_t MinLights = 1024;
         uint32_t MaxLights = 4096;
-        uint32_t NumLights = 4096;
+        uint32_t NumLights = 2048;
         bool GenerateLights = false;
         uint32_t TileWidth = 64;
         uint32_t TileHeight = 64;
@@ -155,7 +155,7 @@ namespace vpsk {
         const float base_range = powf(light_vol, 1.0f / 3.0f);
         const float max_range = base_range * 3.0f;
         const float min_range = base_range / 1.5f;
-        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.50f;
+        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.30f;
         const float pos_radius = std::max(half_size.x, std::max(half_size.y, half_size.z));
         Lights.Positions.reserve(ProgramState.MaxLights);
         Lights.Colors.reserve(ProgramState.MaxLights);
@@ -550,6 +550,10 @@ namespace vpsk {
         createOffscreenFramebuffer();
         createComputePipelines();
         createRenderTargets();
+
+        ImGuiWrapper wrapper(device.get(), onscreenPass->vkHandle(), descriptorPool.get());
+        gui = std::make_unique<ImGuiWrapper>(device.get(), onscreenPass->vkHandle(), descriptorPool.get());
+        gui->UploadTextureData(transferPool.get());
     }
 
     void ClusteredForward::RecordCommands() {
@@ -570,46 +574,45 @@ namespace vpsk {
         offscreenScissor.extent.height = swapchain->Extent().height;
         const glm::vec3 eye = sponza->GetAABB().Center() + glm::vec3(0.0f, 50.0f, 50.0f);
         SetCameraPosition(eye);
-        glm::mat4 view = glm::lookAt(eye, sponza->GetAABB().Center(), glm::vec3(0.0f, 1.0f, 0.0f));
-        GlobalUBO.view = view;
+        GlobalUBO.view = GetViewMatrix();
         GlobalUBO.model = sponza->GetModelMatrix();
         GlobalUBO.normal = glm::transpose(glm::inverse(GlobalUBO.model));
-
+        camera.SetFOV(80.0f);
 
         Buffer::DestroyStagingResources(device.get());
         static bool first_frame = true;
 
         while (!glfwWindowShouldClose(window->glfwWindow())) {
             glfwPollEvents();
+            camera.MouseMoveUpdate();
             if (ShouldResize.exchange(false) && !first_frame) {
                 RecreateSwapchain();
             }
 
-            updateUniforms();
+            if (SceneConfiguration.EnableGUI) {
+                gui->NewFrame(window->glfwWindow());
+            }
 
+            updateUniforms();
             limitFrame();
             UpdateMouseActions();
-            //if (SceneConfiguration.EnableGUI) {
-             //   gui->NewFrame(window->glfwWindow());
-            //}
-
             UpdateMovement(BaseScene::SceneConfiguration.FrameTimeMs / 1000.0f);
-
+            
             acquireBackBuffer();
             recordCommands();
             presentBackBuffer();
 
             //Lights.update();
-
             first_frame = false;
         }
     }
 
     void ClusteredForward::updateUniforms() {
         GlobalUBO.view = GetViewMatrix();
-        GlobalUBO.projection = clip * proj;
+        GlobalUBO.projection = clip * GetProjectionMatrix();
         GlobalUBO.viewPosition = glm::vec4(GetCameraPosition(), 1.0f);
         GlobalUBO.NumLights = ProgramState.NumLights;
+        ubo->CopyToMapped(&GlobalUBO, sizeof(GlobalUBO), 0);
     }
 
     void ClusteredForward::acquireBackBuffer() {
@@ -637,9 +640,6 @@ namespace vpsk {
         Barriers[0].buffer = ubo->vkHandle();
         Barriers[0].size = ubo->Size();
 
-        UpdateUBO();
-        frame.LightPositions->CopyToMapped(Lights.Positions.data(), Lights.Positions.size() * sizeof(glm::vec4), 0);
-        frame.LightColors->CopyToMapped(Lights.Colors.data(), Lights.Colors.size() * sizeof(glm::u8vec4), 0);
         offscreenViewport.maxDepth = 1.0f;
         computePass->UpdateBeginInfo(offscreenFramebuffer->vkHandle());
         auto& cmd = frame.OffscreenCmd.Cmd;
@@ -683,7 +683,6 @@ namespace vpsk {
         if (!frame.ComputeCmd.firstFrame) {
             vkResetCommandBuffer(frame.ComputeCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
         }
-        Lights.update();
 
         Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
         Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -731,6 +730,10 @@ namespace vpsk {
         if (!frame.RenderCmd.firstFrame) {
             vkResetCommandBuffer(frame.RenderCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
         }
+
+        ImGui::BeginMainMenuBar();
+        ImGui::EndMainMenuBar();
+        ImGui::Render();
         
         onscreenPass->UpdateBeginInfo(framebuffers[acquiredBackBuffer.idx]);
         auto& cmd = frame.RenderCmd.Cmd;
@@ -745,6 +748,8 @@ namespace vpsk {
             sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), true, true, 2 });
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Transparent.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), false, true, 2 });
+            gui->UpdateBuffers();
+            gui->DrawFrame(cmd);
             vkCmdEndRenderPass(cmd);
             resetTexelBuffers(cmd);
         vkEndCommandBuffer(cmd);
@@ -1075,9 +1080,10 @@ namespace vpsk {
     }
 
     void ClusteredForward::createDescriptorPool() {
-        descriptorPool = std::make_unique<DescriptorPool>(device.get(), swapchain->ImageCount() + 1);
+        descriptorPool = std::make_unique<DescriptorPool>(device.get(), swapchain->ImageCount() + 3);
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, swapchain->ImageCount());
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, swapchain->ImageCount() * 2 + 7);
+        descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2);
         descriptorPool->Create();
     }
 
