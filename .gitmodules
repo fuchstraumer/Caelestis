@@ -10,3 +10,6 @@
 [submodule "third_party/shadergen"]
 	path = third_party/shadergen
 	url = https://github.com/fuchstraumer/shadergen
+[submodule "third_party/tinyobjloader"]
+	path = third_party/tinyobjloader
+	url = https://github.com/syoyo/tinyobjloader
