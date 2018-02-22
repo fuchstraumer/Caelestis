@@ -291,6 +291,14 @@ namespace vpsk {
             }
         }
 
+        if (input_handler::Keys[GLFW_KEY_RIGHT_BRACKET]) {
+            SceneConfiguration.MovementSpeed += 10.0f;
+        }
+
+        if (input_handler::Keys[GLFW_KEY_LEFT_BRACKET]) {
+            SceneConfiguration.MovementSpeed -= 10.0f;
+        }
+
     }
 
     void BaseScene::limitFrame() {

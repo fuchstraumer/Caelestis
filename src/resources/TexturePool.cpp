@@ -27,6 +27,14 @@ namespace vpsk {
                 else {
                     auto inserted = stbTextures.try_emplace(tex, std::make_unique<vpr::Texture<vpr::texture_2d_t>>(device));
                     inserted.first->second->CreateFromFile(std::string(path_prefix + tex).c_str());
+                    VkSamplerCreateInfo sampler_info = vpr::vk_sampler_create_info_base;
+                    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                    sampler_info.anisotropyEnable = VK_TRUE;
+                    sampler_info.magFilter = VK_FILTER_LINEAR;
+                    sampler_info.minFilter = VK_FILTER_LINEAR;
+                    sampler_info.maxAnisotropy = 8.0f;
+                    inserted.first->second->CreateSampler(sampler_info);
                     inserted.first->second->TransferToDevice(cmd);
                     return inserted.first;
                 }

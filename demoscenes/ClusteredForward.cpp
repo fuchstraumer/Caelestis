@@ -156,7 +156,7 @@ namespace vpsk {
         const float base_range = powf(light_vol, 1.0f / 3.0f);
         const float max_range = base_range * 3.0f;
         const float min_range = base_range / 1.5f;
-        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.50f;
+        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.20f;
         const float pos_radius = std::max(half_size.x, std::max(half_size.y, half_size.z));
         Lights.Positions.reserve(ProgramState.MaxLights);
         Lights.Colors.reserve(ProgramState.MaxLights);
@@ -774,22 +774,18 @@ namespace vpsk {
             vkResetCommandBuffer(frame.ComputeCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
         }
 
+        frame.LightPositions->CopyToMapped(Lights.Positions.data(), sizeof(glm::vec4) * Lights.Positions.size(), 0);
 
         Barriers[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
         Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        Barriers[0].buffer = frame.LightColors->vkHandle();
-        Barriers[0].size = frame.LightColors->Size();
-        Barriers[1].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-        Barriers[2].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        Barriers[2].buffer = frame.LightPositions->vkHandle();
-        Barriers[2].size = frame.LightPositions->Size();
-        frame.LightPositions->CopyToMapped(Lights.Positions.data(), sizeof(glm::vec4) * Lights.Positions.size(), 0);
-        frame.LightColors->CopyToMapped(Lights.Colors.data(), sizeof(glm::u8vec4) * Lights.Colors.size(), 0);
+        Barriers[0].buffer = frame.LightPositions->vkHandle();
+        Barriers[0].size = frame.LightPositions->Size();
+        
 
         auto& cmd = frame.ComputeCmd.Cmd;
         constexpr VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr };
         vkBeginCommandBuffer(cmd, &begin_info);
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 2, Barriers, 0, nullptr);
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, Barriers, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("LightGrids")]);
             VkDescriptorSet compute_sets[2]{ frame.descriptor->vkHandle(), texelBufferSet->vkHandle() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputeLayout->vkHandle(), 0, 2, compute_sets, 0, nullptr);

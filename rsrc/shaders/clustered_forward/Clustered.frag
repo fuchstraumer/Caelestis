@@ -118,7 +118,7 @@ void main() {
     vec3 F0 = vec3(0.04f);
     F0 = mix(F0, albedo, metallic);
 
-    vec3 view_pos = (UBO.view * vPosition).xyz;
+    vec3 view_pos = (UBO.view * vec4(vPosition.xyz,1.0f)).xyz;
     uvec3 grid_coord = uvec3(viewPosToGrid(gl_FragCoord.xy, view_pos.z));
     int grid_idx = int(CoordToIdx(grid_coord.x, grid_coord.y, grid_coord.z));
 
@@ -130,9 +130,6 @@ void main() {
         for (uint i = 0; i < light_count; ++i) {
             int light_idx = int(imageLoad(lightList, int(offset + i).r));
             vec4 light_pos_range = imageLoad(positionRanges, light_idx);
-            if (light_pos_range.w == 0.0f) {
-                continue;
-            }
             float dist = distance(light_pos_range.xyz, vPosition.xyz);
             if (dist < light_pos_range.w) {
                 const vec3 light_color = imageLoad(lightColors, light_idx).rgb;
@@ -161,6 +158,6 @@ void main() {
 
     color = color / (color + vec3(1.0f));
     color = pow(color, vec3(1.0f / 2.20f));
-
-    fragColor = vec4(color, Material.alpha);
+    float fresnel = max(0.0f, 0.02f + (1.0f - 0.02f) * pow(1.0f - max(dot(view_dir,world_normal),0.0f),5.0f));
+    fragColor = vec4(color, Material.alpha + (1.0f - Material.alpha) * fresnel);
 }
