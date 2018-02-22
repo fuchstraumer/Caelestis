@@ -405,7 +405,9 @@ namespace vpsk {
     }
 
     glm::mat4 BaseScene::GetProjectionMatrix() const noexcept {
-        return camera.GetProjection();
+        glm::mat4 result = camera.GetProjection();
+        result[1][1] *= -1.0f;
+        return result;
     }
 
     const glm::vec3 & BaseScene::GetCameraPosition() const noexcept {
