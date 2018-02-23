@@ -415,6 +415,8 @@ namespace vpsk {
     glm::mat4 BaseScene::GetProjectionMatrix() const noexcept {
         glm::mat4 result = camera.GetProjection();
         result[1][1] *= -1.0f;
+        result[2][2] *= 0.50f;
+        result[3][2] *= 0.50f;
         return result;
     }
 
