@@ -108,7 +108,7 @@ void main() {
     vec3 normal_sample = texture(normalMap, vUV).rgb * vec3(2.0f) - vec3(1.0f);
     vec3 world_normal = mat3(UBO.normal) * normal_sample;
 
-    const float metallic = texture(metallicMap, vUV).r * Material.metallic;
+    const float metallic = texture(metallicMap, vUV).r;
     const float roughness = texture(roughnessMap, vUV).r;
     const vec3 albedo = texture(diffuseMap, vUV).rgb;
     const float ao = 1.0f;

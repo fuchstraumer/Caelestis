@@ -58,7 +58,7 @@ namespace vpsk {
     } ProgramState;
 
     struct lights_soa_t {
-        void update() {
+        void update(const AABB& bounds) {
 
             const auto set_from_vec = [](const glm::vec4& v) {
                 glm::vec3 el(0.0f);
@@ -87,6 +87,7 @@ namespace vpsk {
                 el.z += 0.001f;
                 el.y = restrict_phi(el.y);
                 auto v = get_vec(el);
+                
                 Positions[i].x = v.x;
                 Positions[i].y = v.y;
                 Positions[i].z = v.z;
@@ -687,7 +688,6 @@ namespace vpsk {
             acquireBackBuffer();
             recordCommands();
             presentBackBuffer();
-
             first_frame = false;
         }
     }

@@ -65,20 +65,21 @@ namespace vpsk {
         std::unordered_map<std::string, material_ubo_data_t> materialUboData;
         std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> materialBuffers;
         std::unordered_map<std::string, std::unique_ptr<vpr::Texture<vpr::texture_2d_t>>> stbTextures;
+        std::unordered_map<std::string, std::unique_ptr<vpr::Texture<gli::texture2d>>> gliTextures;
         struct material_texture_data_t {
-            decltype(stbTextures)::const_iterator Ambient;
-            decltype(stbTextures)::const_iterator Diffuse;
-            decltype(stbTextures)::const_iterator Specular;
-            decltype(stbTextures)::const_iterator SpecularHighlight;
-            decltype(stbTextures)::const_iterator Bump;
-            decltype(stbTextures)::const_iterator Displacement;
-            decltype(stbTextures)::const_iterator Alpha;
-            decltype(stbTextures)::const_iterator Reflection;
-            decltype(stbTextures)::const_iterator Roughness;
-            decltype(stbTextures)::const_iterator Metallic;
-            decltype(stbTextures)::const_iterator Sheen;
-            decltype(stbTextures)::const_iterator Emissive;
-            decltype(stbTextures)::const_iterator Normal;
+            decltype(gliTextures)::const_iterator Ambient;
+            decltype(gliTextures)::const_iterator Diffuse;
+            decltype(gliTextures)::const_iterator Specular;
+            decltype(gliTextures)::const_iterator SpecularHighlight;
+            decltype(gliTextures)::const_iterator Bump;
+            decltype(gliTextures)::const_iterator Displacement;
+            decltype(gliTextures)::const_iterator Alpha;
+            decltype(gliTextures)::const_iterator Reflection;
+            decltype(gliTextures)::const_iterator Roughness;
+            decltype(gliTextures)::const_iterator Metallic;
+            decltype(gliTextures)::const_iterator Sheen;
+            decltype(gliTextures)::const_iterator Emissive;
+            decltype(gliTextures)::const_iterator Normal;
 
         };
         std::unordered_map<std::string, material_texture_data_t> materialTextures;
