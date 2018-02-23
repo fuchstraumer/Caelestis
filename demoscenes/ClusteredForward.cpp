@@ -156,7 +156,7 @@ namespace vpsk {
         const float base_range = powf(light_vol, 1.0f / 3.0f);
         const float max_range = base_range * 3.0f;
         const float min_range = base_range / 1.5f;
-        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.20f;
+        const glm::vec3 half_size = (model_bounds.Max() - model_bounds.Min()) * 0.50f;
         const float pos_radius = std::max(half_size.x, std::max(half_size.y, half_size.z));
         Lights.Positions.reserve(ProgramState.MaxLights);
         Lights.Colors.reserve(ProgramState.MaxLights);
