@@ -28,19 +28,15 @@ layout (set = 1, binding = 2, r32ui) uniform uimageBuffer gridLightCounts;
 layout (set = 1, binding = 3, r32ui) uniform uimageBuffer gridLightCountTotal;
 layout (set = 1, binding = 4, r32ui) uniform uimageBuffer gridLightCountOffsets;
 
-uint CoordToIdx(uint i, uint j, uint k) {
-    return TileCountX * TileCountY * k + TileCountX * j + i;
-}
-
 void main() {
     if (gl_GlobalInvocationID.z < TileCountZ && gl_GlobalInvocationID.y < TileCountY && gl_GlobalInvocationID.x < TileCountX) {
-        uint idx = CoordToIdx(gl_GlobalInvocationID.z, gl_GlobalInvocationID.y, gl_GlobalInvocationID.x); 
+        int idx = int(gl_GlobalInvocationID.z * TileCountX * TileCountY + gl_GlobalInvocationID.y * TileCountX + gl_GlobalInvocationID.x);
         // Get quantity of lights active in this tile
-        uint count = imageLoad(gridLightCounts, int(idx)).r;
+        uint count = imageLoad(gridLightCounts, idx).r;
         if (count > 0) {
             // Returned value is total light count up to this point
             uint offset = imageAtomicAdd(gridLightCountTotal, 0, count);
-            imageStore(gridLightCountOffsets, int(idx), uvec4(offset, 0, 0, 0));
+            imageStore(gridLightCountOffsets, idx, uvec4(offset, 0, 0, 0));
         }
     }
 }

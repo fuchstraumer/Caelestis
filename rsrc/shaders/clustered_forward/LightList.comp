@@ -31,11 +31,11 @@ layout (set = 1, binding = 5, r32ui) uniform uimageBuffer lightList;
 layout (set = 1, binding = 6, r32ui) uniform uimageBuffer gridLightCountsCompare;
 
 int CoordToIdx(uint i, uint j, uint k) {
-    return int(TileCountX * TileCountY * int(k) + TileCountX * int(j) + int(i));
+    return int(TileCountX * TileCountY * k + TileCountX * j + i);
 }
 
 void main() {
-    const uint light_idx = gl_GlobalInvocationID.x;
+    uint light_idx = gl_GlobalInvocationID.x;
 
     if (light_idx < UBO.numLights) {
         vec4 posRangeIn = imageLoad(positionRanges, int(light_idx));

@@ -34,12 +34,12 @@ uvec3 viewPosToGrid(vec2 frag_pos, float view_z) {
     return uvec3(c);
 }
 
-int CoordToIdx(uvec3 c) {
-    return int(TileCountX * TileCountY * c.z + TileCountX * c.y + c.x);
+uint CoordToIdx(uvec3 c) {
+    return TileCountX * TileCountY * c.z + TileCountX * c.y + c.x;
 }
 
 void main() {
     vec4 vpos = UBO.view * vPosition;
-    int idx = CoordToIdx(viewPosToGrid(gl_FragCoord.xy, vpos.z));
+    uint idx = CoordToIdx(viewPosToGrid(gl_FragCoord.xy, vpos.z));
     imageStore(Flags, int(idx), uvec4(1,0,0,0));
 }

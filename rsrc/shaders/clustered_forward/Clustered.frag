@@ -115,6 +115,11 @@ void main() {
 
     vec3 view_dir = normalize(UBO.viewPosition.xyz - vPosition.xyz);
 
+    if (Material.alpha < 1.0f && dot(view_dir, world_normal) < 0.0f) {
+        fragColor = vec4(0.0f);
+        return;
+    }
+
     vec3 F0 = vec3(0.04f);
     F0 = mix(F0, albedo, metallic);
 

@@ -29,7 +29,7 @@ layout (set = 1, binding = 1, r32ui) uniform uimageBuffer lightBounds;
 layout (set = 1, binding = 2, r32ui) uniform uimageBuffer lightCounts;
 
 int CoordToIdx(uint i, uint j, uint k) {
-    return int(TileCountX * TileCountY * int(k) + TileCountX * int(j) + int(i));
+    return int(TileCountX * TileCountY * k + TileCountX * j + i);
 }
 
 vec3 getViewSpacePos(vec3 pos_in) {
