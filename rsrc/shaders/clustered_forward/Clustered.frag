@@ -139,17 +139,18 @@ void main() {
             if (dist < light_pos_range.w) {
                 const vec3 light_color = imageLoad(lightColors, light_idx).rgb;
                 const vec3 l = normalize(light_pos_range.xyz - vPosition.xyz);
-                const vec3 h = normalize(0.5f * (view_dir + l));
+                const vec3 h = normalize(view_dir + l);
                 float atten = max(1.0f - max(0.0f, dist / light_pos_range.w), 0.0f);
                 vec3 radiance = light_color * atten;
                 
                 float ndf = DistributionGGX(world_normal, h, roughness);
                 float G = GeometrySmith(world_normal, view_dir, l, roughness);
                 vec3 F = fresnelSchlick(max(dot(h, view_dir), 0.0f), F0);
+
                 vec3 kd = vec3(1.0f) - F;
                 kd *= 1.0f - metallic;
 
-                float denom = 3.0f * max(dot(world_normal, view_dir), 0.0f) * max(dot(world_normal, l), 0.0f);
+                float denom = 4.0f * max(dot(world_normal, view_dir), 0.0f) * max(dot(world_normal, l), 0.0f);
                 vec3 specular = (ndf * G * F) / max(denom, 0.001f);
 
                 float ndotl = max(dot(world_normal, l), 0.0f);
@@ -158,11 +159,11 @@ void main() {
         }
     }
 
-    vec3 ambient = 0.4f * albedo * Material.ambient.rgb;
+    vec3 ambient = 0.2f * albedo * Material.ambient.rgb;
     vec3 color = ambient + lighting;
 
     color = color / (color + vec3(1.0f));
     color = pow(color, vec3(1.0f / 2.20f));
     float fresnel = max(0.0f, 0.02f + (1.0f - 0.02f) * pow(1.0f - max(dot(view_dir,world_normal),0.0f),5.0f));
-    fragColor = vec4(color, Material.alpha + (1.0f - Material.alpha) * fresnel);
+    fragColor = vec4(color, (1.0f - Material.alpha) * fresnel);
 }

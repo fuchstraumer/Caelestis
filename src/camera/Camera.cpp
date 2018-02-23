@@ -36,7 +36,7 @@ namespace vpsk {
     }
 
     glm::vec3 Camera::GetRightVector() const noexcept {
-        static const glm::vec3 right{ 1.0f, 0.0f, 0.0f };
+        static const glm::vec3 right{ -1.0f, 0.0f, 0.0f };
         return glm::vec3{ glm::conjugate(rotation) * right };
     }
 
@@ -106,7 +106,7 @@ namespace vpsk {
     }
 
     glm::quat look_at(const glm::vec3& dir, const glm::vec3& up) {
-        static const glm::vec3 z{ 0.0f, 0.0f,-1.0f };
+        static const glm::vec3 z{ 0.0f, 0.0f, 1.0f };
         static const glm::vec3 y{ 0.0f, 1.0f, 0.0f };
         const glm::vec3 norm_dir = glm::normalize(dir);
         const glm::vec3 right = glm::cross(norm_dir, up);

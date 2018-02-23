@@ -661,11 +661,13 @@ namespace vpsk {
         offscreenScissor.extent.height = swapchain->Extent().height;
         const glm::vec3 eye = sponza->GetAABB().Center() + glm::vec3(0.0f, 50.0f, 50.0f);
         SetCameraPosition(eye);
+        camera.SetFOV(75.0f);
+        camera.SetDepthRange(0.1f, 3000.0f);
         GlobalUBO.view = GetViewMatrix();
         GlobalUBO.model = sponza->GetModelMatrix();
         GlobalUBO.normal = glm::transpose(glm::inverse(GlobalUBO.model));
-        camera.SetFOV(75.0f);
-        camera.SetDepthRange(0.25f, 4000.0f);
+        
+        
 
         Buffer::DestroyStagingResources(device.get());
         static bool first_frame = true;
@@ -818,8 +820,6 @@ namespace vpsk {
     }
 
     void ClusteredForward::recordOnscreenPass(frame_data_t& frame) {
-
-        Particles->update();
 
         if (!frame.RenderCmd.firstFrame) {
             vkResetCommandBuffer(frame.RenderCmd.Cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
