@@ -1,4 +1,5 @@
-#include "resources/hpp"
+#include "resources/LightBuffers.hpp"
+#include "core/LogicalDevice.hpp"
 #include "resource/Buffer.hpp"
 
 namespace vpsk {
@@ -26,10 +27,10 @@ namespace vpsk {
         return *this;
     }
 
-    void LightBuffers::CreateBuffers(const VkDeviceSize max_grid_count, const VkDeviceSize max_lights) {
+    void LightBuffers::CreateBuffers(const uint32_t max_grid_count, const uint32_t max_lights) {
         constexpr static auto mem_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         uint32_t indices[2]{ 0, 0 };
-        VkBufferCreateInfo buffer_info = vk_buffer_create_info_base;
+        VkBufferCreateInfo buffer_info = vpr::vk_buffer_create_info_base;
 
         if (device->QueueFamilyIndices.Graphics != device->QueueFamilyIndices.Compute) {
             buffer_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -46,37 +47,37 @@ namespace vpsk {
 
         buffer_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-        Flags = std::make_unique<Buffer>(device.get());
+        Flags = std::make_unique<vpr::Buffer>(device);
         buffer_info.size = max_grid_count * sizeof(uint8_t);
         Flags->CreateBuffer(buffer_info, mem_flags);
         Flags->CreateView(VK_FORMAT_R8_UINT, Flags->Size(), 0);
 
-        Bounds = std::make_unique<Buffer>(device.get());
-        buffer_info.size = ProgramState.MaxLights * 6 * sizeof(uint32_t);
+        Bounds = std::make_unique<vpr::Buffer>(device);
+        buffer_info.size = max_lights * 6 * sizeof(uint32_t);
         Bounds->CreateBuffer(buffer_info, mem_flags);
         Bounds->CreateView(VK_FORMAT_R32_UINT, Bounds->Size(), 0);
 
-        LightCounts = std::make_unique<Buffer>(device.get());
+        LightCounts = std::make_unique<vpr::Buffer>(device);
         buffer_info.size = max_grid_count * sizeof(uint32_t);
         LightCounts->CreateBuffer(buffer_info, mem_flags);
         LightCounts->CreateView(VK_FORMAT_R32_UINT, LightCounts->Size(), 0);
 
-        LightCountTotal = std::make_unique<Buffer>(device.get());
+        LightCountTotal = std::make_unique<vpr::Buffer>(device);
         buffer_info.size = sizeof(uint32_t);
         LightCountTotal->CreateBuffer(buffer_info, mem_flags);
         LightCountTotal->CreateView(VK_FORMAT_R32_UINT, LightCountTotal->Size(), 0);
 
-        LightCountOffsets = std::make_unique<Buffer>(device.get());
+        LightCountOffsets = std::make_unique<vpr::Buffer>(device);
         buffer_info.size = max_grid_count * sizeof(uint32_t);
         LightCountOffsets->CreateBuffer(buffer_info, mem_flags);
         LightCountOffsets->CreateView(VK_FORMAT_R32_UINT, LightCountOffsets->Size(), 0);
 
-        LightList = std::make_unique<Buffer>(device.get());
+        LightList = std::make_unique<vpr::Buffer>(device);
         buffer_info.size = 1024 * 1024 * sizeof(uint32_t);
         LightList->CreateBuffer(buffer_info, mem_flags);
         LightList->CreateView(VK_FORMAT_R32_UINT, LightList->Size(), 0);
 
-        LightCountsCompare = std::make_unique<Buffer>(device.get());
+        LightCountsCompare = std::make_unique<vpr::Buffer>(device);
         buffer_info.size = max_grid_count * sizeof(uint32_t);
         LightCountsCompare->CreateBuffer(buffer_info, mem_flags);
         LightCountsCompare->CreateView(VK_FORMAT_R32_UINT, LightCountsCompare->Size(), 0);

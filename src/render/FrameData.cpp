@@ -24,10 +24,11 @@ namespace vpsk {
         }
     }
 
-    FrameData & FrameData::AddCommandBlock(const std::string & name, VkCommandBuffer cmd) {
+    FrameData & FrameData::AddCommandBlock(const std::string & name, VkCommandBuffer cmd, const VkFenceCreateInfo& fence_info) {
         VkFence fence = VK_NULL_HANDLE;
-        vkCreateFence(device->vkHandle(), &vpr::vk_fence_create_info_base, nullptr, &fence);
+        vkCreateFence(device->vkHandle(), &fence_info, nullptr, &fence);
         cmdBlocks.emplace(name, cmd_buffer_block_t{ cmd, fence, true });
+        return *this;
     }
 
     cmd_buffer_block_t & FrameData::GetCommandBlock(const std::string & name) {

@@ -17,7 +17,7 @@ namespace vpsk {
         LightBuffers& operator=(LightBuffers&& other) noexcept;
         ~LightBuffers();
 
-        void CreateBuffers(const VkDeviceSize max_grid_count, const VkDeviceSize max_lights);
+        void CreateBuffers(const uint32_t max_grid_count, const uint32_t max_lights);
         void ClearBuffers(const VkCommandBuffer& cmd);
         void Destroy();
 

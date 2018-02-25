@@ -25,7 +25,7 @@ namespace vpsk {
         FrameData& operator=(FrameData&& other) noexcept;
         ~FrameData();
 
-        FrameData& AddCommandBlock(const std::string& name, VkCommandBuffer cmd);
+        FrameData& AddCommandBlock(const std::string& name, VkCommandBuffer cmd, const VkFenceCreateInfo& fence_info);
         cmd_buffer_block_t& GetCommandBlock(const std::string& name);
 
     private:

@@ -7,7 +7,7 @@ namespace vpsk {
         device(dvc), swapchain(swap) {
 
         for (const auto& name : names) {
-            semaphores.emplace(name, VK_NULL_HANDLE);
+            semaphores.emplace(name, VkSemaphore(VK_NULL_HANDLE));
             VkResult result = vkCreateSemaphore(device->vkHandle(), &vpr::vk_semaphore_create_info_base, nullptr, &semaphores.at(name));
             VkAssert(result);
         }
@@ -40,6 +40,10 @@ namespace vpsk {
 
     const uint32_t& BackBuffer::GetImageIdx() const noexcept {
         return imageIdx;
+    }
+
+    uint32_t * BackBuffer::GetImageIdxPtr() {
+        return &imageIdx;
     }
 
 }

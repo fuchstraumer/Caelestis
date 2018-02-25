@@ -20,6 +20,7 @@ namespace vpsk {
 
         const VkSemaphore& GetSemaphore(const std::string& name) const;
         const uint32_t& GetImageIdx() const noexcept;
+        uint32_t* GetImageIdxPtr();
 
     private:
         VkSwapchainKHR swapchain;
