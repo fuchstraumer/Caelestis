@@ -4,7 +4,7 @@
 #include "ForwardDecl.hpp"
 #include <memory>
 #include <vulkan/vulkan.h>
-#include <map>
+#include <unordered_map>
 #include <string>
 
 namespace vpsk {
@@ -30,7 +30,7 @@ namespace vpsk {
 
     private:
         const vpr::Device* device;
-        std::map<std::string, cmd_buffer_block_t> cmdBlocks;
+        std::unordered_map<std::string, cmd_buffer_block_t> cmdBlocks;
     };
 
 }
