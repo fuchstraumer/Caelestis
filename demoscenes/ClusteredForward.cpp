@@ -300,8 +300,6 @@ namespace vpsk {
 
         void createDescriptorPool();
         void createFrameDataSetLayout();
-        void createTexelBufferSetLayout();
-        void createTexelBufferDescriptorSet();
 
         void createFrameData();
         void createBackbuffers();
@@ -331,13 +329,10 @@ namespace vpsk {
         clustered_forward_pipelines_t Pipelines;
         std::unique_ptr<DescriptorPool> descriptorPool;
         std::unique_ptr<DescriptorSetLayout> frameDataLayout;
-        std::unique_ptr<DescriptorSetLayout> texelBuffersLayout;
         std::unique_ptr<CommandPool> primaryPool;
         std::unique_ptr<CommandPool> computePool;
         std::unique_ptr<Image> offscreenRenderTarget;
         std::unique_ptr<Framebuffer> offscreenFramebuffer;
-
-        std::unique_ptr<DescriptorSet> texelBufferSet;
 
         std::unique_ptr<Renderpass> onscreenPass;
         VkSubpassDescription onscreenSbDescr;
@@ -400,15 +395,13 @@ namespace vpsk {
         createBackbuffers();
         createShaders();
         createUBO();
+        createDescriptorPool();
         createLightBuffers();
         createVulkanLightData();
-        createDescriptorPool();
         createComputeCmdPool();
         createPrimaryCmdPool();
         createFrameData();
         createFrameDataSetLayout();
-        createTexelBufferSetLayout();
-        createTexelBufferDescriptorSet();
         createComputePass();
         createOnscreenPass();
         createDepthPipeline();
@@ -430,10 +423,7 @@ namespace vpsk {
         offscreenFramebuffer.reset();
         offscreenRenderTarget.reset();
         Pipelines.destroy(device.get());
-        texelBufferSet.reset();
-        texelBuffersLayout.reset();
         frameDataLayout.reset();
-
         primaryPool.reset();
         computePool.reset();
         descriptorPool.reset();
@@ -553,7 +543,7 @@ namespace vpsk {
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Depth.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.Depth.Layout->vkHandle(), true, false, 0 });
         vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
-            const VkDescriptorSet descriptors[2]{ frameDescriptor->vkHandle(), texelBufferSet->vkHandle() };
+            const VkDescriptorSet descriptors[2]{ frameDescriptor->vkHandle(), lightData->GetDescriptor() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Layout->vkHandle(), 0, 2, descriptors, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.LightingOpaque.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.LightingOpaque.Layout->vkHandle(), true, false, 2 });
@@ -599,7 +589,7 @@ namespace vpsk {
         vkBeginCommandBuffer(cmd, &begin_info);
             vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, Barriers, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputePipelines.Handles[NameIdxMap.at("LightGrids")]);
-            VkDescriptorSet compute_sets[2]{ frameDescriptor->vkHandle(), texelBufferSet->vkHandle() };
+            VkDescriptorSet compute_sets[2]{ frameDescriptor->vkHandle(), lightData->GetDescriptor() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines.ComputeLayout->vkHandle(), 0, 2, compute_sets, 0, nullptr);
             vkCmdDispatch(cmd, (ProgramState.NumLights - 1) / 32 + 1, 1, 1);
             Barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; Barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -647,7 +637,7 @@ namespace vpsk {
             vkCmdBeginRenderPass(cmd, &onscreenPass->BeginInfo(), VK_SUBPASS_CONTENTS_INLINE);
             vkCmdSetViewport(cmd, 0, 1, &offscreenViewport);
             vkCmdSetScissor(cmd, 0, 1, &offscreenScissor);
-            const VkDescriptorSet first_two_sets[2]{ texelBufferSet->vkHandle(), frameDescriptor->vkHandle() };
+            const VkDescriptorSet first_two_sets[2]{ lightData->GetDescriptor(), frameDescriptor->vkHandle() };
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Layout->vkHandle(), 0, 2, first_two_sets, 0, nullptr);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines.Opaque.Pipeline->vkHandle());
             sponza->Render(DrawInfo{ cmd, Pipelines.Opaque.Layout->vkHandle(), true, true, 2 });
@@ -744,6 +734,7 @@ namespace vpsk {
         lightData = std::make_unique<LightBuffers>(device.get());
         const uint32_t grid_size = ProgramState.TileCountX * ProgramState.TileCountY * ProgramState.TileCountZ;
         lightData->CreateBuffers(grid_size, ProgramState.MaxLights);
+        lightData->CreateDescriptors(descriptorPool.get());
     }
 
 
@@ -795,7 +786,7 @@ namespace vpsk {
     void ClusteredForward::createLightingPipelines() {
 
         Pipelines.LightingOpaque.Layout = std::make_unique<PipelineLayout>(device.get());
-        const VkDescriptorSetLayout layouts[2]{ frameDataLayout->vkHandle(), texelBuffersLayout->vkHandle() };
+        const VkDescriptorSetLayout layouts[2]{ frameDataLayout->vkHandle(), lightData->GetLayout() };
         Pipelines.LightingOpaque.Layout->Create(layouts, 2);
 
         GraphicsPipelineInfo PipelineInfo;
@@ -843,7 +834,7 @@ namespace vpsk {
     void ClusteredForward::createMainPipelines() {
 
         Pipelines.Opaque.Layout = std::make_unique<PipelineLayout>(device.get());
-        const VkDescriptorSetLayout set_layouts[3]{ texelBuffersLayout->vkHandle(), frameDataLayout->vkHandle(), sponza->GetMaterialSetLayout() };
+        const VkDescriptorSetLayout set_layouts[3]{ lightData->GetLayout(), frameDataLayout->vkHandle(), sponza->GetMaterialSetLayout() };
         Pipelines.Opaque.Layout->Create(set_layouts, 3);
 
         const uint16_t hash_id = static_cast<uint16_t>(std::hash<std::string>()("main-pipeline"));
@@ -945,7 +936,7 @@ namespace vpsk {
     void ClusteredForward::createComputePipelines() {
         Pipelines.ComputePipelines.Infos.fill(VkComputePipelineCreateInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr, 0, VkPipelineShaderStageCreateInfo{}, VK_NULL_HANDLE, VK_NULL_HANDLE, -1 });
         Pipelines.ComputeLayout = std::make_unique<PipelineLayout>(device.get());
-        const VkDescriptorSetLayout layouts[2]{ frameDataLayout->vkHandle(), texelBuffersLayout->vkHandle() };
+        const VkDescriptorSetLayout layouts[2]{ frameDataLayout->vkHandle(), lightData->GetLayout() };
         Pipelines.ComputeLayout->Create(layouts, 2);
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("LightGrids")].layout = Pipelines.ComputeLayout->vkHandle();
         Pipelines.ComputePipelines.Infos[NameIdxMap.at("GridOffsets")].layout = Pipelines.ComputeLayout->vkHandle();
@@ -987,31 +978,6 @@ namespace vpsk {
         frameDescriptor->AddDescriptorInfo(LightColors->GetDescriptor(), LightColors->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 2);
         frameDescriptor->Init(descriptorPool.get(), frameDataLayout.get());
 
-    }
-
-    void ClusteredForward::createTexelBufferSetLayout() {
-        texelBuffersLayout = std::make_unique<DescriptorSetLayout>(device.get());
-        constexpr static VkShaderStageFlags vfc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-        constexpr static VkShaderStageFlags fc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 0);
-        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 1);
-        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 2);
-        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 3);
-        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 4);
-        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 5);
-        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 6);
-    }
-
-    void ClusteredForward::createTexelBufferDescriptorSet() {
-        texelBufferSet = std::make_unique<DescriptorSet>(device.get());
-        texelBufferSet->AddDescriptorInfo(lightData->Flags->GetDescriptor(), lightData->Flags->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 0);
-        texelBufferSet->AddDescriptorInfo(lightData->Bounds->GetDescriptor(), lightData->Bounds->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1);
-        texelBufferSet->AddDescriptorInfo(lightData->LightCounts->GetDescriptor(), lightData->LightCounts->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 2);
-        texelBufferSet->AddDescriptorInfo(lightData->LightCountTotal->GetDescriptor(), lightData->LightCountTotal->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 3);
-        texelBufferSet->AddDescriptorInfo(lightData->LightCountOffsets->GetDescriptor(), lightData->LightCountOffsets->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 4);
-        texelBufferSet->AddDescriptorInfo(lightData->LightList->GetDescriptor(), lightData->LightList->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 5);
-        texelBufferSet->AddDescriptorInfo(lightData->LightCountsCompare->GetDescriptor(), lightData->LightCountsCompare->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 6);
-        texelBufferSet->Init(descriptorPool.get(), texelBuffersLayout.get());
     }
 
     void ClusteredForward::createComputeCmdPool() {

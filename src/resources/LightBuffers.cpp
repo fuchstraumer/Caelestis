@@ -1,6 +1,8 @@
 #include "resources/LightBuffers.hpp"
 #include "core/LogicalDevice.hpp"
 #include "resource/Buffer.hpp"
+#include "resource/DescriptorSet.hpp" 
+#include "resource/DescriptorSetLayout.hpp"
 
 namespace vpsk {
 
@@ -13,7 +15,8 @@ namespace vpsk {
     LightBuffers::LightBuffers(LightBuffers&& other) noexcept : Flags(std::move(other.Flags)), Bounds(std::move(other.Bounds)),
         LightCounts(std::move(other.LightCounts)), LightCountTotal(std::move(other.LightCountTotal)),
         LightCountOffsets(std::move(other.LightCountOffsets)), LightList(std::move(other.LightList)),
-        LightCountsCompare(std::move(other.LightCountsCompare)), device(std::move(other.device)) {}
+        LightCountsCompare(std::move(other.LightCountsCompare)), device(std::move(other.device)),
+        texelBufferSet(std::move(other.texelBufferSet)), texelBuffersLayout(std::move(other.texelBuffersLayout)) {}
 
     LightBuffers& LightBuffers::operator=(LightBuffers&& other) noexcept {
         Flags = std::move(other.Flags);
@@ -24,6 +27,8 @@ namespace vpsk {
         LightList = std::move(other.LightList);
         LightCountsCompare = std::move(other.LightCountsCompare);
         device = std::move(other.device);
+        texelBuffersLayout = std::move(other.texelBuffersLayout);
+        texelBufferSet = std::move(other.texelBufferSet);
         return *this;
     }
 
@@ -83,6 +88,11 @@ namespace vpsk {
         LightCountsCompare->CreateView(VK_FORMAT_R32_UINT, LightCountsCompare->Size(), 0);
     }
 
+    void LightBuffers::CreateDescriptors(vpr::DescriptorPool * pool) {
+        createSetLayout();
+        createDescriptorSet(pool);
+    }
+
     void LightBuffers::ClearBuffers(const VkCommandBuffer& cmd) {
         std::vector<VkBufferMemoryBarrier> transfer_barriers{ 4, VkBufferMemoryBarrier{
             VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr,
@@ -120,5 +130,40 @@ namespace vpsk {
         LightCountOffsets.reset();
         LightList.reset();
         LightCountsCompare.reset();
+        texelBufferSet.reset();
+        texelBuffersLayout.reset();
+    }
+
+    const VkDescriptorSet & LightBuffers::GetDescriptor() const noexcept {
+        return texelBufferSet->vkHandle();
+    }
+
+    const VkDescriptorSetLayout & LightBuffers::GetLayout() const noexcept {
+        return texelBuffersLayout->vkHandle();
+    }
+
+    void LightBuffers::createSetLayout() {
+        texelBuffersLayout = std::make_unique<vpr::DescriptorSetLayout>(device);
+        constexpr static VkShaderStageFlags vfc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+        constexpr static VkShaderStageFlags fc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 0);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 1);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 2);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 3);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 4);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 5);
+        texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 6);
+    }
+
+    void LightBuffers::createDescriptorSet(vpr::DescriptorPool * pool) {
+        texelBufferSet = std::make_unique<vpr::DescriptorSet>(device);
+        texelBufferSet->AddDescriptorInfo(Flags->GetDescriptor(), Flags->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 0);
+        texelBufferSet->AddDescriptorInfo(Bounds->GetDescriptor(), Bounds->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1);
+        texelBufferSet->AddDescriptorInfo(LightCounts->GetDescriptor(), LightCounts->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 2);
+        texelBufferSet->AddDescriptorInfo(LightCountTotal->GetDescriptor(), LightCountTotal->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 3);
+        texelBufferSet->AddDescriptorInfo(LightCountOffsets->GetDescriptor(), LightCountOffsets->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 4);
+        texelBufferSet->AddDescriptorInfo(LightList->GetDescriptor(), LightList->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 5);
+        texelBufferSet->AddDescriptorInfo(LightCountsCompare->GetDescriptor(), LightCountsCompare->View(), VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 6);
+        texelBufferSet->Init(pool, texelBuffersLayout.get());
     }
 }
