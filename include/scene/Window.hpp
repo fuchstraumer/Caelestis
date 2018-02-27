@@ -40,11 +40,11 @@ namespace vpsk {
         std::unique_ptr<input_handler> InputHandler;
     private:
 
-        void createWindow(const std::string& app_name, const bool& fullscreen);
+        void createWindow(const std::string& app_name);
         void createInputHandler();    
         GLFWwindow* window;
         uint32_t width, height;
-
+        bool fullscreen;
     };
 }
 
