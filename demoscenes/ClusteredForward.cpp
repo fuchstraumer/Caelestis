@@ -263,6 +263,7 @@ namespace vpsk {
         void UpdateUBO();
 
         ClusteredForward(const std::string& obj_file);
+        ~ClusteredForward();
         void create();
         void destroy();
         void RecordCommands() final;
@@ -382,6 +383,10 @@ namespace vpsk {
         create();
     }
 
+    ClusteredForward::~ClusteredForward() {
+        destroy();
+    }
+
     void ClusteredForward::create() {
         ProgramState.TileCountX = (ProgramState.ResolutionX - 1) / ProgramState.TileWidth + 1;
         ProgramState.TileCountY = (ProgramState.ResolutionY - 1) / ProgramState.TileHeight + 1;
@@ -431,7 +436,6 @@ namespace vpsk {
         shaders.clear();
         sponza.reset();
         Backbuffers.clear();
-        msaa.reset();
         depthStencil.reset();
         computePass.reset();
         onscreenPass.reset();
