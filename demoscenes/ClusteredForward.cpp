@@ -372,8 +372,52 @@ namespace vpsk {
         constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
         std::vector<VkFramebuffer> framebuffers;
+
+        VkObjectTableNVX objectTable;
+        void createObjectTable();
         
     };
+
+    void ClusteredForward::createObjectTable() {
+
+        std::vector<VkObjectEntryTypeNVX> tableEntries;
+        std::vector<uint32_t> tableEntryCounts;
+        std::vector<VkObjectEntryUsageFlagsNVX> tableEntryFlags;
+
+        tableEntries.emplace_back(VK_OBJECT_ENTRY_PIPELINE_NVX);
+        tableEntryCounts.emplace_back(6);
+        tableEntryFlags.emplace_back(VK_OBJECT_ENTRY_USAGE_COMPUTE_BIT_NVX | VK_OBJECT_ENTRY_USAGE_GRAPHICS_BIT_NVX);
+
+        tableEntries.emplace_back(VK_OBJECT_ENTRY_VERTEX_BUFFER_NVX);
+        tableEntryCounts.emplace_back(2);
+        tableEntryFlags.emplace_back(VK_OBJECT_ENTRY_USAGE_GRAPHICS_BIT_NVX);
+
+        tableEntries.emplace_back(VK_OBJECT_ENTRY_INDEX_BUFFER_NVX);
+        tableEntryCounts.emplace_back(1);
+        tableEntryFlags.emplace_back(VK_OBJECT_ENTRY_USAGE_GRAPHICS_BIT_NVX);
+
+        tableEntries.emplace_back(VK_OBJECT_ENTRY_DESCRIPTOR_SET_NVX);
+        tableEntryCounts.emplace_back(24 + 3);
+        tableEntryCounts.emplace_back(VK_OBJECT_ENTRY_USAGE_COMPUTE_BIT_NVX | VK_OBJECT_ENTRY_USAGE_GRAPHICS_BIT_NVX);
+
+        const VkObjectTableCreateInfoNVX tableInfo{ 
+            VK_STRUCTURE_TYPE_OBJECT_TABLE_CREATE_INFO_NVX, 
+            nullptr, 
+            static_cast<uint32_t>(tableEntries.size()),
+            tableEntries.data(),
+            tableEntryCounts.data(),
+            tableEntryFlags.data(),
+            3,
+            0,
+            9,
+            6,
+            1 
+        };
+
+        VkResult result = vkCreateObjectTableNVX(device->vkHandle(), &tableInfo, nullptr, &objectTable);
+        VkAssert(result);
+        
+    }
 
     void ClusteredForward::UpdateUBO() {
         ubo->CopyToMapped(&GlobalUBO, sizeof(GlobalUBO), 0);
