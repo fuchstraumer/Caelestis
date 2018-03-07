@@ -379,7 +379,7 @@ namespace vpsk {
     };
 
     void ClusteredForward::createObjectTable() {
-
+        /*
         std::vector<VkObjectEntryTypeNVX> tableEntries;
         std::vector<uint32_t> tableEntryCounts;
         std::vector<VkObjectEntryUsageFlagsNVX> tableEntryFlags;
@@ -416,7 +416,7 @@ namespace vpsk {
 
         VkResult result = vkCreateObjectTableNVX(device->vkHandle(), &tableInfo, nullptr, &objectTable);
         VkAssert(result);
-        
+        */
     }
 
     void ClusteredForward::UpdateUBO() {
