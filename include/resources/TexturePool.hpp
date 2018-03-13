@@ -2,7 +2,7 @@
 #ifndef VPSK_TEXTURE_POOL_HPP
 #define VPSK_TEXTURE_POOL_HPP
 #include "ForwardDecl.hpp"
-#include "resource/Texture.hpp"
+#include "resources/Texture.hpp"
 #include "tinyobjloader/tiny_obj_loader.h"
 #include "gli/gli.hpp"
 #include <unordered_map>

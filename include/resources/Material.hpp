@@ -2,7 +2,7 @@
 #ifndef VULPESRENDER_MATERIALS_HPP
 #define VULPESRENDER_MATERIALS_HPP
 #include "ForwardDecl.hpp"
-#include "resource/Texture.hpp"
+#include "resources/Texture.hpp"
 #include <list>
 #include <memory>
 #include "glm/vec4.hpp"

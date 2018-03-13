@@ -3,14 +3,14 @@
 #define VULPESRENDER_ICOSPHERE_HPP
 
 #include "TriangleMesh.hpp"
-#include "resource/Texture.hpp"
+#include "resources/Texture.hpp"
 #include "resource/Buffer.hpp"
 #include "resource/ShaderModule.hpp"
 #include "resource/DescriptorSet.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/PipelineCache.hpp"
 #include "render/GraphicsPipeline.hpp"
-#include "resource/Texture.hpp"
+#include "resources/Texture.hpp"
 #include "resource/DescriptorSet.hpp"
 #include "vertex_t.hpp"
 

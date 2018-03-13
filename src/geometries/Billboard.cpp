@@ -1,5 +1,5 @@
 #include "geometries/Billboard.hpp"
-#include "resource/Texture.hpp"
+#include "resources/Texture.hpp"
 #include "resource/Buffer.hpp"
 #include "resource/ShaderModule.hpp"
 #include "resource/DescriptorSet.hpp"

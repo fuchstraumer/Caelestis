@@ -2,7 +2,7 @@
 #include "render/GraphicsPipeline.hpp"
 #include "resource/Buffer.hpp"
 #include "resource/ShaderModule.hpp"
-#include "resource/Texture.hpp"
+#include "resources/Texture.hpp"
 #include "resource/PipelineCache.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/DescriptorSet.hpp"
@@ -321,7 +321,7 @@ namespace vpsk {
         VkDeviceSize vtx_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
         VkDeviceSize idx_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
 
-        if (vbo->InitDataSize() != vtx_size) {
+        if (vbo->Size() != vtx_size) {
             
             if (vbo) {
                 vbo.reset();
@@ -331,7 +331,7 @@ namespace vpsk {
             vbo->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vtx_size);
         }
 
-        if (ebo->InitDataSize() != idx_size) {
+        if (ebo->Size() != idx_size) {
             
             if (ebo) {
                 ebo.reset();

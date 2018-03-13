@@ -5,7 +5,7 @@
 #include "imgui/imgui.h"
 #include "GLFW/glfw3.h"
 #include <array>
-#include "resource/Texture.hpp"
+#include "resources/Texture.hpp"
 #include "render/GraphicsPipeline.hpp"
 namespace vpsk {
 
