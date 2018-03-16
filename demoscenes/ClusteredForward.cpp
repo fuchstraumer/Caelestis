@@ -33,6 +33,12 @@
 #include <map>
 #include <random>
 #include <deque>
+#include <experimental/filesystem>
+
+#define SHADERGEN_DLL
+#include "Shader.hpp"
+#include "Compiler.hpp"
+#include "BindingGenerator.hpp"
 
 #include "util/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
@@ -1310,8 +1316,32 @@ namespace vpsk {
 int main(int argc, char* argv[]) {
     using namespace vpsk;
     using namespace vpr;
+    namespace fs = std::experimental::filesystem;
     BaseScene::SceneConfiguration.EnableMouseLocking = true;
     BaseScene::SceneConfiguration.MovementSpeed = 10.0f;
+
+    const std::map<VkShaderStageFlagBits, std::string> shader_files{
+
+    };
+
+    std::map<std::string, std::string> completed_shaders{
+
+    };
+
+    for (auto& fname : shader_files) {
+        sg::Shader shader(fname.first);
+        shader.AddIncludePath("../third_party/shadergen/fragments/volumetric_forward/");
+        shader.AddResources("../third_party/shadergen/fragments/volumetric_forward/Resources.glsl");
+        shader.AddBody(fname.second.c_str());
+        size_t sz = 0;
+        shader.GetFullSource(&sz, nullptr);
+        std::string src; src.resize(sz);
+        shader.GetFullSource(&sz, src.data());
+        completed_shaders.emplace(fs::path(fname.second.c_str()).filename().string(), src);
+    }
+
+    st::ShaderCompiler compiler;
+
     ClusteredForward fwd("../rsrc/crytekSponza/sponza.obj");
     fwd.RenderLoop();
     return 0;
