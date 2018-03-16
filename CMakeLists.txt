@@ -39,9 +39,13 @@ SOURCE_GROUP("feature" FILES ${FEATURES})
 SOURCE_GROUP("resources" FILES ${RESOURCES})
 
 FIND_PACKAGE(Vulkan REQUIRED)
+
 SET(TINYOBJLOADER_LIBRARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/")
 ADD_SUBDIRECTORY("third_party/tinyobjloader")
 ADD_SUBDIRECTORY("third_party/vulpesrender")
+ADD_SUBDIRECTORY("third_party/shadergen")
+ADD_SUBDIRECTORY("third_party/shadertools")
+
 ADD_LIBRARY(VulpesSceneKit STATIC ${RESOURCES} ${GEOMETRIES} ${FEATURES} ${PASSES} ${SHADER_TOOLS} ${RENDER} 
                                   ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS} 
                                   ${SHADERS})
@@ -58,6 +62,8 @@ ELSEIF(UNIX)
 ENDIF()
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadergen/include")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "$ENV{VULKAN_SDK}/include")
@@ -75,6 +81,7 @@ ADD_EXECUTABLE(ClusteredForward "demoscenes/ClusteredForward.cpp")
 TARGET_INCLUDE_DIRECTORIES(ClusteredForward PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
 "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
 TARGET_LINK_LIBRARIES(ClusteredForward PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
+TARGET_LINK_LIBRARIES(ClusteredForward PUBLIC ShaderGen ShaderTools)
 TARGET_COMPILE_DEFINITIONS(ClusteredForward PUBLIC -DGLM_LANG_STL11_FORCED)
 TARGET_COMPILE_DEFINITIONS(ClusteredForward PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
 
