@@ -35,8 +35,7 @@
 #include <deque>
 #include <experimental/filesystem>
 
-#define SHADERGEN_DLL
-#include "Shader.hpp"
+#include "ShaderGenerator.hpp"
 #include "Compiler.hpp"
 #include "BindingGenerator.hpp"
 
@@ -1203,8 +1202,57 @@ namespace vpsk {
         computePass->SetupBeginInfo(OffscreenClearValues.data(), OffscreenClearValues.size(), swapchain->Extent());
     }
 
-    void ClusteredForward::createShaders() {
+    static std::map<std::string, std::vector<uint32_t>> shaderBinaries;
+
+    void CompileAndAddShader(const std::string _fname) {
         const std::string prefix("../rsrc/shaders/clustered_forward/");
+        st::ShaderCompiler cmplr;
+        std::string fname(prefix + _fname);
+        cmplr.Compile(fname.c_str());
+        uint32_t binary_size = 0;
+        cmplr.GetBinary(fname.c_str(), &binary_size);
+        std::vector<uint32_t> binary(binary_size);
+        cmplr.GetBinary(fname.c_str(), &binary_size, binary.data());
+        shaderBinaries.emplace(_fname, binary);
+    }
+
+    void ClusteredForward::createShaders() {
+        
+        CompileAndAddShader("Simple.vert");
+        CompileAndAddShader("Clustered.vert");
+        CompileAndAddShader("Clustered.frag");
+
+        st::BindingGenerator binding_gen;
+        auto& entry = shaderBinaries.at("Clustered.vert");
+        binding_gen.ParseBinary(entry.size(), entry.data(), VK_SHADER_STAGE_VERTEX_BIT);
+        entry = shaderBinaries.at("Clustered.frag");
+        binding_gen.ParseBinary(entry.size(), entry.data(), VK_SHADER_STAGE_FRAGMENT_BIT);
+        binding_gen.CollateBindings();
+
+        uint32_t num_sets = binding_gen.GetNumSets();
+        std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
+        
+        for (uint32_t i = 0; i < num_sets; ++i) {
+            uint32_t num_bindings = 0;
+            binding_gen.GetLayoutBindings(i, &num_bindings, nullptr);
+            std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
+            binding_gen.GetLayoutBindings(i, &num_bindings, bindings.data());
+            layoutBindings.emplace(i, bindings);
+        }
+
+        std::unique_ptr<DescriptorSetLayout> set_layout = std::make_unique<DescriptorSetLayout>(device.get());
+        auto& bindings = layoutBindings.at(0);
+        auto iter = std::remove_if(bindings.begin(), bindings.end(), [](const VkDescriptorSetLayoutBinding& binding) { return binding.descriptorType == VK_DESCRIPTOR_TYPE_RANGE_SIZE; });
+        bindings.erase(iter, bindings.end());
+        for (auto& binding : bindings) {
+            set_layout->AddDescriptorBinding(binding);
+        }
+
+        
+        
+        set_layout->vkHandle();
+        const std::string prefix("../rsrc/shaders/clustered_forward/");
+
         shaders["Simple.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Simple.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
         shaders["Light.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
         shaders["Light.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -1329,7 +1377,7 @@ int main(int argc, char* argv[]) {
     };
 
     for (auto& fname : shader_files) {
-        sg::Shader shader(fname.first);
+        st::ShaderGenerator shader(fname.first);
         shader.AddIncludePath("../third_party/shadergen/fragments/volumetric_forward/");
         shader.AddResources("../third_party/shadergen/fragments/volumetric_forward/Resources.glsl");
         shader.AddBody(fname.second.c_str());
