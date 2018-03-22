@@ -262,6 +262,11 @@ namespace vpsk {
         std::unique_ptr<PipelineLayout> ComputeLayout;
     };
 
+
+    static std::map<std::string, std::vector<uint32_t>> shaderBinaries;
+    static std::map<std::string, std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>>> shaderBindings;
+    static std::map<std::string, std::vector<VkVertexInputAttributeDescription>> shaderAttributes;
+
     class ClusteredForward : public BaseScene {
     public:
 
@@ -1202,8 +1207,6 @@ namespace vpsk {
         computePass->SetupBeginInfo(OffscreenClearValues.data(), OffscreenClearValues.size(), swapchain->Extent());
     }
 
-    static std::map<std::string, std::vector<uint32_t>> shaderBinaries;
-
     void CompileAndAddShader(const std::string _fname) {
         const std::string prefix("../rsrc/shaders/clustered_forward/");
         st::ShaderCompiler cmplr;
@@ -1214,6 +1217,47 @@ namespace vpsk {
         std::vector<uint32_t> binary(binary_size);
         cmplr.GetBinary(fname.c_str(), &binary_size, binary.data());
         shaderBinaries.emplace(_fname, binary);
+    }
+
+    void RetrieveShaderAttributes(const std::string& name, st::BindingGenerator& bgen) {
+        uint32_t num_sets = bgen.GetNumSets();
+        std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
+
+        for (uint32_t i = 0; i < num_sets; ++i) {
+            uint32_t num_bindings = 0;
+            bgen.GetLayoutBindings(i, &num_bindings, nullptr);
+            std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
+            bgen.GetLayoutBindings(i, &num_bindings, bindings.data());
+            layoutBindings.emplace(i, bindings);
+        }
+
+        shaderBindings.emplace(name, layoutBindings);
+
+        uint32_t num_attr = 0;
+        bgen.GetVertexAttributes(&num_attr, nullptr);
+        std::vector<VkVertexInputAttributeDescription> attributes(num_attr);
+        bgen.GetVertexAttributes(&num_attr, attributes.data());
+    
+        shaderAttributes.emplace(name, attributes);
+
+    }
+
+    void CompileAddParseShaderGroup(const std::vector<std::pair<VkShaderStageFlagBits, std::string>>& shader_names) {
+        for (const auto& name : shader_names) {
+            CompileAndAddShader(name.second);
+        }
+
+        st::BindingGenerator binding_gen;
+        for (const auto& name : shader_names) {
+            auto& entry = shaderBinaries.at(name.second);
+            binding_gen.ParseBinary(entry.size(), entry.data(), name.first);
+        }
+
+        binding_gen.CollateBindings();
+
+        for (const auto& name : shader_names) {
+
+        }
     }
 
     void ClusteredForward::createShaders() {
@@ -1239,6 +1283,13 @@ namespace vpsk {
             binding_gen.GetLayoutBindings(i, &num_bindings, bindings.data());
             layoutBindings.emplace(i, bindings);
         }
+
+        uint32_t num_attr = 0;
+        binding_gen.GetVertexAttributes(&num_attr, nullptr);
+        std::vector<VkVertexInputAttributeDescription> attributes(num_attr);
+        binding_gen.GetVertexAttributes(&num_attr, attributes.data());
+
+
 
         std::unique_ptr<DescriptorSetLayout> set_layout = std::make_unique<DescriptorSetLayout>(device.get());
         auto& bindings = layoutBindings.at(0);
