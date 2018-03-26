@@ -8,6 +8,7 @@
 #include <memory>
 #include "ForwardDecl.hpp"
 #include "Shader.hpp"
+
 namespace st {
     class BindingGenerator;
     class ShaderCompiler;
@@ -19,13 +20,17 @@ namespace vpsk {
         when bound to a pipeline, to simplify a few key things.
     */
     class ShaderGroup {
+        ShaderGroup(const ShaderGroup&) = delete;
+        ShaderGroup& operator=(const ShaderGroup&) = delete;
     public:
 
         ShaderGroup(const vpr::Device* dvc);
         ~ShaderGroup();
+        ShaderGroup(ShaderGroup&& other) noexcept;
+        ShaderGroup& operator=(ShaderGroup&& other) noexcept;
 
-        void AddShader(const char* fname, const VkShaderStageFlagBits stage);
-        void AddShader(const std::string& shader_name, const std::string& full_shader_str, const VkShaderStageFlagBits stage);
+        void AddShader(const char* fname, VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
+        void AddShader(const std::string& shader_name, const std::string& src_str, const VkShaderStageFlagBits stage);
 
         const std::vector<VkVertexInputAttributeDescription>& GetVertexAttributes() const;
         const std::vector<VkDescriptorSetLayoutBinding>& GetSetLayoutBindings(const uint32_t set_idx) const;

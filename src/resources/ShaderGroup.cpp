@@ -2,16 +2,64 @@
 #include "Compiler.hpp"
 #include "BindingGenerator.hpp"
 #include "core/LogicalDevice.hpp"
+#include "resource/ShaderModule.hpp"
 #include <fstream>
+#include <experimental/filesystem>
 
 namespace vpsk {
+
+    static const std::map<std::string, VkShaderStageFlagBits> extension_stage_map {
+        { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
+        { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
+        { ".geom", VK_SHADER_STAGE_GEOMETRY_BIT },
+        { ".teval", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT },
+        { ".tcntl", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT },
+        { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
+    };
+
+    VkShaderStageFlagBits GetStageFromFilename(const char* fname) {
+        namespace fs = std::experimental::filesystem;
+        fs::path fpath(fname);
+        if (!fs::exists(fpath)) {
+            throw std::runtime_error("Found no file at given path, when trying to guess shader stage!");
+        }
+
+        const std::string fextension = fpath.extension().string();
+
+        if (extension_stage_map.count(fextension) == 0) {
+            throw std::runtime_error("Could not find shader stage for file with given extension!");
+        }
+        else {
+            return extension_stage_map.at(fextension);
+        }
+    }
 
     ShaderGroup::ShaderGroup(const vpr::Device * dvc) : device(dvc), compiler(std::make_unique<st::ShaderCompiler>()),
         bindingGen(std::make_unique<st::BindingGenerator>()) {}
 
     ShaderGroup::~ShaderGroup() {}
 
-    void ShaderGroup::AddShader(const char* fname, const VkShaderStageFlagBits stage) {
+    ShaderGroup::ShaderGroup(ShaderGroup&& other) noexcept : device(std::move(other.device)), collated(std::move(other.collated)),
+        shaders(std::move(other.shaders)), stHandles(std::move(other.stHandles)), inputAttrs(std::move(other.inputAttrs)),
+        layoutBindings(std::move(other.layoutBindings)), bindingGen(std::move(other.bindingGen)), compiler(std::move(other.compiler)) {}
+
+    ShaderGroup& ShaderGroup::operator=(ShaderGroup&& other) noexcept {
+        device = std::move(other.device);
+        collated = std::move(other.collated);
+        shaders = std::move(other.shaders);
+        stHandles = std::move(other.stHandles);
+        inputAttrs = std::move(other.inputAttrs);
+        layoutBindings = std::move(other.layoutBindings);
+        bindingGen = std::move(other.bindingGen);
+        compiler = std::move(other.compiler);
+        return *this;
+    }
+
+    void ShaderGroup::AddShader(const char* fname, VkShaderStageFlagBits stage) {
+        if (stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
+            stage = GetStageFromFilename(fname);
+        }
+        
         st::Shader handle = compiler->Compile(fname, stage);
         bindingGen->ParseBinary(handle);
         stHandles.emplace(stage, handle);
@@ -37,6 +85,14 @@ namespace vpsk {
             retrieveData();
         }
         return layoutBindings.at(set_idx);
+    }
+
+    std::vector<VkPipelineShaderStageCreateInfo> ShaderGroup::GetPipelineInfos() const {
+        std::vector<VkPipelineShaderStageCreateInfo> results; results.reserve(shaders.size());
+        for (auto& entry : shaders) {
+            results.emplace_back(entry.second->PipelineInfo());
+        }
+        return results;
     }
 
     void ShaderGroup::createModule(const st::Shader & handle) {

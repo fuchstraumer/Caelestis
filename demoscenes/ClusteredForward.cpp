@@ -29,6 +29,7 @@
 #include "resources/LightBuffers.hpp"
 #include "render/FrameData.hpp"
 #include "render/BackBuffer.hpp"
+#include "resources/ShaderGroup.hpp"
 #include <memory>
 #include <map>
 #include <random>
@@ -262,10 +263,6 @@ namespace vpsk {
         std::unique_ptr<PipelineLayout> ComputeLayout;
     };
 
-
-    static std::unordered_map<st::Shader, std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>>> shaderBindings;
-    static std::unordered_map<st::Shader, std::vector<VkVertexInputAttributeDescription>> shaderAttributes;
-
     class ClusteredForward : public BaseScene {
     public:
 
@@ -381,6 +378,8 @@ namespace vpsk {
         constexpr static VkPipelineStageFlags RenderFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
         std::vector<VkFramebuffer> framebuffers;
+
+        std::map<std::string, ShaderGroup> shaderGroups;
 
         VkObjectTableNVX objectTable;
         void createObjectTable();
@@ -899,26 +898,32 @@ namespace vpsk {
 
         VkPipelineColorBlendAttachmentState attachment_state = vk_pipeline_color_blend_attachment_info_base;
 
-        GraphicsPipelineInfo PipelineInfo;
+        GraphicsPipelineInfo PipelineStateInfo;
 
-        PipelineInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_t::attributeDescriptions.size());
-        PipelineInfo.VertexInfo.pVertexAttributeDescriptions = vertex_t::attributeDescriptions.data();
-        PipelineInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
-        PipelineInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
+        const auto& shader_group = shaderGroups.at("Clustered");
+        std::vector<VkVertexInputAttributeDescription> attributes = shader_group.GetVertexAttributes();
+        PipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
+        PipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = attributes.data();
+        PipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
+        PipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
 
-        PipelineInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
-        PipelineInfo.MultisampleInfo.minSampleShading = 0.25f;
-        PipelineInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_8_BIT;
+        frameDataLayout = std::make_unique<DescriptorSetLayout>(device.get());
+        const std::vector<VkDescriptorSetLayoutBinding> layout_bindings = shader_group.GetSetLayoutBindings(0);
+        frameDataLayout->AddDescriptorBindings(layout_bindings);
 
-        PipelineInfo.ColorBlendInfo.attachmentCount = 1;
-        PipelineInfo.ColorBlendInfo.pAttachments = &attachment_state;
-        PipelineInfo.DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        PipelineStateInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
+        PipelineStateInfo.MultisampleInfo.minSampleShading = 0.25f;
+        PipelineStateInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_8_BIT;
 
-        PipelineInfo.DynamicStateInfo.dynamicStateCount = 2;
+        PipelineStateInfo.ColorBlendInfo.attachmentCount = 1;
+        PipelineStateInfo.ColorBlendInfo.pAttachments = &attachment_state;
+        PipelineStateInfo.DepthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+
+        PipelineStateInfo.DynamicStateInfo.dynamicStateCount = 2;
         constexpr static VkDynamicState states[2]{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-        PipelineInfo.DynamicStateInfo.pDynamicStates = states;
+        PipelineStateInfo.DynamicStateInfo.pDynamicStates = states;
 
-        VkGraphicsPipelineCreateInfo create_info = PipelineInfo.GetPipelineCreateInfo();
+        VkGraphicsPipelineCreateInfo create_info = PipelineStateInfo.GetPipelineCreateInfo();
         create_info.subpass = 0;
         create_info.layout = Pipelines.Opaque.Layout->vkHandle();
         create_info.renderPass = onscreenPass->vkHandle();
@@ -935,8 +940,8 @@ namespace vpsk {
         Pipelines.Opaque.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
         Pipelines.Opaque.Pipeline->Init(create_info, Pipelines.Opaque.Cache->vkHandle());
 
-        PipelineInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
-        PipelineInfo.DepthStencilInfo.depthWriteEnable = VK_FALSE;
+        PipelineStateInfo.RasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+        PipelineStateInfo.DepthStencilInfo.depthWriteEnable = VK_FALSE;
         attachment_state.blendEnable = VK_TRUE;
 
         Pipelines.Transparent.Pipeline = std::make_unique<GraphicsPipeline>(device.get());
@@ -1022,9 +1027,9 @@ namespace vpsk {
     }
 
     void ClusteredForward::createFrameDataSetLayout() {
-        frameDataLayout = std::make_unique<DescriptorSetLayout>(device.get());
         constexpr static VkShaderStageFlags vfc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
         constexpr static VkShaderStageFlags fc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+        frameDataLayout = std::make_unique<DescriptorSetLayout>(device.get());
         frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, vfc_flags, 0);
         frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 1);
         frameDataLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 2);
@@ -1206,96 +1211,35 @@ namespace vpsk {
         computePass->SetupBeginInfo(OffscreenClearValues.data(), OffscreenClearValues.size(), swapchain->Extent());
     }
 
-    void CompileAndAddShader(const std::vector<std::string>& _fnames) {
-        const std::string prefix("../rsrc/shaders/clustered_forward/");
-        st::ShaderCompiler cmplr;
-        st::BindingGenerator bgen;
-        for (const auto& filename : _fnames) {
-            std::string fname(prefix + filename);
-            st::Shader handle = cmplr.Compile(fname.c_str());
-            bgen.ParseBinary(handle);
-        }
-        
-        bgen.CollateBindings();
-
-
-    }
-
-    void RetrieveShaderAttributes(const std::string& name, st::BindingGenerator& bgen) {
-        uint32_t num_sets = bgen.GetNumSets();
-        std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
-
-        for (uint32_t i = 0; i < num_sets; ++i) {
-            uint32_t num_bindings = 0;
-            bgen.GetLayoutBindings(i, &num_bindings, nullptr);
-            std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
-            bgen.GetLayoutBindings(i, &num_bindings, bindings.data());
-            layoutBindings.emplace(i, bindings);
-        }
-
-        shaderBindings.emplace(name, layoutBindings);
-
-        uint32_t num_attr = 0;
-        bgen.GetVertexAttributes(&num_attr, nullptr);
-        std::vector<VkVertexInputAttributeDescription> attributes(num_attr);
-        bgen.GetVertexAttributes(&num_attr, attributes.data());
-    
-        shaderAttributes.emplace(name, attributes);
-
-    }
-
-
     void ClusteredForward::createShaders() {
-        
-        CompileAndAddShader("Simple.vert");
-        CompileAndAddShader("Clustered.vert");
-        CompileAndAddShader("Clustered.frag");
-
-        st::BindingGenerator binding_gen;
-        auto& entry = shaderBinaries.at("Clustered.vert");
-        binding_gen.ParseBinary(entry.size(), entry.data(), VK_SHADER_STAGE_VERTEX_BIT);
-        entry = shaderBinaries.at("Clustered.frag");
-        binding_gen.ParseBinary(entry.size(), entry.data(), VK_SHADER_STAGE_FRAGMENT_BIT);
-        binding_gen.CollateBindings();
-
-        uint32_t num_sets = binding_gen.GetNumSets();
-        std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
-        
-        for (uint32_t i = 0; i < num_sets; ++i) {
-            uint32_t num_bindings = 0;
-            binding_gen.GetLayoutBindings(i, &num_bindings, nullptr);
-            std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
-            binding_gen.GetLayoutBindings(i, &num_bindings, bindings.data());
-            layoutBindings.emplace(i, bindings);
-        }
-
-        uint32_t num_attr = 0;
-        binding_gen.GetVertexAttributes(&num_attr, nullptr);
-        std::vector<VkVertexInputAttributeDescription> attributes(num_attr);
-        binding_gen.GetVertexAttributes(&num_attr, attributes.data());
-
-
-
-        std::unique_ptr<DescriptorSetLayout> set_layout = std::make_unique<DescriptorSetLayout>(device.get());
-        auto& bindings = layoutBindings.at(0);
-        auto iter = std::remove_if(bindings.begin(), bindings.end(), [](const VkDescriptorSetLayoutBinding& binding) { return binding.descriptorType == VK_DESCRIPTOR_TYPE_RANGE_SIZE; });
-        bindings.erase(iter, bindings.end());
-        for (auto& binding : bindings) {
-            set_layout->AddDescriptorBinding(binding);
-        }
-
-        
-        
-        set_layout->vkHandle();
         const std::string prefix("../rsrc/shaders/clustered_forward/");
 
-        shaders["Simple.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Simple.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-        shaders["Light.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-        shaders["Light.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Light.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-        shaders["Clustered.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Clustered.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-        shaders["Clustered.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Clustered.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-        shaders["Particles.vert"] = std::make_unique<ShaderModule>(device.get(), prefix + "Particles.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-        shaders["Particles.frag"] = std::make_unique<ShaderModule>(device.get(), prefix + "Particles.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+        ShaderGroup simple(device.get());
+        std::string fname = prefix + "Simple.vert";
+        simple.AddShader(fname.c_str());
+        shaderGroups.emplace("Simple", simple);
+
+        ShaderGroup lighting(device.get());
+        fname = prefix + "Light.vert";
+        lighting.AddShader(fname.c_str());
+        fname = prefix + "Light.frag";
+        lighting.AddShader(fname.c_str());
+        shaderGroups.emplace("Lighting", lighting);
+
+        ShaderGroup clustered(device.get());
+        fname = prefix + "Clustered.vert";
+        clustered.AddShader(fname.c_str());
+        fname = prefix + "Clustered.frag";
+        clustered.AddShader(fname.c_str());
+        shaderGroups.emplace("Clustered", clustered);
+
+        ShaderGroup particles(device.get());
+        fname = prefix + "Particles.vert";
+        particles.AddShader(fname.c_str());
+        fname = prefix + "Particles.frag";
+        particles.AddShader(fname.c_str());
+        shaderGroups.emplace("Particles", particles);
+
         shaders["GridOffsets.comp"] = std::make_unique<ShaderModule>(device.get(), prefix + "GridOffsets.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
         shaders["LightGrid.comp"] = std::make_unique<ShaderModule>(device.get(), prefix + "LightGrid.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
         shaders["LightList.comp"] = std::make_unique<ShaderModule>(device.get(), prefix + "LightList.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
