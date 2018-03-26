@@ -263,9 +263,8 @@ namespace vpsk {
     };
 
 
-    static std::map<std::string, std::vector<uint32_t>> shaderBinaries;
-    static std::map<std::string, std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>>> shaderBindings;
-    static std::map<std::string, std::vector<VkVertexInputAttributeDescription>> shaderAttributes;
+    static std::unordered_map<st::Shader, std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>>> shaderBindings;
+    static std::unordered_map<st::Shader, std::vector<VkVertexInputAttributeDescription>> shaderAttributes;
 
     class ClusteredForward : public BaseScene {
     public:
@@ -1207,16 +1206,19 @@ namespace vpsk {
         computePass->SetupBeginInfo(OffscreenClearValues.data(), OffscreenClearValues.size(), swapchain->Extent());
     }
 
-    void CompileAndAddShader(const std::string _fname) {
+    void CompileAndAddShader(const std::vector<std::string>& _fnames) {
         const std::string prefix("../rsrc/shaders/clustered_forward/");
         st::ShaderCompiler cmplr;
-        std::string fname(prefix + _fname);
-        cmplr.Compile(fname.c_str());
-        uint32_t binary_size = 0;
-        cmplr.GetBinary(fname.c_str(), &binary_size);
-        std::vector<uint32_t> binary(binary_size);
-        cmplr.GetBinary(fname.c_str(), &binary_size, binary.data());
-        shaderBinaries.emplace(_fname, binary);
+        st::BindingGenerator bgen;
+        for (const auto& filename : _fnames) {
+            std::string fname(prefix + filename);
+            st::Shader handle = cmplr.Compile(fname.c_str());
+            bgen.ParseBinary(handle);
+        }
+        
+        bgen.CollateBindings();
+
+
     }
 
     void RetrieveShaderAttributes(const std::string& name, st::BindingGenerator& bgen) {
@@ -1242,23 +1244,6 @@ namespace vpsk {
 
     }
 
-    void CompileAddParseShaderGroup(const std::vector<std::pair<VkShaderStageFlagBits, std::string>>& shader_names) {
-        for (const auto& name : shader_names) {
-            CompileAndAddShader(name.second);
-        }
-
-        st::BindingGenerator binding_gen;
-        for (const auto& name : shader_names) {
-            auto& entry = shaderBinaries.at(name.second);
-            binding_gen.ParseBinary(entry.size(), entry.data(), name.first);
-        }
-
-        binding_gen.CollateBindings();
-
-        for (const auto& name : shader_names) {
-
-        }
-    }
 
     void ClusteredForward::createShaders() {
         

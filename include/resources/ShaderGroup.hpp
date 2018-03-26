@@ -6,7 +6,8 @@
 #include <string>
 #include <map>
 #include <memory>
-
+#include "ForwardDecl.hpp"
+#include "Shader.hpp"
 namespace st {
     class BindingGenerator;
     class ShaderCompiler;
@@ -20,21 +21,32 @@ namespace vpsk {
     class ShaderGroup {
     public:
 
-        ShaderGroup();
+        ShaderGroup(const vpr::Device* dvc);
         ~ShaderGroup();
 
         void AddShader(const char* fname, const VkShaderStageFlagBits stage);
-        void AddShader(const std::string& full_shader_str, const VkShaderStageFlagBits stage);
+        void AddShader(const std::string& shader_name, const std::string& full_shader_str, const VkShaderStageFlagBits stage);
 
-        const std::vector<VkVertexInputAttributeDescription>& GetAttributesForStage(const VkShaderStageFlagBits stage) const;
+        const std::vector<VkVertexInputAttributeDescription>& GetVertexAttributes() const;
         const std::vector<VkDescriptorSetLayoutBinding>& GetBindingsForStage(const VkShaderStageFlagBits stage) const;
         std::vector<VkPipelineShaderStageCreateInfo> GetPipelineInfos() const;
         
     private:
-        
+
+        void createModule(const st::Shader& handle);
+        void retrieveData() const;
+
+        const vpr::Device* device;
+        mutable bool collated = false;
+
+        std::map<VkShaderStageFlagBits, std::unique_ptr<vpr::ShaderModule>> shaders;
+        std::map<VkShaderStageFlagBits, st::Shader> stHandles;
+
+        mutable std::vector<VkVertexInputAttributeDescription> inputAttrs;
+        mutable std::map<VkShaderStageFlagBits, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
+
         std::unique_ptr<st::BindingGenerator> bindingGen;
         std::unique_ptr<st::ShaderCompiler> compiler;
-        std::map<VkShaderStageFlagBits, std::vector<uint32_t>> binaries;
     };
 
 }
