@@ -28,7 +28,7 @@ namespace vpsk {
         void AddShader(const std::string& shader_name, const std::string& full_shader_str, const VkShaderStageFlagBits stage);
 
         const std::vector<VkVertexInputAttributeDescription>& GetVertexAttributes() const;
-        const std::vector<VkDescriptorSetLayoutBinding>& GetBindingsForStage(const VkShaderStageFlagBits stage) const;
+        const std::vector<VkDescriptorSetLayoutBinding>& GetSetLayoutBindings(const uint32_t set_idx) const;
         std::vector<VkPipelineShaderStageCreateInfo> GetPipelineInfos() const;
         
     private:
@@ -43,7 +43,7 @@ namespace vpsk {
         std::map<VkShaderStageFlagBits, st::Shader> stHandles;
 
         mutable std::vector<VkVertexInputAttributeDescription> inputAttrs;
-        mutable std::map<VkShaderStageFlagBits, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
+        mutable std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
 
         std::unique_ptr<st::BindingGenerator> bindingGen;
         std::unique_ptr<st::ShaderCompiler> compiler;

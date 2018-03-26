@@ -32,11 +32,11 @@ namespace vpsk {
         return inputAttrs;
     }
 
-    const std::vector<VkDescriptorSetLayoutBinding>& ShaderGroup::GetBindingsForStage(const VkShaderStageFlagBits stage) const {
+    const std::vector<VkDescriptorSetLayoutBinding>& ShaderGroup::GetSetLayoutBindings(const uint32_t set_idx) const {
         if (!collated) {
             retrieveData();
         }
-        return layoutBindings.at(stage);
+        return layoutBindings.at(set_idx);
     }
 
     void ShaderGroup::createModule(const st::Shader & handle) {
@@ -51,8 +51,20 @@ namespace vpsk {
         collated = true;
 
         bindingGen->CollateBindings();
+        const uint32_t num_sets = bindingGen->GetNumSets();
+        for (uint32_t i = 0; i < num_sets; ++i) {
+            uint32_t num_bindings = 0;
+            bindingGen->GetLayoutBindings(i, &num_bindings, nullptr);
+            std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
+            bindingGen->GetLayoutBindings(i, &num_bindings, bindings.data());
+            layoutBindings.emplace(i, bindings);
+        }
 
-        uint32_t num_sets = 0;
+        uint32_t num_attrs = 0;
+        bindingGen->GetVertexAttributes(&num_attrs, nullptr);
+        inputAttrs = std::vector<VkVertexInputAttributeDescription>(num_attrs);
+        bindingGen->GetVertexAttributes(&num_attrs, inputAttrs.data());
+        
     }
 
 }
