@@ -39,6 +39,7 @@
 #include "ShaderGenerator.hpp"
 #include "Compiler.hpp"
 #include "BindingGenerator.hpp"
+#include "mango/mango/mango.hpp"
 
 #include "util/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
@@ -1341,35 +1342,68 @@ namespace vpsk {
 
 }
 
+constexpr float FLOAT_PI = 3.1415926535897932384626433832795028841971;
+
 int main(int argc, char* argv[]) {
     using namespace vpsk;
     using namespace vpr;
-    namespace fs = std::experimental::filesystem;
+    using namespace mango;
+
+    Bitmap bitmap("ldem_64_pa.bmp");
+    size_t face_size = bitmap.width / 4;
+    std::array<Bitmap, 6> outputs;
+
+
+
+    auto outImgToXYZ = [&](const size_t& i, const size_t& j, const size_t& face_idx)->float32x3 {
+        const float a = 2.0f * static_cast<float>(i) / static_cast<float>(face_size);
+        const float b = 2.0f * static_cast<float>(j) / static_cast<float>(face_size);
+
+        switch (face_idx) {
+        case 0:
+            return float32x3{-1.0f, 1.0f - a, 1.0f - b };
+        case 1:
+            return float32x3{ a - 1.0f,-1.0f, 1.0f - b };
+        case 2:
+            return float32x3{ 1.0f, a - 1.0f, 1.0f - b };
+        case 3:
+            return float32x3{ 1.0f - a, 1.0f, 1.0f - b };
+        case 4:
+            return float32x3{ b - 1.0f, a - 1.0f, 1.0f };
+        case 5:
+            return float32x3{ 1.0f - b, a - 1.0f,-1.0f };
+        }
+    };
+
+    auto clamp = [](const int& x, const int& x_min, const int& x_max) {
+        return x < x_min ? x_min : x > x_max ? x_max : x;
+    };
+
+    auto convertFace = [&](const size_t& face_idx) {
+        for (size_t y = 0; y < face_size; ++y) {
+            for (size_t x  = 0; x < face_size; ++x) {
+                float32x3 xyz = outImgToXYZ(x, y, face_idx);
+                const float theta = atan2f(static_cast<float>(y), static_cast<float>(x));
+                const float r = hypotf(static_cast<float>(x), static_cast<float>(y));
+                const float phi = atan2f(xyz.z, r);
+
+                const float uf = 0.50f * static_cast<float>(bitmap.width) * (theta + FLOAT_PI) / FLOAT_PI;
+                const float vf = 0.50f * static_cast<float>(bitmap.width) * (FLOAT_PI / 2.0f - phi) / FLOAT_PI;
+
+                int ui = static_cast<int>(floorf(uf));
+                int vi = static_cast<int>(floorf(vf));
+                int u2 = ui + 1;
+                int v2 = vi + 1;
+                int mu = static_cast<int>(uf) - ui;
+                int nu = static_cast<int>(vf) - vi;
+
+                uint8_t X = bitmap.address(ui % bitmap.width, clamp(vi, 0, bitmap.height - 1));
+            }
+        }
+    };
+
     BaseScene::SceneConfiguration.EnableMouseLocking = true;
     BaseScene::SceneConfiguration.MovementSpeed = 10.0f;
-
-    const std::map<VkShaderStageFlagBits, std::string> shader_files{
-
-    };
-
-    std::map<std::string, std::string> completed_shaders{
-
-    };
-
-    for (auto& fname : shader_files) {
-        st::ShaderGenerator shader(fname.first);
-        shader.AddIncludePath("../third_party/shadergen/fragments/volumetric_forward/");
-        shader.AddResources("../third_party/shadergen/fragments/volumetric_forward/Resources.glsl");
-        shader.AddBody(fname.second.c_str());
-        size_t sz = 0;
-        shader.GetFullSource(&sz, nullptr);
-        std::string src; src.resize(sz);
-        shader.GetFullSource(&sz, src.data());
-        completed_shaders.emplace(fs::path(fname.second.c_str()).filename().string(), src);
-    }
-
-    st::ShaderCompiler compiler;
-
     ClusteredForward fwd("../rsrc/crytekSponza/sponza.obj");
     fwd.RenderLoop();
     return 0;
