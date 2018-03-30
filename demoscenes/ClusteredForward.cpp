@@ -890,27 +890,38 @@ namespace vpsk {
 
     void ClusteredForward::createMainPipelines() {
 
+        GraphicsPipelineInfo PipelineStateInfo;
+
+        const auto& shader_group = shaderGroups.at("Clustered");
+        std::vector<VkVertexInputAttributeDescription> attributes = shader_group.GetVertexAttributes();
+        attributes[0].binding = 0;
+        for (auto iter = attributes.begin() + 1; iter != attributes.end(); ++iter) {
+            iter->binding = 1;
+        }
+
+        PipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
+        PipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = attributes.data();
+        PipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
+        PipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
+
+        std::vector<DescriptorSetLayout> vpr_set_layouts;
+        std::vector<VkDescriptorSetLayout> set_layouts;
+
+        frameDataLayout = std::make_unique<DescriptorSetLayout>(device.get());
+        const std::vector<VkDescriptorSetLayoutBinding> layout_bindings = shader_group.GetSetLayoutBindings(0);
+        frameDataLayout->AddDescriptorBindings(layout_bindings);
+        set_layouts.emplace_back(frameDataLayout->vkHandle());
+
+        
+
         Pipelines.Opaque.Layout = std::make_unique<PipelineLayout>(device.get());
-        const VkDescriptorSetLayout set_layouts[3]{ lightData->GetLayout(), frameDataLayout->vkHandle(), sponza->GetMaterialSetLayout() };
-        Pipelines.Opaque.Layout->Create(set_layouts, 3);
+        Pipelines.Opaque.Layout->Create(set_layouts.data(), set_layouts.size());
 
         const uint16_t hash_id = static_cast<uint16_t>(std::hash<std::string>()("main-pipeline"));
         Pipelines.Opaque.Cache = std::make_unique<PipelineCache>(device.get(), hash_id);
 
         VkPipelineColorBlendAttachmentState attachment_state = vk_pipeline_color_blend_attachment_info_base;
 
-        GraphicsPipelineInfo PipelineStateInfo;
-
-        const auto& shader_group = shaderGroups.at("Clustered");
-        std::vector<VkVertexInputAttributeDescription> attributes = shader_group.GetVertexAttributes();
-        PipelineStateInfo.VertexInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
-        PipelineStateInfo.VertexInfo.pVertexAttributeDescriptions = attributes.data();
-        PipelineStateInfo.VertexInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertex_t::bindingDescriptions.size());
-        PipelineStateInfo.VertexInfo.pVertexBindingDescriptions = vertex_t::bindingDescriptions.data();
-
-        frameDataLayout = std::make_unique<DescriptorSetLayout>(device.get());
-        const std::vector<VkDescriptorSetLayoutBinding> layout_bindings = shader_group.GetSetLayoutBindings(0);
-        frameDataLayout->AddDescriptorBindings(layout_bindings);
 
         PipelineStateInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
         PipelineStateInfo.MultisampleInfo.minSampleShading = 0.25f;
@@ -1347,60 +1358,6 @@ constexpr float FLOAT_PI = 3.1415926535897932384626433832795028841971;
 int main(int argc, char* argv[]) {
     using namespace vpsk;
     using namespace vpr;
-    using namespace mango;
-
-    Bitmap bitmap("ldem_64_pa.bmp");
-    size_t face_size = bitmap.width / 4;
-    std::array<Bitmap, 6> outputs;
-
-
-
-    auto outImgToXYZ = [&](const size_t& i, const size_t& j, const size_t& face_idx)->float32x3 {
-        const float a = 2.0f * static_cast<float>(i) / static_cast<float>(face_size);
-        const float b = 2.0f * static_cast<float>(j) / static_cast<float>(face_size);
-
-        switch (face_idx) {
-        case 0:
-            return float32x3{-1.0f, 1.0f - a, 1.0f - b };
-        case 1:
-            return float32x3{ a - 1.0f,-1.0f, 1.0f - b };
-        case 2:
-            return float32x3{ 1.0f, a - 1.0f, 1.0f - b };
-        case 3:
-            return float32x3{ 1.0f - a, 1.0f, 1.0f - b };
-        case 4:
-            return float32x3{ b - 1.0f, a - 1.0f, 1.0f };
-        case 5:
-            return float32x3{ 1.0f - b, a - 1.0f,-1.0f };
-        }
-    };
-
-    auto clamp = [](const int& x, const int& x_min, const int& x_max) {
-        return x < x_min ? x_min : x > x_max ? x_max : x;
-    };
-
-    auto convertFace = [&](const size_t& face_idx) {
-        for (size_t y = 0; y < face_size; ++y) {
-            for (size_t x  = 0; x < face_size; ++x) {
-                float32x3 xyz = outImgToXYZ(x, y, face_idx);
-                const float theta = atan2f(static_cast<float>(y), static_cast<float>(x));
-                const float r = hypotf(static_cast<float>(x), static_cast<float>(y));
-                const float phi = atan2f(xyz.z, r);
-
-                const float uf = 0.50f * static_cast<float>(bitmap.width) * (theta + FLOAT_PI) / FLOAT_PI;
-                const float vf = 0.50f * static_cast<float>(bitmap.width) * (FLOAT_PI / 2.0f - phi) / FLOAT_PI;
-
-                int ui = static_cast<int>(floorf(uf));
-                int vi = static_cast<int>(floorf(vf));
-                int u2 = ui + 1;
-                int v2 = vi + 1;
-                int mu = static_cast<int>(uf) - ui;
-                int nu = static_cast<int>(vf) - vi;
-
-                uint8_t X = bitmap.address(ui % bitmap.width, clamp(vi, 0, bitmap.height - 1));
-            }
-        }
-    };
 
     BaseScene::SceneConfiguration.EnableMouseLocking = true;
     BaseScene::SceneConfiguration.MovementSpeed = 10.0f;
