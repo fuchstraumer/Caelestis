@@ -907,13 +907,16 @@ namespace vpsk {
         std::vector<DescriptorSetLayout> vpr_set_layouts;
         std::vector<VkDescriptorSetLayout> set_layouts;
 
+        for (size_t i = 0; i < shader_group.GetNumSetsRequired(); ++i) {
+
+        }
+
         frameDataLayout = std::make_unique<DescriptorSetLayout>(device.get());
         const std::vector<VkDescriptorSetLayoutBinding> layout_bindings = shader_group.GetSetLayoutBindings(0);
         frameDataLayout->AddDescriptorBindings(layout_bindings);
         set_layouts.emplace_back(frameDataLayout->vkHandle());
 
         
-
         Pipelines.Opaque.Layout = std::make_unique<PipelineLayout>(device.get());
         Pipelines.Opaque.Layout->Create(set_layouts.data(), set_layouts.size());
 

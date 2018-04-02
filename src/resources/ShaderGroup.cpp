@@ -103,10 +103,16 @@ namespace vpsk {
         shaders.emplace(handle.GetStage(), std::make_unique<vpr::ShaderModule>(device, handle.GetStage(), binary.data(), sz));
     }
 
+    size_t ShaderGroup::GetNumSetsRequired() const {
+        if (!collated) {
+            retrieveData();
+        }
+        return bindingGen->GetNumSets();
+    }
+
     void ShaderGroup::retrieveData() const {
         collated = true;
 
-        bindingGen->CollateBindings();
         const uint32_t num_sets = bindingGen->GetNumSets();
         for (uint32_t i = 0; i < num_sets; ++i) {
             uint32_t num_bindings = 0;

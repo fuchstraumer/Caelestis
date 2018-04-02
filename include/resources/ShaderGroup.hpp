@@ -35,6 +35,7 @@ namespace vpsk {
         const std::vector<VkVertexInputAttributeDescription>& GetVertexAttributes() const;
         const std::vector<VkDescriptorSetLayoutBinding>& GetSetLayoutBindings(const uint32_t set_idx) const;
         std::vector<VkPipelineShaderStageCreateInfo> GetPipelineInfos() const;
+        size_t GetNumSetsRequired() const;
         
     private:
 
