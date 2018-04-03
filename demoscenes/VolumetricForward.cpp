@@ -31,6 +31,7 @@
 #include <map>
 #include <random>
 #include <deque>
+#include <array>
 #include <experimental/filesystem>
 
 #include "util/easylogging++.h"
@@ -39,6 +40,45 @@ namespace volumetric_forward {
 
     constexpr uint32_t LightGridBlockSize = 32;
     constexpr uint32_t ClusterGridBlockSize = 64;
+
+    struct alignas(4) light_counts_t {
+        uint32_t NumPointLights{ 0 };
+        uint32_t NumSpotLights{ 0 };
+        uint32_t NumDirectionalLights{ 0 };
+        uint32_t GetMaxLights() const noexcept {
+            return std::max(NumPointLights, std::max(NumSpotLights, NumDirectionalLights));
+        }
+    } LightCounts;
+
+    struct alignas(4) dispatch_params_t {
+        glm::uvec3 NumThreadGroups{ 0, 0, 0 };
+        const uint32_t Padding0{ 0 };
+        glm::uvec3 NumThreads{ 0, 0, 0 };
+        const uint32_t Padding1{ 0 };
+    } DispatchParams;
+
+    struct alignas(16) frustum_t {
+        std::array<glm::vec4, 4> Planes;
+    } Frustum;
+
+    struct alignas(4) cluster_data_t {
+        glm::uvec3 GridDim{ 0, 0, 0 };
+        float ViewNear{ 0.0f };
+        glm::uvec2 Size{ 0, 0 };
+        float NearK{ 0.0f };
+        float LogGridDimY{ 0.0f };
+    };
+
+    struct alignas(4) SortParams {
+        uint32_t NumElements{ 0 };
+        uint32_t ChunkSize{ 0 };
+    };
+
+    struct alignas(4) BVHParams {
+        uint32_t PointLightLevels{ 0 };
+        uint32_t SpotLightLevels{ 0 };
+        uint32_t ChildLevel{ 0 };
+    };
 
     struct render_target_t {
         render_target_t() = default;
@@ -55,19 +95,52 @@ namespace volumetric_forward {
         std::unique_ptr<vpr::DescriptorSet> Descriptor;
     };
 
+    resources_collection_t ClusterResources{
+        std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> {
+            { "ClusterData", nullptr },
+            { "ClusterFlags", nullptr },
+            { "PointLightIndexList", nullptr },
+            { "SpotLightIndexList", nullptr },
+            { "PointLightGrid", nullptr },
+            { "SpotLightGrid", nullptr },
+            { "UniqueClustersCounter", nullptr },
+            { "UniqueClusters", nullptr }
+        },
+        std::unique_ptr<vpr::DescriptorSet>{ nullptr }
+    };
+
+    resources_collection_t LightResources{
+        std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> {
+            { "LightCounts", nullptr },
+            { "PointLights", nullptr },
+            { "SpotLights", nullptr },
+            { "DirectionalLights", nullptr }
+        },
+        std::unique_ptr<vpr::DescriptorSet>{ nullptr }
+    };
+
     /*
+        ReductionParams{ uint }
+        AABB[] ClusterAABBs
+        AABB[] LightAABBs
         U_IMAGE_BUFFER r32ui PointLightIndexCounter;
         U_IMAGE_BUFFER r32ui SpotLightIndexCounter;
         U_IMAGE_BUFFER r32ui PointLightIndexList;
         U_IMAGE_BUFFER r32ui SpotLightIndexList;
         U_IMAGE_BUFFER rg32ui PointLightGrid;
         U_IMAGE_BUFFER rg32ui SpotLightGrid;
-        U_IMAGE_BUFFER r32ui InputKeys;
-        U_IMAGE_BUFFER r32ui InputValues;
-        U_IMAGE_BUFFER r32ui OutputKeys;
-        U_IMAGE_BUFFER r32ui OutputValues;
-        I_IMAGE_BUFFER r32i MergePathPartitions;
     */
+
+    resources_collection_t SortResources{
+        std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> {
+            { "ReductionParams", nullptr },
+            { "ClusterAABBs", nullptr },
+            { "LightAABBs", nullptr },
+            { "PointLightIndexCounter", nullptr },
+            { "SpotLightIndexCounter", nullptr }
+        },
+        std::unique_ptr<vpr::DescriptorSet>{ nullptr }
+    };
 
     resources_collection_t MergeSortResources { 
         std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> {
@@ -77,6 +150,25 @@ namespace volumetric_forward {
             { "OutputKeys", nullptr },
             { "OutputValues", nullptr },
             { "MergePathPartitions", nullptr }
+        },
+        std::unique_ptr<vpr::DescriptorSet>{ nullptr }
+    };
+
+    resources_collection_t BVHResources{
+        std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> {
+            { "BVHParams", nullptr },
+            { "PointLightBVH", nullptr },
+            { "SpotLightBVH", nullptr }
+        },
+        std::unique_ptr<vpr::DescriptorSet>{ nullptr }
+    };
+
+    resources_collection_t MortonResources{
+        std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>>{
+            { "PointLightMortonCodes", nullptr },
+            { "PointLightIndices", nullptr },
+            { "SpotLightMortonCodes", nullptr },
+            { "SpotLightIndices", nullptr }
         },
         std::unique_ptr<vpr::DescriptorSet>{ nullptr }
     };
@@ -93,8 +185,8 @@ namespace volumetric_forward {
     struct compute_pipelines_t {
         std::unordered_map<std::string, compute_pipeline_t> Handles = std::unordered_map<std::string, compute_pipeline_t>{
             { "UpdateLights", compute_pipeline_t() },
+            { "ReduceLights0", compute_pipeline_t() },
             { "ReduceLights1", compute_pipeline_t() },
-            { "ReduceLights2", compute_pipeline_t() },
             { "ComputeMortonCodes", compute_pipeline_t() },
             { "RadixSort", compute_pipeline_t() },
             { "MergePathPartitions", compute_pipeline_t() },
@@ -110,13 +202,6 @@ namespace volumetric_forward {
         compute_pipeline_t& at(const std::string& key);
     } ComputePipelines;
 
-    struct alignas(4) SortParams {
-        uint32_t NumElements;
-        uint32_t ChunkSize;
-    };
-    
-
-
     constexpr static uint32_t SORTING_NUM_THREADS_PER_THREAD_GROUP = 256;
     constexpr static uint32_t SORT_NUM_VALUES_PER_THREAD = 8;
 
@@ -124,7 +209,8 @@ namespace volumetric_forward {
         vpr::Buffer* dst_values, const uint32_t num_values, const uint32_t chunk_size) {
         
         auto& merge_path_partitions = MergeSortResources.Resources.at("MergePathPartitions");
-        auto& merge_pipeline = ComputePipelines.at("MergePathPartitions");
+        auto& merge_partitions_pipeline = ComputePipelines.at("MergePathPartitions");
+        auto& merge_sort_pipeline = ComputePipelines.at("MergeSort");
 
         constexpr uint32_t numThreadsPerGroup = SORTING_NUM_THREADS_PER_THREAD_GROUP;
         constexpr uint32_t numValuesPerThread = SORT_NUM_VALUES_PER_THREAD;
@@ -138,17 +224,109 @@ namespace volumetric_forward {
 
             const SortParams params{ num_values, chunk_size_local };
             const uint32_t num_sort_groups = num_chunks / 2;
-            const uint32_t num_thread_groups_per_sort_group = static_cast<uint32_t>(
+            uint32_t num_thread_groups_per_sort_group = static_cast<uint32_t>(
                 std::ceil(static_cast<double>(chunk_size * 2) / static_cast<double>(numValuesPerThreadGroup))
             );
 
             {
                 merge_path_partitions->Fill(cmd, merge_path_partitions->Size(), 0, 0);
-                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, ComputePipelines.at("MergePathPartitions").Handle);
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, merge_pipeline.Layout->vkHandle(),
-                    0, 1, &MergeSortResources.Descriptor->vkHandle(), 0, nullptr);
+                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, merge_partitions_pipeline.Handle);
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, merge_partitions_pipeline.Layout->vkHandle(), 0, 1, &MergeSortResources.Descriptor->vkHandle(), 0, nullptr);
+                uint32_t num_merge_path_partitions_per_sort_group = num_thread_groups_per_sort_group + 1u;
+                uint32_t total_merge_path_partitions = num_merge_path_partitions_per_sort_group * num_sort_groups;
+                uint32_t num_thread_groups = static_cast<uint32_t>(std::ceil(static_cast<double>(total_merge_path_partitions) / static_cast<double>(numThreadsPerGroup)));
+                vkCmdDispatch(cmd, num_thread_groups, 1, 1);
+                const VkBufferMemoryBarrier barrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_QUEUE_FAMILY_IGNORED,
+                    VK_QUEUE_FAMILY_IGNORED, merge_path_partitions->vkHandle(), 0, merge_path_partitions->Size() };
+                vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &barrier, 0, nullptr);
+
             }
 
+            {
+                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, merge_sort_pipeline.Handle);
+                uint32_t numValuesPerSortGroup = std::min(chunk_size_local * 2, num_values);
+                num_thread_groups_per_sort_group = static_cast<uint32_t>(std::ceil(static_cast<double>(numValuesPerSortGroup) / static_cast<double>(numValuesPerThreadGroup)));
+                vkCmdDispatch(cmd, num_thread_groups_per_sort_group * num_sort_groups, 1, 1);
+
+            }
+
+            chunk_size_local *= 2;
+            num_chunks = static_cast<uint32_t>(std::ceil(static_cast<double>(num_values) / static_cast<double>(chunk_size_local)));
+
         }
+
+        // TODO: How to easily swap bindings so that src becomes dst and dst becomes src?
+
+        if (pass % 2 == 1) {
+
+        }
+    }
+
+    constexpr static std::array<uint32_t, 6> NumLevelNodes{ 1, 32, 1024, 32768, 1048576, 33554432 };
+    constexpr static std::array<uint32_t, 6> NumBVHNodes{ 1, 33, 1057, 33825, 1082401, 34636833 };
+
+    uint32_t GetNumLevels(const uint32_t num_leaves) {
+        static const double log32f = std::log(32.0);
+
+        if (num_leaves > 0) {
+            return static_cast<uint32_t>(std::ceil(std::log(static_cast<double>(num_leaves)) / log32f));
+        }
+        else {
+            return 0;
+        }
+    }
+
+    uint32_t GetNumNodes(const uint32_t num_leaves) {
+        const uint32_t num_levels = GetNumLevels(num_leaves);
+        if (num_levels > 0 && num_levels < NumBVHNodes.size()) {
+            return NumBVHNodes[num_levels - 1];
+        }
+        else {
+            return 0;
+        }
+    }
+
+    void UpdateLights(const VkCommandBuffer& cmd) {
+        auto& update_pipeline = ComputePipelines.at("UpdateLights");
+        VkDescriptorSet sets[2]{ LightResources.Descriptor->vkHandle(), SortResources.Descriptor->vkHandle() };
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, update_pipeline.Handle);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, update_pipeline.Layout->vkHandle(), 0, 2, sets, 0, nullptr);
+        uint32_t num_groups_x = std::max(LightCounts.NumPointLights, std::max(LightCounts.NumDirectionalLights, LightCounts.NumSpotLights));
+        num_groups_x = static_cast<uint32_t>(std::ceil(static_cast<double>(num_groups_x) / 1024.0));
+        vkCmdDispatch(cmd, num_groups_x, 1, 1);
+    }
+
+    void ReduceLights(const VkCommandBuffer& cmd) {
+
+        {
+            auto& reduce_pipeline = ComputePipelines.at("ReduceLights0");
+            
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, reduce_pipeline.Handle);
+            uint32_t num_thread_groups = static_cast<uint32_t>(std::min(static_cast<int>(std::ceil(static_cast<double>(LightCounts.GetMaxLights()) / 512.0)), 512));
+            dispatch_params_t params;
+            params.NumThreadGroups = glm::uvec3{ num_thread_groups, 1, 1 };
+            params.NumThreads = glm::uvec3{ 512, 1, 1 }; 
+            SortResources.Resources.at("DispatchParams")->Update(cmd, sizeof(dispatch_params_t), 0, &params);
+        }
+    }
+
+    void ComputeMortonCodes(const VkCommandBuffer& cmd) {
+
+    }
+
+    void SortByMortonCodes(const VkCommandBuffer& cmd) {
+
+    }
+
+    void BuildLightBVH(const VkCommandBuffer& cmd) {
+
+    }
+
+    void ExecutePrecomputeShaders(const VkCommandBuffer& cmd) {
+        UpdateLights(cmd);
+        ReduceLights(cmd);
+        ComputeMortonCodes(cmd);
+        SortByMortonCodes(cmd);
+        BuildLightBVH(cmd);
     }
 }
