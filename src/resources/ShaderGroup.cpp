@@ -34,14 +34,14 @@ namespace vpsk {
         }
     }
 
-    ShaderGroup::ShaderGroup(const vpr::Device * dvc) : device(dvc), compiler(std::make_unique<st::ShaderCompiler>()),
-        bindingGen(std::make_unique<st::BindingGenerator>()) {}
+    ShaderGroup::ShaderGroup(const vpr::Device * dvc, st::ShaderCompiler* _compiler, st::BindingGenerator* b_gen) : device(dvc), 
+        compiler(_compiler), bindingGenerator(b_gen) {}
 
     ShaderGroup::~ShaderGroup() {}
 
     ShaderGroup::ShaderGroup(ShaderGroup&& other) noexcept : device(std::move(other.device)), collated(std::move(other.collated)),
         shaders(std::move(other.shaders)), stHandles(std::move(other.stHandles)), inputAttrs(std::move(other.inputAttrs)),
-        layoutBindings(std::move(other.layoutBindings)), bindingGen(std::move(other.bindingGen)), compiler(std::move(other.compiler)) {}
+        layoutBindings(std::move(other.layoutBindings)), bindingGenerator(std::move(other.bindingGenerator)), compiler(std::move(other.compiler)) {}
 
     ShaderGroup& ShaderGroup::operator=(ShaderGroup&& other) noexcept {
         device = std::move(other.device);
@@ -50,7 +50,7 @@ namespace vpsk {
         stHandles = std::move(other.stHandles);
         inputAttrs = std::move(other.inputAttrs);
         layoutBindings = std::move(other.layoutBindings);
-        bindingGen = std::move(other.bindingGen);
+        bindingGenerator = std::move(other.bindingGenerator);
         compiler = std::move(other.compiler);
         return *this;
     }
@@ -61,14 +61,14 @@ namespace vpsk {
         }
         
         st::Shader handle = compiler->Compile(fname, stage);
-        bindingGen->ParseBinary(handle);
+        bindingGenerator->ParseBinary(handle);
         stHandles.emplace(stage, handle);
         createModule(handle);
     }
 
     void ShaderGroup::AddShader(const std::string& shader_name, const std::string& shader_str, const VkShaderStageFlagBits stage) {
         st::Shader handle = compiler->Compile(shader_name.c_str(), shader_str.c_str(), shader_str.size(), stage);
-        bindingGen->ParseBinary(handle);
+        bindingGenerator->ParseBinary(handle);
         stHandles.emplace(stage, handle);
         createModule(handle);
     }
@@ -107,25 +107,25 @@ namespace vpsk {
         if (!collated) {
             retrieveData();
         }
-        return bindingGen->GetNumSets();
+        return bindingGenerator->GetNumSets();
     }
 
     void ShaderGroup::retrieveData() const {
         collated = true;
 
-        const uint32_t num_sets = bindingGen->GetNumSets();
+        const uint32_t num_sets = bindingGenerator->GetNumSets();
         for (uint32_t i = 0; i < num_sets; ++i) {
             uint32_t num_bindings = 0;
-            bindingGen->GetLayoutBindings(i, &num_bindings, nullptr);
+            bindingGenerator->GetLayoutBindings(i, &num_bindings, nullptr);
             std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
-            bindingGen->GetLayoutBindings(i, &num_bindings, bindings.data());
+            bindingGenerator->GetLayoutBindings(i, &num_bindings, bindings.data());
             layoutBindings.emplace(i, bindings);
         }
 
         uint32_t num_attrs = 0;
-        bindingGen->GetVertexAttributes(&num_attrs, nullptr);
+        bindingGenerator->GetVertexAttributes(&num_attrs, nullptr);
         inputAttrs = std::vector<VkVertexInputAttributeDescription>(num_attrs);
-        bindingGen->GetVertexAttributes(&num_attrs, inputAttrs.data());
+        bindingGenerator->GetVertexAttributes(&num_attrs, inputAttrs.data());
         
     }
 

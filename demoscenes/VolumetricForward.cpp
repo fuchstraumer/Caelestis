@@ -27,7 +27,9 @@
 #include "resources/LightBuffers.hpp"
 #include "render/FrameData.hpp"
 #include "render/BackBuffer.hpp"
+#include "camera/Camera.hpp"
 #include <memory>
+#include <set>
 #include <map>
 #include <random>
 #include <deque>
@@ -90,9 +92,29 @@ namespace volumetric_forward {
         std::unique_ptr<vpr::Framebuffer> Framebuffer{ nullptr };
     } DepthOnlyRenderTarget;
 
+    class DescriptorSetDetail {
+
+        DescriptorSetDetail(const vpr::Device* parent);
+
+        void AddResource(std::string name, VkDescriptorBufferInfo info, const VkDescriptorType type, const uint32_t binding_idx);
+        void AddResource(std::string name, VkDescriptorBufferInfo info, const VkBufferView view, const VkDescriptorType type, const uint32_t binding_idx);
+        void AddResource(std::string name, VkDescriptorImageInfo info, const VkDescriptorType type, const uint32_t binding_idx);
+
+        void Init(const vpr::DescriptorPool* parent_pool, const vpr::DescriptorSetLayout* set_layout);
+        const VkDescriptorSet& vkHandle() const noexcept;
+
+    private:
+    
+        std::unique_ptr<vpr::DescriptorSet> descriptor;
+        std::set<std::string> resources;
+    };
+
     struct resources_collection_t {
         std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> Resources;
         std::unique_ptr<vpr::DescriptorSet> Descriptor;
+        std::unique_ptr<vpr::Buffer>& at(const std::string& key) {
+            return Resources.at(key);
+        }
     };
 
     resources_collection_t ClusterResources{
@@ -104,7 +126,8 @@ namespace volumetric_forward {
             { "PointLightGrid", nullptr },
             { "SpotLightGrid", nullptr },
             { "UniqueClustersCounter", nullptr },
-            { "UniqueClusters", nullptr }
+            { "UniqueClusters", nullptr },
+            { "PreviousUniqueClusters", nullptr }
         },
         std::unique_ptr<vpr::DescriptorSet>{ nullptr }
     };
@@ -297,24 +320,33 @@ namespace volumetric_forward {
     }
 
     void ReduceLights(const VkCommandBuffer& cmd) {
-
-        {
-            auto& reduce_pipeline = ComputePipelines.at("ReduceLights0");
-            
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, reduce_pipeline.Handle);
-            uint32_t num_thread_groups = static_cast<uint32_t>(std::min(static_cast<int>(std::ceil(static_cast<double>(LightCounts.GetMaxLights()) / 512.0)), 512));
-            dispatch_params_t params;
-            params.NumThreadGroups = glm::uvec3{ num_thread_groups, 1, 1 };
-            params.NumThreads = glm::uvec3{ 512, 1, 1 }; 
-            SortResources.Resources.at("DispatchParams")->Update(cmd, sizeof(dispatch_params_t), 0, &params);
-        }
+        // Descriptor sets from previous binding call are all we should still need.
+        auto& reduce_pipeline = ComputePipelines.at("ReduceLights0");
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, reduce_pipeline.Handle);
+        const uint32_t num_thread_groups = static_cast<uint32_t>(std::min(static_cast<int>(std::ceil(static_cast<double>(LightCounts.GetMaxLights()) / 512.0)), 512));
+        dispatch_params_t params0;
+        params0.NumThreadGroups = glm::uvec3{ num_thread_groups, 1, 1 };
+        params0.NumThreads = glm::uvec3{ 512 * num_thread_groups, 1, 1 }; 
+        SortResources.Resources.at("DispatchParams")->Update(cmd, sizeof(dispatch_params_t), 0, &params0);
+        vkCmdDispatch(cmd, num_thread_groups, 1, 1);
+        dispatch_params_t params1;
+        params1.NumThreadGroups = glm::uvec3(1, 1, 1);
+        params1.NumThreads = glm::uvec3(512, 1, 1);
+        SortResources.Resources.at("DispatchParams")->Update(cmd, sizeof(dispatch_params_t), 0, &params1);
+        vkCmdDispatch(cmd, 1, 1, 1);    
     }
 
     void ComputeMortonCodes(const VkCommandBuffer& cmd) {
-
+        auto& morton_pipeline = ComputePipelines.at("ComputeMortonCodes");
+        // Only need to bind this single extra set
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, morton_pipeline.Layout->vkHandle(), 2, 1, &MortonResources.Descriptor->vkHandle(), 0, nullptr);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, morton_pipeline.Handle);
+        const uint32_t num_thread_groups = static_cast<uint32_t>(std::ceil(static_cast<double>(LightCounts.GetMaxLights()) / 1024.0));
+        vkCmdDispatch(cmd, num_thread_groups, 1, 1);
     }
 
     void SortByMortonCodes(const VkCommandBuffer& cmd) {
+        auto& radix_pipeline = ComputePipelines.at("RadixSort");
 
     }
 
@@ -328,5 +360,57 @@ namespace volumetric_forward {
         ComputeMortonCodes(cmd);
         SortByMortonCodes(cmd);
         BuildLightBVH(cmd);
+    }
+
+    void ComputeGridFrustums(const VkCommandBuffer& cmd, const uint32_t _screen_width, const uint32_t _screen_height) {
+        const uint32_t screen_width = std::max(_screen_width, 1u);
+        const uint32_t screen_height = std::max(_screen_height, 1u);
+
+        const glm::uvec3 num_threads = glm::uvec3(
+            static_cast<uint32_t>(std::ceil(static_cast<double>(screen_width) / 1024.0)), 
+            static_cast<uint32_t>(std::ceil(static_cast<double>(screen_height) / 1024.0)), 
+            1u
+        );
+
+        const glm::uvec3 num_thread_groups = glm::uvec3(
+            static_cast<uint32_t>(std::ceil(static_cast<double>(num_threads.x) / static_cast<double>(LightGridBlockSize))),
+            static_cast<uint32_t>(std::ceil(static_cast<double>(num_threads.y) / static_cast<double>(LightGridBlockSize))),
+            1u
+        );
+
+    }
+
+    void UpdateClusterGrid(const VkCommandBuffer& cmd, const vpsk::Camera& cam, const uint32_t screen_width, const uint32_t screen_height) {
+        const uint32_t cluster_dim_x = static_cast<uint32_t>(std::ceil(static_cast<double>(screen_width) / static_cast<double>(ClusterGridBlockSize)));
+        const uint32_t cluster_dim_y = static_cast<uint32_t>(std::ceil(static_cast<double>(screen_height) / static_cast<double>(ClusterGridBlockSize)));
+
+        const float s_d = 2.0f * std::tan(cam.GetFOV() * 0.50f) / static_cast<float>(cluster_dim_y);
+        const float log_dim_y = 1.0f / glm::log(1.0f + s_d);
+
+        const float log_depth = glm::log(cam.GetNearPlane() / cam.GetFarPlane());
+        const uint32_t cluster_dim_z = static_cast<uint32_t>(glm::floor(log_depth * log_dim_y));
+
+        cluster_data_t cluster_data{
+            glm::uvec3{ cluster_dim_x, cluster_dim_y, cluster_dim_z },
+            cam.GetNearPlane(),
+            glm::uvec2{ ClusterGridBlockSize, ClusterGridBlockSize },
+            1.0f + s_d,
+            log_dim_y
+        };
+
+        const uint32_t num_clusters = cluster_dim_x * cluster_dim_y * cluster_dim_z;
+        ClusterResources.at("ClusterFlags")->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint8_t) * num_clusters);
+        ClusterResources.at("ClusterFlags")->CreateView(VK_FORMAT_R8_UINT, ClusterResources.at("ClusterFlags")->Size(), 0);
+        ClusterResources.at("UniqueClusters")->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint32_t) * num_clusters);
+        ClusterResources.at("UniqueClusters")->CreateView(VK_FORMAT_R32_UINT, ClusterResources.at("UniqueClusters")->Size(), 0);
+        ClusterResources.at("PreviousUniqueClusters")->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(uint32_t) * num_clusters);
+        ClusterResources.at("PreviousUniqueClusters")->CreateView(VK_FORMAT_R32_UINT, ClusterResources.at("PreviousUniqueClusters")->Size(), 0);
+
+        // TODO: Generate lights, update clusters now. Need some kind of byte address buffer?
+    }
+
+    void ClusteredPrePass(const VkCommandBuffer& cmd) {
+        ClusterResources.at("ClusterFlags")->Fill(cmd, ClusterResources.at("ClusterFlags")->Size(), 0, 0);
+
     }
 }

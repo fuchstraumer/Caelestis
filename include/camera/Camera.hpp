@@ -29,6 +29,7 @@ namespace vpsk {
 
         float GetNearPlane() const noexcept;
         float GetFarPlane() const noexcept;
+        float GetFOV() const noexcept;
 
         void SetTransformation(const glm::mat4& m);
 

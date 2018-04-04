@@ -31,7 +31,6 @@ namespace vpsk {
         VkImageUsageFlags Usage{ 0 };
     };
 
-
     class PipelineResource {
     public:
 

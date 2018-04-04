@@ -24,7 +24,7 @@ namespace vpsk {
         ShaderGroup& operator=(const ShaderGroup&) = delete;
     public:
 
-        ShaderGroup(const vpr::Device* dvc);
+        ShaderGroup(const vpr::Device* dvc, st::ShaderCompiler* _compiler, st::BindingGenerator* binding_gen);
         ~ShaderGroup();
         ShaderGroup(ShaderGroup&& other) noexcept;
         ShaderGroup& operator=(ShaderGroup&& other) noexcept;
@@ -51,8 +51,8 @@ namespace vpsk {
         mutable std::vector<VkVertexInputAttributeDescription> inputAttrs;
         mutable std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
 
-        std::unique_ptr<st::BindingGenerator> bindingGen;
-        std::unique_ptr<st::ShaderCompiler> compiler;
+        st::ShaderCompiler* compiler;
+        st::BindingGenerator* bindingGenerator;
     };
 
 }
