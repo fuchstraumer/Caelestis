@@ -18,6 +18,8 @@ namespace vpsk {
         createWindow(app_name);
     }
 
+    Window::~Window() {}
+
     void Window::createWindow(const std::string& app_name) {
 
         if (!fullscreen) {
