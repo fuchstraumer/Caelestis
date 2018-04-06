@@ -24,7 +24,7 @@ namespace vpsk {
         ShaderGroup& operator=(const ShaderGroup&) = delete;
     public:
 
-        ShaderGroup(const vpr::Device* dvc, st::ShaderCompiler* _compiler, st::BindingGenerator* binding_gen);
+        ShaderGroup(const vpr::Device* dvc);
         ~ShaderGroup();
         ShaderGroup(ShaderGroup&& other) noexcept;
         ShaderGroup& operator=(ShaderGroup&& other) noexcept;
@@ -33,7 +33,9 @@ namespace vpsk {
         void AddShader(const std::string& shader_name, const std::string& src_str, const VkShaderStageFlagBits stage);
 
         const std::vector<VkVertexInputAttributeDescription>& GetVertexAttributes() const;
-        const std::vector<VkDescriptorSetLayoutBinding>& GetSetLayoutBindings(const uint32_t set_idx) const;
+        const std::map<std::string, VkDescriptorSetLayoutBinding>& GetSetLayoutBindings(const uint32_t set_idx) const;
+        using resources_tuple_t = std::tuple<const std::map<std::string, VkDescriptorSetLayoutBinding>&, const std::vector<VkVertexInputAttributeDescription>&>;
+        resources_tuple_t GetResources(const uint32_t set_idx) const;
         std::vector<VkPipelineShaderStageCreateInfo> GetPipelineInfos() const;
         size_t GetNumSetsRequired() const;
         
@@ -49,10 +51,10 @@ namespace vpsk {
         std::map<VkShaderStageFlagBits, st::Shader> stHandles;
 
         mutable std::vector<VkVertexInputAttributeDescription> inputAttrs;
-        mutable std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> layoutBindings;
+        mutable std::map<uint32_t, std::map<std::string, VkDescriptorSetLayoutBinding>> layoutBindings;
 
-        st::ShaderCompiler* compiler;
-        st::BindingGenerator* bindingGenerator;
+        mutable std::unique_ptr<st::ShaderCompiler> compiler;
+        mutable std::unique_ptr<st::BindingGenerator> bindingGenerator;
     };
 
 }

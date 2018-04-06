@@ -34,8 +34,8 @@ namespace vpsk {
         }
     }
 
-    ShaderGroup::ShaderGroup(const vpr::Device * dvc, st::ShaderCompiler* _compiler, st::BindingGenerator* b_gen) : device(dvc), 
-        compiler(_compiler), bindingGenerator(b_gen) {}
+    ShaderGroup::ShaderGroup(const vpr::Device * dvc) : device(dvc), compiler(std::make_unique<st::ShaderCompiler>()), 
+        bindingGenerator(std::make_unique<st::BindingGenerator>()) {}
 
     ShaderGroup::~ShaderGroup() {}
 
@@ -80,11 +80,15 @@ namespace vpsk {
         return inputAttrs;
     }
 
-    const std::vector<VkDescriptorSetLayoutBinding>& ShaderGroup::GetSetLayoutBindings(const uint32_t set_idx) const {
+    const std::map<std::string, VkDescriptorSetLayoutBinding>& ShaderGroup::GetSetLayoutBindings(const uint32_t set_idx) const {
         if (!collated) {
             retrieveData();
         }
         return layoutBindings.at(set_idx);
+    }
+
+    ShaderGroup::resources_tuple_t ShaderGroup::GetResources(const uint32_t set_idx) const {
+        return std::make_tuple(GetSetLayoutBindings(set_idx), GetVertexAttributes());
     }
 
     std::vector<VkPipelineShaderStageCreateInfo> ShaderGroup::GetPipelineInfos() const {
@@ -107,7 +111,7 @@ namespace vpsk {
         if (!collated) {
             retrieveData();
         }
-        return bindingGenerator->GetNumSets();
+        return layoutBindings.size();
     }
 
     void ShaderGroup::retrieveData() const {
@@ -115,17 +119,29 @@ namespace vpsk {
 
         const uint32_t num_sets = bindingGenerator->GetNumSets();
         for (uint32_t i = 0; i < num_sets; ++i) {
-            uint32_t num_bindings = 0;
-            bindingGenerator->GetLayoutBindings(i, &num_bindings, nullptr);
-            std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
-            bindingGenerator->GetLayoutBindings(i, &num_bindings, bindings.data());
-            layoutBindings.emplace(i, bindings);
+            uint32_t num_names = 0;
+            bindingGenerator->GetSetNameBindingPairs(i, &num_names, nullptr, nullptr);
+            std::vector<char*> names(num_names);
+            std::vector<VkDescriptorSetLayoutBinding> bindings(num_names);
+            bindingGenerator->GetSetNameBindingPairs(i, &num_names, names.data(), bindings.data());
+
+            for (size_t j = 0; j < num_names; ++j) {
+                layoutBindings[i].emplace(std::string{ names[j] }, bindings[j]);
+            }
+
+            bindingGenerator->FreeRetrievedSetMemberNames(num_names, names.data());
+            
         }
 
         uint32_t num_attrs = 0;
         bindingGenerator->GetVertexAttributes(&num_attrs, nullptr);
-        inputAttrs = std::vector<VkVertexInputAttributeDescription>(num_attrs);
-        bindingGenerator->GetVertexAttributes(&num_attrs, inputAttrs.data());
+        if (num_attrs != 0) {
+            inputAttrs = std::vector<VkVertexInputAttributeDescription>(num_attrs);
+            bindingGenerator->GetVertexAttributes(&num_attrs, inputAttrs.data());
+        }
+
+        bindingGenerator.reset();
+        compiler.reset();
         
     }
 
