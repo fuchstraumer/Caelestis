@@ -1,29 +1,14 @@
-#include "scene/BaseScene.hpp"
 #include "common/CreateInfoBase.hpp"
 #include "core/Instance.hpp"
 #include "core/LogicalDevice.hpp"
-#include "resource/DescriptorPool.hpp"
-#include "resource/Buffer.hpp"
-#include "util/UtilitySphere.hpp" 
-#include "math/Ray.hpp"
-#include "util/AABB.hpp"
-#include "render/Swapchain.hpp"
-#include "command/CommandPool.hpp"
-#include "command/TransferPool.hpp"
-#include "geometries/vertex_t.hpp"
-#include "render/GraphicsPipeline.hpp"
-#include "render/Renderpass.hpp"
-#include "render/Framebuffer.hpp"
-#include "resource/ShaderModule.hpp"
-#include "resource/PipelineCache.hpp"
-#include "resource/PipelineLayout.hpp"
-#include "resource/DescriptorSetLayout.hpp"
-#include "resource/DescriptorSet.hpp"
-#include "resource/Image.hpp"
 #include "resources/ShaderGroup.hpp"
 #include "scene/Window.hpp"
-#include "camera/Camera.hpp"
 #include "ShaderGenerator.hpp"
+#include "resources/DescriptorResources.hpp"
+#include "resources/PipelineResource.hpp"
+#include "render/PipelineSubmission.hpp"
+#include "render/RenderGraph.hpp"
+#include "imgui/imgui.h"
 #include <memory>
 #include <set>
 #include <unordered_map>
@@ -41,15 +26,7 @@ INITIALIZE_EASYLOGGINGPP
 
 namespace rendergraph_sketch {
 
-    using backing_resource_t = std::variant<
-        std::unique_ptr<vpr::Buffer>,
-        std::unique_ptr<vpr::Image>
-    >;
-
-    using backing_resource_map_t = std::map<
-        std::string,
-        backing_resource_t
-    >;
+    std::unique_ptr<vpsk::DescriptorResources> ResourceLibrary;
 
     struct compute_pipeline_t {
         VkPipeline Handle;
@@ -100,7 +77,7 @@ namespace rendergraph_sketch {
 
         uint32_t num_sets = static_cast<uint32_t>(Shaders->GetNumSetsRequired());
         for(uint32_t i = 0; i < num_sets; ++i) {
-            ResourceLibraryIndices.emplace_back(ResourceLibrary.AddResources(Shaders->GetSetLayoutBindings(i)));
+            ResourceLibraryIndices.emplace_back(ResourceLibrary->AddResources(Shaders->GetSetLayoutBindings(i)));
         }
 
     }
@@ -112,19 +89,9 @@ namespace rendergraph_sketch {
         }
         uint32_t num_sets = static_cast<uint32_t>(Shaders->GetNumSetsRequired());
         for (uint32_t i = 0; i < num_sets; ++i) {
-            ResourceLibraryIndices.emplace_back(ResourceLibrary.AddResources(Shaders->GetSetLayoutBindings(i)));
+            ResourceLibraryIndices.emplace_back(ResourceLibrary->AddResources(Shaders->GetSetLayoutBindings(i)));
         }
     }
-
-    class RenderGraph {
-
-    public:
-
-        std::unordered_map<std::string, base_pass_t> passes;
-        std::vector<std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
-        std::vector<std::unique_ptr<vpr::DescriptorSetLayout>> setLayouts;
-        std::unique_ptr<vpr::DescriptorPool> descriptorPool;
-    };
 
 }
 
@@ -140,6 +107,8 @@ constexpr VkApplicationInfo app_info{
 
 int main(int argc, char* argv[]) {
     using namespace rendergraph_sketch;
+    using namespace vpsk;
+    using namespace vpr;
     ImGui::CreateContext();
     auto window = std::make_unique<vpsk::Window>(1280, 720, "RendergraphSketch");
     auto instance = std::make_unique<vpr::Instance>(false, &app_info, window->glfwWindow());
@@ -176,16 +145,12 @@ int main(int argc, char* argv[]) {
         }
 
     }
+
+    RenderGraph graph(device.get());
+    auto& AssignLightsToClustersBVH = graph.AddSubmission("AssignLightsToClustersBVH", VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    AssignLightsToClustersBVH.AddShaders({ "AssignLightsToClustersBVH" }, { generatedShaders.at("AssignLightsToClustersBVH") }, { VK_SHADER_STAGE_COMPUTE_BIT });
     
-    std::map<std::string, base_pass_t> passes;
 
-    for (auto& shader : generatedShaders) {
-        passes.emplace(shader.first, base_pass_t(device.get(), { shader.first }, { shader.second }));
-    }
-
-    ResourceLibrary.AllocatePool(device.get());
-    ResourceLibrary.CreateSetLayouts(device.get());
-
-    std::cerr << "Completed " << std::to_string(ResourceLibrary.setResources.size()) << "\n";
+    std::cerr << "Completed\n";
     
 }

@@ -2,23 +2,75 @@
 #ifndef VPSK_RENDERGRAPH_HPP
 #define VPSK_RENDEGRAPH_HPP
 #include "resources/PipelineResource.hpp"
+#include "PipelineSubmission.hpp"
 #include <unordered_map>
 
 namespace vpsk {
+    
+    class DescriptorResources;
 
     class RenderGraph {
     public:
 
+        RenderGraph(const vpr::Device* dvc);
+
+        PipelineSubmission& AddSubmission(const std::string& name, VkPipelineStageFlags stages);
+        PipelineResource& GetResource(const std::string& name);
+
+        void Bake();
+        void Reset();
+
+        void SetBackbufferSource(const std::string& name);
+        void SetBackbufferDimensions(const ResourceDimensions& dimensions);
+
     private:
 
-        using barrier_variant_t = std::variant<VkBufferMemoryBarrier, VkImageMemoryBarrier, VkMemoryBarrier>;
-        struct resource_barriers_t { 
-            std::vector<barrier_variant_t> Invalidates;
-            std::vector<barrier_variant_t> Flushes;
+        struct pipeline_barrier_t {
+            size_t Resource;
+            VkImageLayout Layout{ VK_IMAGE_LAYOUT_UNDEFINED };
+            VkAccessFlags AccessFlags{ VK_ACCESS_FLAG_BITS_MAX_ENUM };
+            VkPipelineStageFlags Stages{ VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM };
+            bool History{ false };
         };
-        std::unordered_map<std::string, vpr::Buffer*> usedBuffers;
-        std::unordered_map<std::string, vpr::Image*> usedImages;
-        std::unordered_map<std::string, PipelineResource> resources;
+
+        struct pass_barriers_t {
+            std::vector<pipeline_barrier_t> InvalidateBarriers;
+            std::vector<pipeline_barrier_t> FlushBarriers;
+        };
+
+        struct color_clear_request_t {
+            PipelineSubmission* Submission;
+            VkClearColorValue* Target;
+            size_t Index;
+        };
+
+        struct depth_clear_request_t {
+            PipelineSubmission* Submission;
+            VkClearDepthStencilValue* Target;
+        };
+
+        struct scaled_clear_request_t {
+            size_t Target;
+            size_t Resource;
+        };
+
+        struct mipmap_request_t {
+            size_t Resource;
+        };
+
+        std::string graphName;
+        std::string backbufferSource;
+
+
+        std::unordered_map<std::string, pass_barriers_t> passBarriers;
+        std::unordered_map<std::string, vpr::Buffer*> backingBuffers;
+        std::unordered_map<std::string, vpr::Image*> backingImages;
+        std::unordered_map<std::string, size_t> resourceNameMap;
+        std::vector<std::unique_ptr<PipelineResource>> resources;
+        std::unordered_map<std::string, std::unique_ptr<PipelineSubmission>> submissions;
+
+        std::unique_ptr<DescriptorResources> descriptorResources;
+        std::vector<std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
     };
 
 }

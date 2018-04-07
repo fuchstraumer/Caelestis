@@ -44,6 +44,14 @@ namespace vpsk {
                 return (other.stub != stub) || (other.object != object);
             }
 
+            explicit bool operator() const noexcept {
+                return (object != nullptr) && (stub != nullptr);
+            }
+
+            explicit bool operator!() const noexcept {
+                return (object == nullptr) || (stub == nullptr);
+            }
+
             void* object = nullptr;
             func_stub_t stub = nullptr;
         };
@@ -124,7 +132,7 @@ namespace vpsk {
             return other != (*this);
         }
 
-        Result operator()(Args&&...args) const {
+        Result operator()(Args...args) const {
             return (*invocation.stub)(invocation.object,std::forward<Args>(args)...);
         }
 
@@ -135,7 +143,7 @@ namespace vpsk {
 
         template<class T, Result(T::*Method)(Args...) const>
         static delegate_t create(const T* object) {
-            return delegate_t(cons_cast<T*>(object), const_method_stub<T,Method>);
+            return delegate_t(const_cast<T*>(object), const_method_stub<T,Method>);
         }
 
         template<Result(*Function)(Args...)>
@@ -178,7 +186,7 @@ namespace vpsk {
         }
 
         template<typename LambdaFunc>
-        static Result lambda_stub(void* this_ptr, Args&&...args) {
+        static Result lambda_stub(void* this_ptr, Args...args) {
             LambdaFunc* p = static_cast<LambdaFunc*>(this_ptr);
             return (p->operator())(std::forward<Args>(args)...);
         }
