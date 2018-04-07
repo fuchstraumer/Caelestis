@@ -21,6 +21,10 @@ namespace vpsk {
         size_t AddResources(const std::map<std::string, VkDescriptorSetLayoutBinding>& resources);
         size_t FindIdxOfSetWithResource(const std::string& name) const;
 
+        vpr::DescriptorPool* GetDescriptorPool();
+        vpr::DescriptorSetLayout* GetSetLayout(const size_t& idx);
+        const std::map<std::string, VkDescriptorSetLayoutBinding>& GetSetResources(const size_t& idx) const;
+
         void AllocatePool();
         void CreateSetLayouts();
 
@@ -28,7 +32,6 @@ namespace vpsk {
         const vpr::Device* device;
         std::unique_ptr<vpr::DescriptorPool> descriptorPool;
         std::vector<std::unique_ptr<vpr::DescriptorSetLayout>> setLayouts;
-        std::vector<std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
         std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>> setResources;
         std::mutex insertionGuard;
     };

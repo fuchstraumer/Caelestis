@@ -1,7 +1,6 @@
 #include "resources/DescriptorResources.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "resource/DescriptorSetLayout.hpp"
-#include "resource/DescriptorSet.hpp"
 #include <future>
 
 namespace vpsk {
