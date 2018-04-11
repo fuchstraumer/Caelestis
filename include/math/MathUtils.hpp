@@ -1,14 +1,16 @@
 #pragma once
 #ifndef VULPES_MATH_UTILITIES_HPP
 #define VULPES_MATH_UTILITIES_HPP
-#include "glm/vec2.hpp"
+#include "math/vector_float32x2.hpp"
 
 namespace vpsk {
-
-    float PointOnEllipseBisector(const size_t& num_components, const glm::vec2& extents, const glm::vec2& y, glm::vec2& x);
-    float PointOnEllipseSqrDistanceImpl(const glm::vec2& extents, const glm::vec2& y, glm::vec2& x);
-    float PointOnEllipseSqrDistance(const glm::vec2& extents, const glm::vec2& y, glm::vec2& x);
-    glm::vec2 GetClosestPointOnEllipse(const glm::vec2& center, const glm::vec2& axis_a, const glm::vec2& axis_b, const glm::vec2& test_point);
+    
+    float PointOnEllipseBisector(const size_t& num_components, const mango::float32x2& extents, const mango::float32x2& y, 
+        mango::float32x2& x);
+    float PointOnEllipseSqrDistanceImpl(const mango::float32x2& extents, const mango::float32x2& y, mango::float32x2& x);
+    float PointOnEllipseSqrDistance(const mango::float32x2& extents, const mango::float32x2& y, mango::float32x2& x);
+    mango::float32x2 GetClosestPointOnEllipse(const mango::float32x2& center, const mango::float32x2& axis_a, 
+        const mango::float32x2& axis_b, const mango::float32x2& test_point);
 
 }
 
