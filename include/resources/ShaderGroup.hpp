@@ -8,6 +8,7 @@
 #include <memory>
 #include "ForwardDecl.hpp"
 #include "Shader.hpp"
+#include "DescriptorStructs.hpp"
 
 namespace st {
     class BindingGenerator;
@@ -34,6 +35,7 @@ namespace vpsk {
 
         const std::vector<VkVertexInputAttributeDescription>& GetVertexAttributes() const;
         const std::map<std::string, VkDescriptorSetLayoutBinding>& GetSetLayoutBindings(const uint32_t set_idx) const;
+        std::map<uint32_t, st::DescriptorObject> GetSetObjects(const uint32_t set_idx) const;
         using resources_tuple_t = std::tuple<const std::map<std::string, VkDescriptorSetLayoutBinding>&, const std::vector<VkVertexInputAttributeDescription>&>;
         resources_tuple_t GetResources(const uint32_t set_idx) const;
         std::vector<VkPipelineShaderStageCreateInfo> GetPipelineInfos() const;

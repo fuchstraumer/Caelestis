@@ -62,6 +62,20 @@ namespace vpsk {
 
     }
 
+    vpr::DescriptorPool * DescriptorResources::GetDescriptorPool()
+    {
+        return nullptr;
+    }
+
+    vpr::DescriptorSetLayout * DescriptorResources::GetSetLayout(const size_t & idx)
+    {
+        return nullptr;
+    }
+
+    const std::map<std::string, VkDescriptorSetLayoutBinding>& DescriptorResources::GetSetResources(const size_t & idx) const {
+        return setResources.at(idx);
+    }
+
     void DescriptorResources::AllocatePool() {
         descriptorPool = std::make_unique<vpr::DescriptorPool>(device, setResources.size());
         std::map<VkDescriptorType, uint32_t> num_per_type;

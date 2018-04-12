@@ -44,14 +44,6 @@ namespace vpsk {
                 return (other.stub != stub) || (other.object != object);
             }
 
-            explicit bool operator() const noexcept {
-                return (object != nullptr) && (stub != nullptr);
-            }
-
-            explicit bool operator!() const noexcept {
-                return (object == nullptr) || (stub == nullptr);
-            }
-
             void* object = nullptr;
             func_stub_t stub = nullptr;
         };

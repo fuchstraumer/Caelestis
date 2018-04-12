@@ -3,11 +3,10 @@
 #define VPSK_RENDEGRAPH_HPP
 #include "resources/PipelineResource.hpp"
 #include "PipelineSubmission.hpp"
+#include "resources/DescriptorResources.hpp"
 #include <unordered_map>
 
 namespace vpsk {
-    
-    class DescriptorResources;
 
     class RenderGraph {
     public:
@@ -22,6 +21,9 @@ namespace vpsk {
 
         void SetBackbufferSource(const std::string& name);
         void SetBackbufferDimensions(const ResourceDimensions& dimensions);
+
+        const vpr::Device* GetDevice() const noexcept;
+        DescriptorResources* GetDescriptorResources();
 
     private:
 
@@ -60,8 +62,6 @@ namespace vpsk {
 
         std::string graphName;
         std::string backbufferSource;
-
-
         std::unordered_map<std::string, pass_barriers_t> passBarriers;
         std::unordered_map<std::string, vpr::Buffer*> backingBuffers;
         std::unordered_map<std::string, vpr::Image*> backingImages;
@@ -71,6 +71,8 @@ namespace vpsk {
 
         std::unique_ptr<DescriptorResources> descriptorResources;
         std::vector<std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
+
+        const vpr::Device* device;
     };
 
 }

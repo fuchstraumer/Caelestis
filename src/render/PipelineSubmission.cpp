@@ -1,10 +1,39 @@
 #include "render/PipelineSubmission.hpp"
 #include "render/RenderGraph.hpp"
+#include "resources/ShaderGroup.hpp"
 
 namespace vpsk {
 
-    PipelineSubmission::PipelineSubmission(RenderGraph& rgraph, std::string _name, size_t _idx, VkPipelineStageFlags _stages) : renderGraph(rgraph),
-            name(std::move(_name)), idx(std::move(_idx)), stages(std::move(_stages)) {}
+    PipelineSubmission::PipelineSubmission(RenderGraph& rgraph, std::string _name, size_t _idx, VkPipelineStageFlags _stages, const std::string pipeline_options_json_path) : renderGraph(rgraph),
+            name(std::move(_name)), idx(std::move(_idx)), stages(std::move(_stages)), shaders(std::make_unique<ShaderGroup>(rgraph.GetDevice())) {}
+
+    PipelineSubmission::~PipelineSubmission() {}
+
+    void PipelineSubmission::AddShaders(const std::vector<std::string>& shader_paths, const std::vector<VkShaderStageFlagBits>& stages) {
+
+    }
+
+    void PipelineSubmission::AddShaders(const std::vector<std::string>& shader_names, const std::vector<std::string>& shader_srcs, const std::vector<VkShaderStageFlagBits>& stages) {
+
+        auto self_register_resources = [](const st::DescriptorObject& object) {
+
+        };
+
+        for (size_t i = 0; i < shader_names.size(); ++i) {
+            shaders->AddShader(shader_names[i], shader_srcs[i], stages[i]);
+        }
+
+        const size_t num_sets = shaders->GetNumSetsRequired();
+        DescriptorResources* rsrcs = renderGraph.GetDescriptorResources();
+        for (size_t i = 0; i < num_sets; ++i) {
+            usedSetIndices.emplace_back(rsrcs->AddResources(shaders->GetSetLayoutBindings(static_cast<uint32_t>(i))));
+            auto objects = shaders->GetSetObjects(i);
+            for (auto& obj : objects) {
+                self_register_resources(obj.second);
+            }
+        }
+
+    }
  
     PipelineResource & PipelineSubmission::SetDepthStencilInput(const std::string & name) {
         auto& resource = renderGraph.GetResource(name);
@@ -14,7 +43,7 @@ namespace vpsk {
         return resource;
     }
 
-    PipelineResource & PipelineSubmission::SetDepthStencilOutput(const std::string & name, const image_info_t & info) {
+    PipelineResource & PipelineSubmission::SetDepthStencilOutput(const std::string & name, image_info_t info) {
         auto& resource = renderGraph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenInPass(idx);
@@ -38,17 +67,17 @@ namespace vpsk {
         return resource;
     }
 
-    PipelineResource & PipelineSubmission::AddColorOutput(const std::string & name, const image_info_t & info, const std::string & input) {
+    PipelineResource & PipelineSubmission::AddColorOutput(const std::string & name, image_info_t info, const std::string & input) {
         auto& resource = renderGraph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenInPass(idx);
         resource.SetInfo(info);
-        colorOutputs.emplace_back(resource);
+        colorOutputs.emplace_back(&resource);
         if (!input.empty()) {
             auto& input_resource = renderGraph.GetResource(input);
             input_resource.ReadInPass(idx);
-            colorInputs.emplace_back(&resource);
-            colorScaleInputs.emplace_back(&resource);
+            colorInputs.emplace_back(&input_resource);
+            colorScaleInputs.emplace_back(&input_resource);
         }
         else {
             colorInputs.emplace_back(nullptr);
@@ -57,7 +86,7 @@ namespace vpsk {
         return resource;
     }
 
-    PipelineResource & PipelineSubmission::AddResolveOutput(const std::string & name, const image_info_t & info) {
+    PipelineResource & PipelineSubmission::AddResolveOutput(const std::string & name, image_info_t info) {
         auto& resource = renderGraph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenInPass(idx);
@@ -66,7 +95,7 @@ namespace vpsk {
         return resource;
     }
 
-    PipelineResource & PipelineSubmission::AddTextureInput(const std::string & name, const image_info_t & info) {
+    PipelineResource & PipelineSubmission::AddTextureInput(const std::string & name, image_info_t info) {
         auto& resource = renderGraph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.ReadInPass(idx);
@@ -74,11 +103,12 @@ namespace vpsk {
         return resource;
     }
 
-    PipelineResource & PipelineSubmission::AddStorageTextureOutput(const std::string & name, const image_info_t & info, const std::string & input) {
+    PipelineResource & PipelineSubmission::AddStorageTextureOutput(const std::string & name, image_info_t info, const std::string & input) {
         auto& resource = renderGraph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenInPass(idx);
         resource.SetInfo(info);
+        resource.SetStorage(true);
         storageTextureOutputs.emplace_back(&resource);
         if (!input.empty()) {
             auto& input_resource = renderGraph.GetResource(input);
@@ -91,6 +121,16 @@ namespace vpsk {
         return resource;
     }
 
+    PipelineResource& PipelineSubmission::AddStorageTextureRW(const std::string& name, image_info_t info) {
+        auto& resource = renderGraph.GetResource(name);
+        resource.AddUsedPipelineStages(stages);
+        resource.ReadInPass(idx);
+        resource.WrittenInPass(idx);
+        resource.SetStorage(true);
+        storageTextureOutputs.emplace_back(&resource);
+        storageTextureInputs.emplace_back(&resource);
+    }
+
     PipelineResource& PipelineSubmission::AddUniformInput(const std::string& name) {
         auto& resource = renderGraph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
@@ -99,11 +139,12 @@ namespace vpsk {
         return resource;
     }
 
-    PipelineResource & PipelineSubmission::AddStorageOutput(const std::string & name, const buffer_info_t & info, const std::string & input) {
+    PipelineResource & PipelineSubmission::AddStorageOutput(const std::string & name, buffer_info_t info, const std::string & input) {
         auto& resource = renderGraph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenInPass(idx);
         resource.SetInfo(info);
+        resource.SetStorage(true);
         storageOutputs.emplace_back(&resource);
         if (!input.empty()) {
             auto& input_resource = renderGraph.GetResource(input);
@@ -249,6 +290,14 @@ namespace vpsk {
 
     void PipelineSubmission::BuildSubmission(const VkCommandBuffer & cmd) {
         buildPassCb(cmd);
+    }
+
+    graphics_pipeline_t::~graphics_pipeline_t()
+    {
+    }
+
+    compute_pipeline_t::~compute_pipeline_t() {
+
     }
 
 }

@@ -10,6 +10,13 @@
 #include <vector>
 #include <string>
 
+#include "resource/PipelineCache.hpp"
+#include "render/GraphicsPipeline.hpp"
+#include "resource/PipelineLayout.hpp"
+#include "resource/DescriptorPool.hpp"
+#include "resource/DescriptorSet.hpp"
+#include "resource/DescriptorSetLayout.hpp"
+
 namespace vpsk {
 
     class DescriptorResources;
@@ -17,12 +24,14 @@ namespace vpsk {
     class RenderGraph;
 
     struct compute_pipeline_t {
+        ~compute_pipeline_t();
         VkPipeline Handle;
         VkComputePipelineCreateInfo Info;
         delegate_t<void(const VkCommandBuffer&)> DispatchFunc;
     };
 
     struct graphics_pipeline_t {
+        ~graphics_pipeline_t();
         std::unique_ptr<vpr::GraphicsPipeline> Pipeline;
         std::unique_ptr<vpr::GraphicsPipelineInfo> Info;
     };
@@ -37,21 +46,23 @@ namespace vpsk {
 
         PipelineSubmission(RenderGraph& rgraph, std::string name, size_t idx, VkPipelineStageFlags stages, 
             const std::string pipeline_options_json_path = "");
+        ~PipelineSubmission();
         
         void AddShaders(const std::vector<std::string>& shader_paths, const std::vector<VkShaderStageFlagBits>& stages = {});
         void AddShaders(const std::vector<std::string>& shader_names, const std::vector<std::string>& shader_srcs, 
             const std::vector<VkShaderStageFlagBits>& stages);
 
         PipelineResource& SetDepthStencilInput(const std::string& name);
-        PipelineResource& SetDepthStencilOutput(const std::string& name, const image_info_t& info);
+        PipelineResource& SetDepthStencilOutput(const std::string& name, image_info_t info);
         PipelineResource& AddAttachmentInput(const std::string& name);
         PipelineResource& AddHistoryInput(const std::string& name);
-        PipelineResource& AddColorOutput(const std::string& name, const image_info_t& info, const std::string& input = "");
-        PipelineResource& AddResolveOutput(const std::string& name, const image_info_t& info);
-        PipelineResource& AddTextureInput(const std::string& name, const image_info_t& info);
-        PipelineResource& AddStorageTextureOutput(const std::string& name, const image_info_t& info, const std::string& input = "");
+        PipelineResource& AddColorOutput(const std::string& name, image_info_t info, const std::string& input = "");
+        PipelineResource& AddResolveOutput(const std::string& name, image_info_t info);
+        PipelineResource& AddTextureInput(const std::string& name, image_info_t info);
+        PipelineResource& AddStorageTextureOutput(const std::string& name, image_info_t info, const std::string& input = "");
+        PipelineResource & AddStorageTextureRW(const std::string & name, image_info_t info);
         PipelineResource& AddUniformInput(const std::string& name);
-        PipelineResource& AddStorageOutput(const std::string& name, const buffer_info_t& info, const std::string& input = "");
+        PipelineResource& AddStorageOutput(const std::string& name, buffer_info_t info, const std::string& input = "");
         PipelineResource& AddStorageReadOnlyInput(const std::string& name);
 
         const std::vector<PipelineResource*>& GetColorOutputs() const noexcept;

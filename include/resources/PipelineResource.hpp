@@ -57,14 +57,17 @@ namespace vpsk {
     public:
 
         PipelineResource(std::string name, size_t idx);
+        ~PipelineResource();
 
         bool operator==(const PipelineResource& other) const noexcept;
 
         bool IsBuffer() const noexcept;
         bool IsImage() const noexcept;
+        bool IsStorage() const noexcept;
+        bool IsTransient() const noexcept;
 
-        void WrittenInPass(uint16_t idx);
-        void ReadInPass(uint16_t idx);
+        void WrittenInPass(size_t idx);
+        void ReadInPass(size_t idx);
 
         void SetIdx(size_t idx);
         void SetParentSetIdx(size_t idx);
@@ -72,14 +75,16 @@ namespace vpsk {
         void SetDescriptorType(VkDescriptorType type);
         void AddUsedPipelineStages(VkPipelineStageFlags stages);
         void SetInfo(resource_info_variant_t _info);
+        void SetStorage(const bool& _storage);
+        void SetTransient(const bool& _transient);
 
         const size_t& GetIdx() const noexcept;
         const size_t& GetParentSetIdx() const noexcept;
         const VkDescriptorType& GetDescriptorType() const noexcept;
         const std::string& GetName() const noexcept;
         VkPipelineStageFlags GetUsedPipelineStages() const noexcept;
-        const std::unordered_set<uint16_t>& GetPassesReadIn() const noexcept;
-        const std::unordered_set<uint16_t>& GetPassesWrittenIn() const noexcept;
+        const std::unordered_set<size_t>& GetPassesReadIn() const noexcept;
+        const std::unordered_set<size_t>& GetPassesWrittenIn() const noexcept;
         const resource_info_variant_t& GetInfo() const noexcept;
 
     private:
@@ -94,11 +99,14 @@ namespace vpsk {
         VkDescriptorType intendedType{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         // Stages of the pipeline this item is used in
         VkPipelineStageFlags usedStages{ VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM };
-
+        // Used to specify storage resources (unsurprisingly)
+        bool storage{ false };
+        // Resources that don't need to persist throughout the frame
+        bool transient{ false };
         resource_info_variant_t info;
 
-        std::unordered_set<uint16_t> readInPasses;
-        std::unordered_set<uint16_t> writtenInPasses;
+        std::unordered_set<size_t> readInPasses;
+        std::unordered_set<size_t> writtenInPasses;
     };
 
 }
