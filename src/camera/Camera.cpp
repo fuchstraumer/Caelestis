@@ -121,12 +121,16 @@ namespace vpsk {
         rotation = look_at(look_at_pos - eye_pos, world_up);
     }
 
-    float Camera::GetNearPlane() const noexcept {
-        return zNear;
+    double Camera::GetNearPlane() const noexcept {
+        return static_cast<double>(zNear);
     }
 
-    float Camera::GetFarPlane() const noexcept {
-        return zFar;
+    double Camera::GetFarPlane() const noexcept {
+        return static_cast<double>(zFar);
+    }
+
+    double Camera::GetFOV() const noexcept {
+        return static_cast<double>(fovY);
     }
 
     fpsCamera::fpsCamera() : Camera() {}

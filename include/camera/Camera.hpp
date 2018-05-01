@@ -27,9 +27,9 @@ namespace vpsk {
         void SetRotation(glm::quat quat);
         void LookAt(const glm::vec3& eye_pos, const glm::vec3& look_at_pos, const glm::vec3& world_up = glm::vec3(0.0f, 1.0f, 0.0f));
 
-        float GetNearPlane() const noexcept;
-        float GetFarPlane() const noexcept;
-        float GetFOV() const noexcept;
+        double GetNearPlane() const noexcept;
+        double GetFarPlane() const noexcept;
+        double GetFOV() const noexcept;
 
         void SetTransformation(const glm::mat4& m);
 
