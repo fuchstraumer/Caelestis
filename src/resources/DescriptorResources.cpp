@@ -100,7 +100,7 @@ namespace vpsk {
             for (const auto& rsrc : entry) {
                 bindings.emplace_back(rsrc.second);
             }
-            set_layout->AddDescriptorBindings(bindings);
+            set_layout->AddDescriptorBindings(static_cast<uint32_t>(bindings.size()), bindings.data());
             setLayouts.emplace_back(std::move(set_layout));
         }
     }

@@ -131,7 +131,6 @@ namespace vpsk {
         std::vector<size_t> usedSetIndices;
         std::unique_ptr<vpr::PipelineCache> cache;
         std::unique_ptr<vpr::PipelineLayout> layout;
-        std::unique_ptr<ShaderGroup> shaders;
         pipelines_variant_t pipeline;
 
     };

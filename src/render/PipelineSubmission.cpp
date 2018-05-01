@@ -4,7 +4,7 @@
 namespace vpsk {
 
     PipelineSubmission::PipelineSubmission(RenderGraph& rgraph, std::string _name, size_t _idx, VkPipelineStageFlags _stages, const std::string pipeline_options_json_path) : renderGraph(rgraph),
-            name(std::move(_name)), idx(std::move(_idx)), stages(std::move(_stages)), shaders(std::make_unique<ShaderGroup>(rgraph.GetDevice())) {}
+            name(std::move(_name)), idx(std::move(_idx)), stages(std::move(_stages)) {}
 
     PipelineSubmission::~PipelineSubmission() {}
 
@@ -13,7 +13,6 @@ namespace vpsk {
     }
 
     void PipelineSubmission::AddShaders(const std::vector<std::string>& shader_names, const std::vector<std::string>& shader_srcs, const std::vector<VkShaderStageFlagBits>& stages) {
-
 
     }
  
@@ -111,6 +110,7 @@ namespace vpsk {
         resource.SetStorage(true);
         storageTextureOutputs.emplace_back(&resource);
         storageTextureInputs.emplace_back(&resource);
+        return resource;
     }
 
     PipelineResource& PipelineSubmission::AddUniformInput(const std::string& name) {
