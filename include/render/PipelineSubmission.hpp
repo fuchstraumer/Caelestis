@@ -16,6 +16,7 @@
 #include "resource/DescriptorPool.hpp"
 #include "resource/DescriptorSet.hpp"
 #include "resource/DescriptorSetLayout.hpp"
+#include "util/Delegate.hpp"
 
 namespace vpsk {
 
@@ -27,7 +28,7 @@ namespace vpsk {
         ~compute_pipeline_t();
         VkPipeline Handle;
         VkComputePipelineCreateInfo Info;
-        delegate_t<void(const VkCommandBuffer&)> DispatchFunc;
+        st::delegate_t<void(const VkCommandBuffer&)> DispatchFunc;
     };
 
     struct graphics_pipeline_t {
@@ -105,10 +106,10 @@ namespace vpsk {
         VkPipelineStageFlags stages;
         std::string name;
 
-        delegate_t<void(const VkCommandBuffer&)> buildPassCb;
-        delegate_t<bool()> needPassCb;
-        delegate_t<bool(VkClearDepthStencilValue*)> getClearDepthCb;
-        delegate_t<bool(size_t, VkClearColorValue*)> getClearColorCb;
+        st::delegate_t<void(const VkCommandBuffer&)> buildPassCb;
+        st::delegate_t<bool()> needPassCb;
+        st::delegate_t<bool(VkClearDepthStencilValue*)> getClearDepthCb;
+        st::delegate_t<bool(size_t, VkClearColorValue*)> getClearColorCb;
         
         std::vector<PipelineResource*> colorOutputs;
         std::vector<PipelineResource*> resolveOutputs;

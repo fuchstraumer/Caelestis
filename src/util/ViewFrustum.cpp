@@ -1,5 +1,6 @@
 #include "util/ViewFrustum.hpp"
-
+#include "glm/mat4x4.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 namespace vpsk {
 
     static const std::array<glm::vec4, 8> helper_array {

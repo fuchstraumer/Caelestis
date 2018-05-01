@@ -41,7 +41,6 @@ SET(TINYOBJLOADER_LIBRARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/")
 ADD_SUBDIRECTORY("third_party/tinyobjloader")
 ADD_SUBDIRECTORY("third_party/vulpesrender")
 ADD_SUBDIRECTORY("third_party/shadertools")
-ADD_SUBDIRECTORY("third_party/mango")
 
 ADD_LIBRARY(VulpesSceneKit STATIC ${RESOURCES} ${GEOMETRIES} ${FEATURES} ${PASSES} ${SHADER_TOOLS} ${RENDER} 
                                   ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS} 
@@ -73,27 +72,27 @@ OPTION(BUILD_EX_SCENES "Build example scenes" ON)
 
 IF(BUILD_EX_SCENES) 
 
-ADD_EXECUTABLE(ClusteredForward "demoscenes/ClusteredForward.cpp")
+ADD_EXECUTABLE(ClusteredForward "tests/ClusteredForward.cpp")
 TARGET_INCLUDE_DIRECTORIES(ClusteredForward PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
 "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
 TARGET_LINK_LIBRARIES(ClusteredForward PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
-TARGET_LINK_LIBRARIES(ClusteredForward PUBLIC glfw ShaderTools mango)
+TARGET_LINK_LIBRARIES(ClusteredForward PUBLIC glfw ShaderTools)
 TARGET_COMPILE_DEFINITIONS(ClusteredForward PUBLIC -DGLM_LANG_STL11_FORCED)
 TARGET_COMPILE_DEFINITIONS(ClusteredForward PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
 
-ADD_EXECUTABLE(VolumetricForward "demoscenes/VolumetricForward.cpp")
+ADD_EXECUTABLE(VolumetricForward "tests/VolumetricForward.cpp")
 TARGET_INCLUDE_DIRECTORIES(VolumetricForward PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
 "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
 TARGET_LINK_LIBRARIES(VolumetricForward PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
-TARGET_LINK_LIBRARIES(VolumetricForward PUBLIC glfw ShaderTools mango)
+TARGET_LINK_LIBRARIES(VolumetricForward PUBLIC glfw ShaderTools)
 TARGET_COMPILE_DEFINITIONS(VolumetricForward PUBLIC -DGLM_LANG_STL11_FORCED)
 TARGET_COMPILE_DEFINITIONS(VolumetricForward PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
 
-ADD_EXECUTABLE(RendergraphSketch "demoscenes/RendergraphSketch.cpp") 
+ADD_EXECUTABLE(RendergraphSketch "tests/RendergraphSketch.cpp") 
 TARGET_INCLUDE_DIRECTORIES(RendergraphSketch PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
 "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
 TARGET_LINK_LIBRARIES(RendergraphSketch PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
-TARGET_LINK_LIBRARIES(RendergraphSketch PUBLIC glfw ShaderTools mango)
+TARGET_LINK_LIBRARIES(RendergraphSketch PUBLIC glfw ShaderTools)
 TARGET_COMPILE_DEFINITIONS(RendergraphSketch PUBLIC -DGLM_LANG_STL11_FORCED)
 TARGET_COMPILE_DEFINITIONS(RendergraphSketch PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
 

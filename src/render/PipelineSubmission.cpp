@@ -1,6 +1,5 @@
 #include "render/PipelineSubmission.hpp"
 #include "render/RenderGraph.hpp"
-#include "resources/ShaderGroup.hpp"
 
 namespace vpsk {
 
@@ -15,23 +14,6 @@ namespace vpsk {
 
     void PipelineSubmission::AddShaders(const std::vector<std::string>& shader_names, const std::vector<std::string>& shader_srcs, const std::vector<VkShaderStageFlagBits>& stages) {
 
-        auto self_register_resources = [](const st::DescriptorObject& object) {
-
-        };
-
-        for (size_t i = 0; i < shader_names.size(); ++i) {
-            shaders->AddShader(shader_names[i], shader_srcs[i], stages[i]);
-        }
-
-        const size_t num_sets = shaders->GetNumSetsRequired();
-        DescriptorResources* rsrcs = renderGraph.GetDescriptorResources();
-        for (size_t i = 0; i < num_sets; ++i) {
-            usedSetIndices.emplace_back(rsrcs->AddResources(shaders->GetSetLayoutBindings(static_cast<uint32_t>(i))));
-            auto objects = shaders->GetSetObjects(i);
-            for (auto& obj : objects) {
-                self_register_resources(obj.second);
-            }
-        }
 
     }
  
