@@ -343,12 +343,25 @@ static double far_plane() {
     return camera.GetFarPlane();
 }
 
+constexpr VkApplicationInfo app_info{
+    VK_STRUCTURE_TYPE_APPLICATION_INFO,
+    nullptr,
+    "VolumetricForward",
+    VK_MAKE_VERSION(0,1,0),
+    "VulpesSceneKit",
+    VK_MAKE_VERSION(0,1,0),
+    VK_API_VERSION_1_1
+};
+
 int main(int argc, char* argv[]) {
     using namespace volumetric_forward;
     using namespace st;
     using namespace vpsk;
     using namespace vpr;
-
+    ImGui::CreateContext();
+    auto window = std::make_unique<vpsk::Window>(1280, 720, "RendergraphSketch");
+    auto instance = std::make_unique<vpr::Instance>(false, &app_info, window->glfwWindow());
+    auto device = std::make_unique<vpr::Device>(instance.get(), instance->GetPhysicalDevice(), true);
 
     auto& callbacks = ShaderPack::RetrievalCallbacks();
     callbacks.GetScreenSizeX = &screen_x;
@@ -364,6 +377,53 @@ int main(int argc, char* argv[]) {
             group_names.emplace_back(names.Strings[i]);
         }
     }
+
+    std::vector<std::string> resource_block_names;
+    {
+        auto retrieved_names = pack.GetResourceGroupNames();
+        for (size_t i = 0; i < retrieved_names.NumStrings; ++i) {
+            resource_block_names.emplace_back(retrieved_names.Strings[i]);
+        }
+    }
+
+    std::unordered_map<std::string, std::vector<const ShaderResource*>> resources;
+    {
+        for (const auto& block_name : resource_block_names) {
+            size_t num_resources = 0;
+            pack.GetResourceGroupPointers(block_name.c_str(), &num_resources, nullptr);
+            std::vector<const ShaderResource*> vec(num_resources);
+            pack.GetResourceGroupPointers(block_name.c_str(), &num_resources, vec.data());
+            resources.emplace(block_name, vec);
+        }
+    }
+
+    std::unique_ptr<DescriptorPool> pool = std::make_unique<DescriptorPool>(device.get(), resources.size());
+    const auto& rsrc_counts = pack.GetTotalDescriptorTypeCounts();
+    pool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, rsrc_counts.UniformBuffers);
+    pool->AddResourceType(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, rsrc_counts.StorageTexelBuffers);
+    pool->AddResourceType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, rsrc_counts.StorageBuffers);
+    pool->AddResourceType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, rsrc_counts.CombinedImageSamplers);
+    pool->Create();
+
+    for (const auto& block_name : resource_block_names) {
+        for (const auto& resource : resources.at(block_name)) {
+            const std::string rsrc_name = resource->GetName();
+            if (resource->GetType() == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+                UniformBuffers.emplace(rsrc_name, std::make_unique<Buffer>(device.get()));
+                UniformBuffers.at(rsrc_name)->CreateBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VkDeviceSize(resource->GetAmountOfMemoryRequired()));
+            }
+            else if (resource->GetType() == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+                StorageTexelBuffers.emplace(rsrc_name, std::make_unique<Buffer>(device.get()));
+                StorageTexelBuffers.at(rsrc_name)->CreateBuffer(VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VkDeviceSize(resource->GetAmountOfMemoryRequired()));
+                StorageTexelBuffers.at(rsrc_name)->CreateView(resource->GetFormat(), resource->GetAmountOfMemoryRequired(), 0);
+            }
+            else if (resource->GetType() == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
+                StorageBuffers.emplace(rsrc_name, std::make_unique<Buffer>(device.get()));
+                StorageBuffers.at(rsrc_name)->CreateBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VkDeviceSize(resource->GetAmountOfMemoryRequired()));
+            }
+        }
+    }
+
 
     return 0;
 }
