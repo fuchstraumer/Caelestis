@@ -13,3 +13,6 @@
 [submodule "third_party/stb"]
 	path = third_party/stb
 	url = https://github.com/nothings/stb
+[submodule "third_party/eastl"]
+	path = third_party/eastl
+	url = https://github.com/electronicarts/eastl
