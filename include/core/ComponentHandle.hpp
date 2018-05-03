@@ -1,7 +1,0 @@
-#pragma once
-#ifndef COMPONENT_HANDLE_HPP
-#define COMPONENT_HANDLE_HPP
-
-
-
-#endif // !COMPONENT_HANDLE_HPP
