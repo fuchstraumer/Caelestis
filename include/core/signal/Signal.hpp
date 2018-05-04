@@ -185,6 +185,11 @@ namespace vpsk {
         std::vector<call_type> fnCalls;
     };
 
+    template<typename Result, typename...Args>
+    bool operator!=(const SignalHandler<Result(Args...)>& lhs, const SignalHandler<Result(Args...)>& rhs) noexcept {
+        return !(lhs == rhs);
+    }
+
 }
 
 #endif //!VPSK_SIGNAL_HPP
