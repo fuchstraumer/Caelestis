@@ -52,9 +52,31 @@ namespace vpsk {
                 listeners.emplace_after(listeners.before_begin(), false, std::move(listener));
             }
 
-            void erase(connection_type connection) noexcept;
+            void erase(connection_type connection) noexcept {
+                connection->first = true;
 
-            void publish(const Event& event, Derived& ref);
+                if (!publishing) {
+                    auto predicate = [](auto&& element) { return element.first; };
+                    singleUseListeners.remove_if(predicate);
+                    listeners.remove_if(predicate);
+                }
+            }
+
+            void publish(const Event& event, Derived& ref) {
+                container_type current_listeners;
+                singleUseListeners.swap(current_listeners);
+
+                auto func = [&event,&ref](auto&& elem) {
+                    return elem.first ? void() : elem.second(event,ref);
+                };
+
+                publishing = true;
+                std::for_each(listeners.begin(), listeners.end(), func);
+                std::for_each(current_listeners.begin(), current_listeners.end(), func);
+                publishing = false;
+
+                listeners.remove_if([](auto&& elem){ return elem.first; });
+            }
 
         private:
             bool publishing = false;
@@ -161,17 +183,6 @@ namespace vpsk {
         
     };
 
-    template<typename Derived>
-    template<typename EventType>
-    void Emitter<Derived>::Handler<EventType>::erase(Emitter<Derived>::Handler<EventType>::connection_type connection) noexcept {
-        connection->first = true;
-
-        if (!publishing) {
-            auto predicate = [](auto&& element) { return element.first; };
-            singleUseListeners.remove_if(predicate);
-            listeners.remove_if(predicate);
-        }
-    }
     
 }
 
