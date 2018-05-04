@@ -88,12 +88,11 @@ namespace vpsk {
             std::size_t pos;
         };
 
-        static constexpr auto PENDING_ENTITY = std::numeric_limits<EntityTraits::entity_type>::max();
-        
     public:
 
         using entity_type = EntityType;
         using position_type = entity_type;
+        static constexpr auto PENDING_ENTITY = std::numeric_limits<traits_type::entity_type>::max();
         using size_type = std::size_t;
         using iterator_type = iterator;
         using const_iterator_type = iterator;
@@ -253,8 +252,4 @@ namespace vpsk {
 
 }
 
-#include "SparseSet.inl"
-
 #endif //!VPSK_SPARSE_SET_HPP
-
-
