@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
 PROJECT(VulpesSceneKit)
 
-FILE(GLOB CORE "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp")
+FILE(GLOB CORE "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.inl" "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp")
 FILE(GLOB SCRIPT_BINDINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/bindings/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/bindings/*.cpp")
 
 SOURCE_GROUP("core" FILES ${CORE})
