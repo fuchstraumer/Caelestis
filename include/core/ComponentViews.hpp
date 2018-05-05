@@ -122,7 +122,7 @@ namespace vpsk {
 
     template<typename EntityType, typename...ComponentTypes>
     class MultiComponentView final {
-        static_assert(sizeof...(ComponentTypes) > 1, "Need more than 1 Component to create a valid view type");
+        //static_assert(sizeof...(ComponentTypes) > 1, "Need more than 1 Component to create a valid view type");
 
         friend class Registry<EntityType>;
 
@@ -357,12 +357,66 @@ namespace vpsk {
     };
 
     template<typename EntityType, typename ComponentType>
-    class SingleComponentView {
+    class RawView final {
+        friend class Registry<EntityType>;
+        using pool_type = SparseSet<EntityType, ComponentType>;
+        pool_type& pool;
+        RawView(pool_type& _pool) noexcept : pool(_pool) {}
+    public:
+        using iterator = typename pool_type::iterator;
+        using const_iterator = typename pool_type::const_iterator;
+        using entity_type = typename pool_type::entity_type;
+        using size_type = typename pool_type::size_type;
 
-    };
+        size_type NumOfComponent() const noexcept {
+            return pool.size();
+        }
 
-    template<typename EntityType, typename ComponentType>
-    class RawView {
+        bool NoComponenets() const noexcept {
+            return pool.empty();
+        }
+
+        const ComponentType* raw() const noexcept {
+            return pool.objects_ptr();
+        }
+
+        ComponentType* raw() noexcept {
+            return pool.objects_ptr();
+        }
+
+        const_iterator cbegin() const noexcept {
+            return pool.cbegin():
+        }
+
+        const_iterator cend() const noexcept {
+            return pool.cend():
+        }
+
+        iterator cbegin() const noexcept {
+            return pool.cbegin();
+        }
+
+        iterator cend() const noexcept {
+            return pool.cend();
+        }
+
+        iterator begin() noexcept {
+            return pool.begin();
+        }
+
+        iterator end() noexcept {
+            return pool.end();
+        }
+
+        template<typename FunctionType>
+        void ForEach(FunctionType fn) const {
+            std::for_each(cbegin(), cend(), fn);
+        }
+
+        template<typename FunctionType>
+        void ForEach(FunctionType fn) {
+            std::for_each(begin(), end(), fn);
+        }
 
     };
 
