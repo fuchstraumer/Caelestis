@@ -1,17 +1,19 @@
+#include "SparseSet.hpp"
+
 namespace vpsk {
 
     template<typename EntityType>
-    inline size_type SparseSet<EntityType>::reserve(size_type desired_capacity) {
+    inline  SparseSet<EntityType>::size_type SparseSet<EntityType>::reserve(size_type desired_capacity) {
         return packed_data.reserve(desired_capacity).capacity();
     }
 
     template<typename EntityType>
-    inline size_type SparseSet<EntityType>::extent() const noexcept {
+    inline  SparseSet<EntityType>::size_type SparseSet<EntityType>::extent() const noexcept {
         return sparse_data.size();
     }
 
     template<typename EntityType>
-    inline size_type SparseSet<EntityType>::size() const noexcept  {
+    inline  SparseSet<EntityType>::size_type SparseSet<EntityType>::size() const noexcept  {
         return packed_data.size();
     }
 
@@ -21,38 +23,38 @@ namespace vpsk {
     }
 
     template<typename EntityType>
-    inline const entity_type * SparseSet<EntityType>::data() const noexcept {
+    inline const  SparseSet<EntityType>::entity_type * SparseSet<EntityType>::data() const noexcept {
         return packed_data.data();
     }
 
     template<typename EntityType>
-    inline const_iterator_type SparseSet<EntityType>::cbegin() const noexcept {
+    inline  SparseSet<EntityType>::const_iterator_type SparseSet<EntityType>::cbegin() const noexcept {
         return const_iterator_type(packed_data.data(), packed_data.size());
     }
 
     template<typename EntityType>
-    inline const_iterator_type SparseSet<EntityType>::cend() const noexcept {
+    inline  SparseSet<EntityType>::const_iterator_type SparseSet<EntityType>::cend() const noexcept {
         return const_iterator_type(packed_data.data(), 0);
     }
 
     template<typename EntityType>
-    inline iterator_type SparseSet<EntityType>::cbegin() const noexcept {
-        return iterator_type(packed_data.data(), packed_data.size());
+    inline  SparseSet<EntityType>::iterator SparseSet<EntityType>::cbegin() const noexcept {
+        return iterator(packed_data.data(), packed_data.size());
     }
 
     template<typename EntityType>
-    inline iterator_type SparseSet<EntityType>::cend() const noexcept {
-        return iterator_type(packed_data.data(), 0);
+    inline  SparseSet<EntityType>::iterator SparseSet<EntityType>::cend() const noexcept {
+        return iterator(packed_data.data(), 0);
     }
 
     template<typename EntityType>
-    inline iterator_type SparseSet<EntityType>::begin() noexcept {
-        return iterator_type(packed_data.data(), packed_data.size());
+    inline  SparseSet<EntityType>::iterator SparseSet<EntityType>::begin() noexcept {
+        return iterator(packed_data.data(), packed_data.size());
     }
 
     template<typename EntityType>
-    inline iterator_type SparseSet<EntityType>::end() noexcept {
-        return iterator_type(packed_data.data(), 0);
+    inline SparseSet<EntityType>::iterator SparseSet<EntityType>::end() noexcept {
+        return iterator(packed_data.data(), 0);
     }
 
     template<typename EntityType>
@@ -163,23 +165,23 @@ namespace vpsk {
     }
 
     template<typename EntityType, typename ObjectType>
-    SparseSet<typename EntityType, typename ObjectType>::iterator_type SparseSet<typename EntityType, typename ObjectType>::cbegin() const noexcept {
-        return iterator_type{ objects.data(), objects.size() };
+    SparseSet<typename EntityType, typename ObjectType>::iterator SparseSet<typename EntityType, typename ObjectType>::cbegin() const noexcept {
+        return iterator{ objects.data(), objects.size() };
     }
 
     template<typename EntityType, typename ObjectType>
-    SparseSet<typename EntityType, typename ObjectType>::iterator_type SparseSet<typename EntityType, typename ObjectType>::cend() const noexcept {
-        return iterator_type{ objects.data(), 0 };
+    SparseSet<typename EntityType, typename ObjectType>::iterator SparseSet<typename EntityType, typename ObjectType>::cend() const noexcept {
+        return iterator{ objects.data(), 0 };
     }
 
     template<typename EntityType, typename ObjectType>
-    SparseSet<typename EntityType, typename ObjectType>::iterator_type SparseSet<typename EntityType, typename ObjectType>::begin() noexcept {
-        return iterator_type{ objects.data(), objects.size() };
+    SparseSet<typename EntityType, typename ObjectType>::iterator SparseSet<typename EntityType, typename ObjectType>::begin() noexcept {
+        return iterator{ objects.data(), objects.size() };
     }
 
     template<typename EntityType, typename ObjectType>
-    SparseSet<typename EntityType, typename ObjectType>::iterator_type SparseSet<typename EntityType, typename ObjectType>::end() noexcept {
-        return iterator_type{ objects.data(), 0 };
+    SparseSet<typename EntityType, typename ObjectType>::iterator SparseSet<typename EntityType, typename ObjectType>::end() noexcept {
+        return iterator{ objects.data(), 0 };
     }
 
     template<typename EntityType, typename ObjectType>

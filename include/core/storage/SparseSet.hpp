@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <functional>
 #include <utility>
-#include "Entity.hpp"
+#include "../EntityTraits.hpp"
 
 namespace vpsk {
 
@@ -45,37 +45,37 @@ namespace vpsk {
     class SparseSet<EntityType> {
         using traits_type = EntityTraits<EntityType>;
         // Specialize iterator type for this container
-        struct iterator final {
+        struct sparse_set_iterator_t final {
             using difference_type = std::size_t;
             using value_type = EntityType;
             using pointer = const value_type*;
             using reference = value_type;
             using iterator_category = std::input_iterator_tag;
 
-            iterator(pointer ptr, std::size_t _pos) : value_ptr(ptr), pos(std::move(_pos)) {}
+            sparse_set_iterator_t(pointer ptr, std::size_t _pos) : value_ptr(ptr), pos(std::move(_pos)) {}
 
-            iterator& operator++() noexcept {
+            sparse_set_iterator_t& operator++() noexcept {
                 --pos;
                 return *this;
                 // could've been return "--pos, *this": I just find comma operator a bit confusing so didn't use that
             }
 
-            iterator& operator++(int) noexcept {
-                iterator tmp = *this;
+            sparse_set_iterator_t& operator++(int) noexcept {
+                sparse_set_iterator_t tmp = *this;
                 ++(*this);
                 return tmp;
             }
 
-            iterator& operator+=(difference_type value) noexcept {
+            sparse_set_iterator_t& operator+=(difference_type value) noexcept {
                 pos -= value;
                 return *this;
             }
 
-            iterator operator+(difference_type value) noexcept {
-                return iterator{ value_ptr, pos - value };
+            sparse_set_iterator_t operator+(difference_type value) noexcept {
+                return sparse_set_iterator_t{ value_ptr, pos - value };
             }
 
-            bool operator==(const iterator& other) const noexcept {
+            bool operator==(const sparse_set_iterator_t& other) const noexcept {
                 return !(*this == other);
             }
 
@@ -94,8 +94,8 @@ namespace vpsk {
         using position_type = entity_type;
         static constexpr auto PENDING_ENTITY = std::numeric_limits<traits_type::entity_type>::max();
         using size_type = std::size_t;
-        using iterator_type = iterator;
-        using const_iterator_type = iterator;
+        using iterator = sparse_set_iterator_t;
+        using const_iterator_type = sparse_set_iterator_t;
 
         SparseSet() noexcept = default;
         virtual ~SparseSet() noexcept = default;
@@ -116,15 +116,17 @@ namespace vpsk {
 
         const_iterator_type cbegin() const noexcept;
         const_iterator_type cend() const noexcept;
-        iterator_type cbegin() const noexcept;
-        iterator_type cend() const noexcept;
-        iterator_type begin() noexcept;
-        iterator_type end() noexcept;
+        iterator cbegin() const noexcept;
+        iterator cend() const noexcept;
+        iterator begin() noexcept;
+        iterator end() noexcept;
 
         bool has(entity_type entity) const noexcept;
         // Will throw if invoked outside of bounds
         bool check_has_fast(entity_type entity) const;
         position_type get(entity_type) const noexcept;
+        entity_type& operator[](const size_t& idx);
+        const entity_type& operator[](const size_t& idx) const noexcept;
         void construct(entity_type entity);
         virtual void destroy(entity_type entity);
         void swap_entity_positions(position_type lhs, position_type rhs);
@@ -153,40 +155,40 @@ namespace vpsk {
         using underlying_type = SparseSet<Entity>;
 
         template<bool constant_variant>
-        struct iterator final {
+        struct sparse_object_set_iterator_t final {
             using difference_type = std::size_t;
             using value_type = std::conditional_t<constant_variant, const ObjectType, ObjectType>;
             using pointer = value_type*;
             using reference = value_type&;
             using iterator_category = std::input_iterator_tag;
 
-            iterator(pointer _values, std::size_t _pos) noexcept : values(_values) : pos(std::move(_pos)) {}
+            sparse_object_set_iterator_t(pointer _values, std::size_t _pos) noexcept : values(_values) : pos(std::move(_pos)) {}
 
-            iterator& operator++() noexcept {
+            sparse_object_set_iterator_t& operator++() noexcept {
                 --pos;
                 return *this;
             }
 
-            iterator& operator++(int) noexcept {
-                iterator tmp = *this;
+            sparse_object_set_iterator_t& operator++(int) noexcept {
+                sparse_object_set_iterator_t tmp = *this;
                 ++(*this);
                 return tmp;
             }
 
-            iterator& operator+=(difference_type value) noexcept {
+            sparse_object_set_iterator_t& operator+=(difference_type value) noexcept {
                 pos -= value;
                 return *this;
             }
 
-            iterator operator+(difference_type value) noexcept {
-                return iterator{ values, pos - value };
+            sparse_object_set_iterator_t operator+(difference_type value) noexcept {
+                return sparse_object_set_iterator_t{ values, pos - value };
             }
 
-            bool operator==(const iterator& other) const noexcept {
+            bool operator==(const sparse_object_set_iterator_t& other) const noexcept {
                 return other.pos == pos;
             }
 
-            inline bool operator!=(const iterator& other) const noexcept {
+            inline bool operator!=(const sparse_object_set_iterator_t& other) const noexcept {
                 return other.pos != pos;
             }
 
@@ -209,8 +211,8 @@ namespace vpsk {
         using entity_type = typename underlying_type::entity_type;
         using position_type = typename underlying_type::position_type;
         using size_type = typename underyling_type::size_type;
-        using iterator_type = iterator<false>;
-        using const_iterator_type = iterator<true>;
+        using iterator = sparse_object_set_iterator_t<false>;
+        using const_iterator_type = sparse_object_set_iterator_t<true>;
 
         SparseSet() noexcept = default;
         SparseSet(const SparseSet&) = delete;
@@ -223,11 +225,11 @@ namespace vpsk {
         object_type* objects_ptr() noexcept;
 
         const_iterator_type cbegin() const noexcept;
-        iterator_type cbegin() const noexcept;
+        iterator cbegin() const noexcept;
         const_iterator_type cend() const noexcept;
-        iterator_type cend() const noexcept;
-        iterator_type begin() noexcept;
-        iterator_type end() noexcept;
+        iterator cend() const noexcept;
+        iterator begin() noexcept;
+        iterator end() noexcept;
 
         const object_type& get(entity_type entity) const noexcept;
         object_type& get(entity_type entity) noexcept;
@@ -249,7 +251,6 @@ namespace vpsk {
     private:
         std::vector<object_type> objects;
     };
-
 }
 
 #endif //!VPSK_SPARSE_SET_HPP
