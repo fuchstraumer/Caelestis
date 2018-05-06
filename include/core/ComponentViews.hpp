@@ -250,16 +250,6 @@ namespace vpsk {
             return view->empty();
         }
 
-        const_iterator cbegin() const noexcept {
-            const auto extent = std::min({ std::get<pool_type<ComponentTypes>&>(pools).extent()... });
-            return const_iterator{ unchecked, extent, view->cbegin(), view->cend() };
-        }
-
-        const_iterator cend() const noexcept {
-            const auto extent = std::min({ std::get<pool_type<ComponentTypes>&>(pools).extent()... });
-            return const_iterator{ unchecked, extent, view->cend(), view->cend() };
-        }
-
         iterator cbegin() const noexcept {
             const auto extent = std::min({ std::get<pool_type<ComponentTypes>&>(pools).extent()... });
             return iterator{ unchecked, extent, view->cbegin(), view->cend() };
@@ -303,12 +293,12 @@ namespace vpsk {
         }
 
         template<typename...RetrievedComponentTypes>
-        std::enable_if_t<(sizeof...RetrievedComponentTypes > 1), std::tuple<const RetrievedComponentTypes&... >> GetComponents(entity_type ent) const noexcept {
+        std::enable_if_t<(sizeof...(RetrievedComponentTypes) > 1), std::tuple<const RetrievedComponentTypes&... >> GetComponents(entity_type ent) const noexcept {
             return std::tuple<const RetrievedComponentTypes&...>{ GetComponent<RetrievedComponentTypes>(ent)... };
         }
         
         template<typename...RetrievedComponentTypes>
-        std::enable_if_t<(sizeof...RetrievedComponentTypes > 1), std::tuple<RetrievedComponentTypes&...>> GetComponents(entity_type ent) noexcept {
+        std::enable_if_t<(sizeof...(RetrievedComponentTypes) > 1), std::tuple<RetrievedComponentTypes&...>> GetComponents(entity_type ent) noexcept {
             return std::tuple<RetrievedComponentTypes&..>{ GetComponent<RetrievedComponentTypes>(ent)... };
         }
 
@@ -357,11 +347,11 @@ namespace vpsk {
     };
 
     template<typename EntityType, typename ComponentType>
-    class RawView final {
+    class RawComponentView final {
         friend class Registry<EntityType>;
         using pool_type = SparseSet<EntityType, ComponentType>;
         pool_type& pool;
-        RawView(pool_type& _pool) noexcept : pool(_pool) {}
+        RawComponentView(pool_type& _pool) noexcept : pool(_pool) {}
     public:
         using iterator = typename pool_type::iterator;
         using const_iterator = typename pool_type::const_iterator;

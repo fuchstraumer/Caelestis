@@ -25,7 +25,7 @@ namespace vpsk {
 
         template<typename...Args, typename Collector>
         struct Invoker<void(Args...), Collector> {
-            using func_proto_type = std::add_pointr<void(Args...)>;
+            using func_proto_type = std::add_pointer<void(Args...)>;
             using func_call_type = std::pair<void*, func_proto_type>;
             virtual ~Invoker() noexcept = default;
 
@@ -133,7 +133,7 @@ namespace vpsk {
 
     template<typename Result, typename...Args, typename Collector>
     class SignalHandler<Result(Args...), Collector> final : private detail::Invoker<Result(Args...), Collector> {
-        using call_type = typename detail::Invoker<Result(Args...), Collector>::call_type;
+        using call_type = typename detail::Invoker<Result(Args...), Collector>::func_call_type;
     public:
         using size_type = typename std::vector<call_type>::size_type;
         using collector_type = Collector;
