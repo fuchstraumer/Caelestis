@@ -1,0 +1,7 @@
+#pragma once
+#ifndef VPSK_ECS_DEPENDENCY_HPP
+#define VPSK_ECS_DEPENDENCY_HPP
+
+
+
+#endif // !VPSK_ECS_DEPENDENCY_HPP
