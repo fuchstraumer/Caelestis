@@ -428,8 +428,7 @@ namespace vpsk {
 
     template<typename EntityType, typename ObjectType>
     template<typename ...Args>
-    inline std::enable_if_t<std::is_constructible<ObjectType, Args...>::value, typename SparseSet<typename EntityType, typename ObjectType>::object_type&>
-        SparseSet<typename EntityType, typename ObjectType>::construct(entity_type entity, Args && ...args) {
+    inline std::enable_if_t<std::is_constructible<ObjectType, Args...>::value, ObjectType&> SparseSet<EntityType, ObjectType>::construct(entity_type entity, Args && ...args) {
         underlying_type::construct(entity);
         objects.emplace_back(std::forward<Args>(args)...);
         return objects.back();
@@ -437,15 +436,14 @@ namespace vpsk {
 
     template<typename EntityType, typename ObjectType>
     template<typename ...Args>
-    inline typename std::enable_if_t<!std::is_constructible<ObjectType, Args...>::value, typename SparseSet<typename EntityType, typename ObjectType>::object_type&>
-        SparseSet<typename EntityType, typename ObjectType>::construct(entity_type entity, Args && ...args) {
+    inline typename std::enable_if_t<!std::is_constructible<ObjectType, Args...>::value, ObjectType&> SparseSet<EntityType, ObjectType>::construct(entity_type entity, Args && ...args) {
         underlying_type::construct(entity);
         objects.emplace_back(ObjectType{ std::forward<Args>(args)... });
         return objects.back();
     }
 
     template<typename EntityType, typename ObjectType>
-    inline void SparseSet<typename EntityType, typename ObjectType>::destroy(SparseSet::entity_type entity) {
+    inline void SparseSet<EntityType, ObjectType>::destroy(SparseSet::entity_type entity) {
         ObjectType&& tmp = std::move(objects.back());
         objects[underlying_type::get(entity)] = std::move(tmp);
         objects.pop_back();
