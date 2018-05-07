@@ -14,7 +14,7 @@ namespace vpsk {
 
         template<typename Result, typename...Args, typename Collector>
         struct Invoker<Result(Args...), Collector> {
-            using func_proto_type = std::add_pointer<Result(void*,Args...)>;
+            using func_proto_type = Result(*)(void *, Args...);
             using func_call_type = std::pair<void*, func_proto_type>;
             virtual ~Invoker() noexcept = default;
 
@@ -25,7 +25,7 @@ namespace vpsk {
 
         template<typename...Args, typename Collector>
         struct Invoker<void(Args...), Collector> {
-            using func_proto_type = std::add_pointer<void(Args...)>;
+            using func_proto_type = void(*)(void *, Args...);
             using func_call_type = std::pair<void*, func_proto_type>;
             virtual ~Invoker() noexcept = default;
 
@@ -76,17 +76,17 @@ namespace vpsk {
         template<typename,typename>
         friend class SignalHandler;
 
-        using function_prototype = std::add_pointer<Result(void*,Args...)>;
+        using function_prototype = Result(*)(void *, Args...);
         using function_call_type = std::pair<void*, function_prototype>;
 
         template<Result(*Function)(Args...)>
         static Result prototype(void*,Args&&...args) {
-            return (Function)(std::forward<Args>(args)...);
+            return (Function)(args...);
         }
 
         template<typename Class, Result(Class::*Member)(Args...args)>
         static Result prototype(void* instance, Args&&...args) {
-            return (static_cast<Class*>(instance)->*Member)(std::forward<Args>(args)...);
+            return (static_cast<Class*>(instance)->*Member)(args...);
         }
 
         Sink(std::vector<function_call_type>& calls) : function_calls(calls) {}
@@ -154,17 +154,17 @@ namespace vpsk {
             return sink_type{ fnCalls };
         }
 
-        void TriggerSignal(Args&&...args) {
+        void TriggerSignal(Args...args) {
             std::for_each(fnCalls.begin(), fnCalls.end(),
             [&args...](auto&& call){ 
-                call.second(call.first, std::forward<Args>(args)...);
+                call.second(call.first, args...);
             });
         }
 
         collector_type CollectReturnValues(Args&&...args) {
             collector_type collector;
             for (auto&& call : fnCalls) {
-                if (!this->invoke(collector, call.second, call.first, std::forward<Args>(args)...)) {
+                if (!this->invoke(collector, call.second, call.first, args...)) {
                     break;
                 }
             }
