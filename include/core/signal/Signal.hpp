@@ -19,7 +19,7 @@ namespace vpsk {
             virtual ~Invoker() noexcept = default;
 
             bool invoke(Collector& collector, func_proto_type function_prototype, void* instance, Args&&...args) {
-                return collector(function_prototype(instance, std::forward<Args&&>(args)...));
+                return collector(function_prototype(instance, std::forward<Args>(args)...));
             }
         };
 
@@ -30,7 +30,7 @@ namespace vpsk {
             virtual ~Invoker() noexcept = default;
 
             bool invoke(Collector& collector, func_proto_type function_prototype, void* instances, Args&&...args) {
-                return proto(instance,std::forward<Args&&>(args)...), true;
+                return proto(instance,std::forward<Args>(args)...), true;
             }
         };
 
@@ -81,12 +81,12 @@ namespace vpsk {
 
         template<Result(*Function)(Args...)>
         static Result prototype(void*,Args&&...args) {
-            return (Function)(std::forward<Args&&>(args)...);
+            return (Function)(std::forward<Args>(args)...);
         }
 
         template<typename Class, Result(Class::*Member)(Args...args)>
         static Result prototype(void* instance, Args&&...args) {
-            return (static_cast<Class*>(instance)->*Member)(std::forward<Args&&>(args)...);
+            return (static_cast<Class*>(instance)->*Member)(std::forward<Args>(args)...);
         }
 
         Sink(std::vector<function_call_type>& calls) : function_calls(calls) {}
@@ -157,14 +157,14 @@ namespace vpsk {
         void TriggerSignal(Args&&...args) {
             std::for_each(fnCalls.begin(), fnCalls.end(),
             [&args...](auto&& call){ 
-                call.second(call.first, std::forward<Args&&>(args)...);
+                call.second(call.first, std::forward<Args>(args)...);
             });
         }
 
         collector_type CollectReturnValues(Args&&...args) {
             collector_type collector;
             for (auto&& call : fnCalls) {
-                if (!this->invoke(collector, call.second, call.first, std::forward<Args&&>(args)...)) {
+                if (!this->invoke(collector, call.second, call.first, std::forward<Args>(args)...)) {
                     break;
                 }
             }

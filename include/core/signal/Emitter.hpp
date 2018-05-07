@@ -138,7 +138,7 @@ namespace vpsk {
 
         template<typename EventType, typename...Args>
         void Publish(Args&&...args) {
-            handler<EventType>().publish({std::forward<Args&&>(args)...},*static_cast<Derived*>(this));
+            handler<EventType>().publish({std::forward<Args>(args)...},*static_cast<Derived*>(this));
         }
 
         template<typename EventType>

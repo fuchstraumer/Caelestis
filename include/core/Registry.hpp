@@ -247,7 +247,7 @@ namespace vpsk {
         TagType& AssignTag(tag_t, entity_type ent, Args&&...args) {
             assureTagStorage<TagType>();
             auto& tag_tuple = tags[tag_family::Type<TagType>()];
-            std::get<0>(tag_tuple).reset(std::make_unique<Attaching<TagType>>(ent, TagType{ std::forward<Args&&>(args)... }));
+            std::get<0>(tag_tuple).reset(std::make_unique<Attaching<TagType>>(ent, TagType{ std::forward<Args>(args)... }));
             std::get<1>(tag_tuple).TriggerSignal(*this, ent);
             return get<TagType>();
         }
@@ -255,7 +255,7 @@ namespace vpsk {
         template<typename ComponentType, typename...Args>
         ComponentType& AssignComponent(entity_type ent, Args&&...args) {
             assureComponentStorage<ComponentType>();
-            getComponentStorage<ComponentType>().construct(ent, std::forward<Args&&>(args)...);
+            getComponentStorage<ComponentType>().construct(ent, std::forward<Args>(args)...);
             std::get<1>(pools[component_family::Type<ComponentType>()]).TriggerSignal(*this, ent);
             return getComponentStorage<ComponentType>().get(ent);
         }
@@ -342,12 +342,12 @@ namespace vpsk {
 
         template<typename TagType, typename...Args>
         TagType& Replace(tag_t, Args&&...args) {
-            return (get<TagType>() = TagType{ std::forward<Args&&>(args)... });
+            return (get<TagType>() = TagType{ std::forward<Args>(args)... });
         }
 
         template<typename ComponentType, typename...Args>
         ComponentType& Replace(entity_type ent, Args&&...args) {
-            return (get<ComponentType>() = ComponentType{ std::forward<Args&&>(args)... });
+            return (get<ComponentType>() = ComponentType{ std::forward<Args>(args)... });
         }
 
         // Returns original owner of the tag, but replaces the tag's current owner with "ent"
@@ -376,10 +376,10 @@ namespace vpsk {
             assureComponentStorage<ComponentType>();
             auto& component_pool = getComponentStorage<ComponentType>();
             if (component_pool.has(ent)) {
-                return (component_pool.get(ent) = ComponentType{ std::forward<Args&&>(args)... });
+                return (component_pool.get(ent) = ComponentType{ std::forward<Args>(args)... });
             }
             else {
-                return component_pool.construct(ent, std::forward<Args&&>(args)...);
+                return component_pool.construct(ent, std::forward<Args>(args)...);
             }
         }
 

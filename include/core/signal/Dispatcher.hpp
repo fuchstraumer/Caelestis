@@ -40,12 +40,12 @@ namespace vpsk {
 
             template<typename...Args>
             inline void Trigger(Args&&...args) {
-                signal.TriggerSignal({ std::forward<Args&&>(args)... });
+                signal.TriggerSignal({ std::forward<Args>(args)... });
             }
 
             template<typename...Args>
             inline void Enqueue(Args&&...args) {
-                events[current].emplace_back({ std::forward<Args&&>(args)... });
+                events[current].emplace_back({ std::forward<Args>(args)... });
             }
 
         private:
@@ -80,12 +80,12 @@ namespace vpsk {
 
         template<typename EventType, typename...Args>
         inline void Trigger(Args&&...args) {
-            wrapper<EventType>().Trigger(std::forward<Args&&>(args)...);
+            wrapper<EventType>().Trigger(std::forward<Args>(args)...);
         }
 
         template<typename EventType, typename...Args>
         inline void Enqueue(Args&&...args) {
-            wrapper<EventType>().Enqueue(std::forward<Args&&>(args)...);
+            wrapper<EventType>().Enqueue(std::forward<Args>(args)...);
         }
 
         template<typename EventType>

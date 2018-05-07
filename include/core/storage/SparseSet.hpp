@@ -431,7 +431,7 @@ namespace vpsk {
     inline std::enable_if_t<std::is_constructible<ObjectType, Args...>::value, typename SparseSet<typename EntityType, typename ObjectType>::object_type&>
         SparseSet<typename EntityType, typename ObjectType>::construct(entity_type entity, Args && ...args) {
         underlying_type::construct(entity);
-        objects.emplace_back(std::forward<Args&&>(args)...);
+        objects.emplace_back(std::forward<Args>(args)...);
         return objects.back();
     }
 
@@ -440,7 +440,7 @@ namespace vpsk {
     inline typename std::enable_if_t<!std::is_constructible<ObjectType, Args...>::value, typename SparseSet<typename EntityType, typename ObjectType>::object_type&>
         SparseSet<typename EntityType, typename ObjectType>::construct(entity_type entity, Args && ...args) {
         underlying_type::construct(entity);
-        objects.emplace_back(ObjectType{ std::forward<Args&&>(args)... });
+        objects.emplace_back(ObjectType{ std::forward<Args>(args)... });
         return objects.back();
     }
 
