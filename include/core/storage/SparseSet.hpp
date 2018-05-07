@@ -75,8 +75,12 @@ namespace vpsk {
                 return sparse_set_iterator_t{ value_ptr, pos - value };
             }
 
+            bool operator!=(const sparse_set_iterator_t& other) const noexcept {
+                return pos != other.pos;
+            }
+
             bool operator==(const sparse_set_iterator_t& other) const noexcept {
-                return !(*this == other);
+                return pos == other.pos;
             }
 
             reference operator*() const noexcept {
@@ -95,7 +99,7 @@ namespace vpsk {
         static constexpr auto PENDING_ENTITY = std::numeric_limits<traits_type::entity_type>::max();
         using size_type = std::size_t;
         using iterator = sparse_set_iterator_t;
-        using const_iterator_type = sparse_set_iterator_t;
+        using const_iterator = sparse_set_iterator_t;
 
         SparseSet() noexcept = default;
         virtual ~SparseSet() noexcept = default;
@@ -106,7 +110,7 @@ namespace vpsk {
         SparseSet& operator=(const SparseSet&) = delete;
         SparseSet& operator=(SparseSet&& other) noexcept;
 
-        size_type reserve(size_type desired_capacity);
+        void reserve(size_type desired_capacity);
         // size of the sparse array attached to this object
         size_type extent() const noexcept;
         // size of the dense array attached to this object
@@ -123,8 +127,6 @@ namespace vpsk {
         // Will throw if invoked outside of bounds
         bool check_has_fast(entity_type entity) const;
         position_type get(entity_type) const noexcept;
-        entity_type& operator[](const size_t& idx);
-        const entity_type& operator[](const size_t& idx) const noexcept;
         void construct(entity_type entity);
         virtual void destroy(entity_type entity);
         void swap_entity_positions(position_type lhs, position_type rhs);
@@ -227,8 +229,13 @@ namespace vpsk {
         iterator begin() noexcept;
         iterator end() noexcept;
 
-        const object_type& get(entity_type entity) const noexcept;
-        object_type& get(entity_type entity) noexcept;
+       const object_type& get(SparseSet::entity_type entity) const noexcept {
+            return objects[underlying_type::get(entity)];
+        }
+
+        object_type& get(SparseSet::entity_type entity) noexcept {
+            return objects[underlying_type::get(entity)];
+        }
 
         template<typename...Args>
         std::enable_if_t<std::is_constructible<ObjectType, Args...>::value, object_type&> construct(entity_type entity, Args&&...args);
@@ -249,8 +256,8 @@ namespace vpsk {
     };
 
     template<typename EntityType>
-    inline typename SparseSet<EntityType>::size_type SparseSet<EntityType>::reserve(size_type desired_capacity) {
-        return packed_data.reserve(desired_capacity).capacity();
+    inline void SparseSet<EntityType>::reserve(size_type desired_capacity) {
+        packed_data.reserve(desired_capacity);
     }
 
     template<typename EntityType>
@@ -308,12 +315,6 @@ namespace vpsk {
     template<typename EntityType>
     inline typename SparseSet<EntityType>::position_type SparseSet<EntityType>::get(entity_type entity) const noexcept {
         return sparse_data[entity & traits_type::entity_mask];
-    }
-
-    template<typename EntityType>
-    inline typename SparseSet<EntityType>::entity_type& vpsk::SparseSet<EntityType>::operator[](const size_t & idx)
-    {
-        // TODO: insert return statement here
     }
 
     template<typename EntityType>
@@ -393,7 +394,7 @@ namespace vpsk {
 
     template<typename EntityType, typename ObjectType>
     inline typename SparseSet<typename EntityType, typename ObjectType>::object_type* SparseSet<typename EntityType, typename ObjectType>::objects_ptr() noexcept {
-        return objects.data();
+        return const_cast<ObjectType*>(const_cast<const SparseSet*>(this)->objects_ptr());
     }
 
     template<typename EntityType, typename ObjectType>
@@ -414,16 +415,6 @@ namespace vpsk {
     template<typename EntityType, typename ObjectType>
     inline typename SparseSet<typename EntityType, typename ObjectType>::iterator SparseSet<typename EntityType, typename ObjectType>::end() noexcept {
         return iterator{ objects.data(), 0 };
-    }
-
-    template<typename EntityType, typename ObjectType>
-    inline const typename SparseSet<typename EntityType, typename ObjectType>::object_type& SparseSet<typename EntityType, typename ObjectType>::get(SparseSet::entity_type entity) const noexcept {
-        return objects[underlying_type::get(entity)];
-    }
-
-    template<typename EntityType, typename ObjectType>
-    inline typename SparseSet<typename EntityType, typename ObjectType>::object_type& SparseSet<typename EntityType, typename ObjectType>::get(SparseSet::entity_type entity) noexcept {
-        return objects[underlying_type::get(entity)];
     }
 
     template<typename EntityType, typename ObjectType>

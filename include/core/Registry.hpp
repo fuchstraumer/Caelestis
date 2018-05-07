@@ -29,7 +29,7 @@ namespace vpsk {
 
         template<typename...Components>
         static void creating(Registry& registry, EntityType ent) {
-            if (registry.has<Components...>(ent)) {
+            if (registry.HasComponents<Components...>(ent)) {
                 registry.handlers[handler_family::Type<Components...>()]->construct(ent);
             }
         }
@@ -67,8 +67,7 @@ namespace vpsk {
 
         template<typename Component>
         SparseSet<EntityType, Component>& getComponentStorage() noexcept {
-            const component_family::family_type component_type = component_family::Type<Component>();
-            return static_cast<SparseSet<EntityType, Component>&>(*std::get<0>(pools[component_type]));
+            return const_cast<SparseSet<EntityType, Component>&>(const_cast<const Registry*>(this)->getComponentStorage<Component>());
         }
 
         // Ensures that a getComponentStorage for the Component type given exists.
@@ -88,9 +87,9 @@ namespace vpsk {
         }
 
         // Ensures that a tag group/getComponentStorage for the given tag type exists
-        template<typename Tag>
+        template<typename TagType>
         void assureTagStorage() {
-            const tag_family::family_type tag_type = tag_family::Type<Tag>();
+            const tag_family::family_type tag_type = tag_family::Type<TagType>();
             if (!(tag_type < tags.size())) {
                 tags.resize(tag_type + 1);
             }
@@ -244,12 +243,13 @@ namespace vpsk {
         }
 
         template<typename TagType, typename...Args>
-        TagType& AssignTag(tag_t, entity_type ent, Args&&...args) {
+        TagType& AssignTag(entity_type ent, Args&&...args) {
             assureTagStorage<TagType>();
             auto& tag_tuple = tags[tag_family::Type<TagType>()];
-            std::get<0>(tag_tuple).reset(std::make_unique<Attaching<TagType>>(ent, TagType{ std::forward<Args>(args)... }));
+            std::get<0>(tag_tuple).reset();
+            std::get<0>(tag_tuple) = std::make_unique<Attaching<TagType>>(ent, TagType{ std::forward<Args>(args)... });
             std::get<1>(tag_tuple).TriggerSignal(*this, ent);
-            return get<TagType>();
+            return GetTag<TagType>();
         }
 
         template<typename ComponentType, typename...Args>
@@ -306,7 +306,7 @@ namespace vpsk {
             using accum_type = bool[];
             bool all = true;
             accum_type accumulator = { all, (all = all && managed<ComponentTypes>() && getComponentStorage<ComponentTypes>().has(ent))... };
-            (void)accum; // evaluates the sequence
+            (void)accumulator; // evaluates the sequence
             return all;
         }
 
@@ -316,8 +316,8 @@ namespace vpsk {
         }
 
         template<typename TagType>
-        TagType& GetTag() const noexcept {
-            return static_cast<Attaching<TagType>*>(std::get<0>(tags[tag_family::Type<TagType>()]).get())->tag;
+        TagType& GetTag() noexcept {
+            return const_cast<TagType&>(const_cast<const Registry*>(this)->GetTag<TagType>());
         }
 
         template<typename ComponentType>
@@ -326,18 +326,18 @@ namespace vpsk {
         }
 
         template<typename ComponentType>
-        ComponentType& GetComponent() noexcept {
-            return getComponentStorage<ComponentType>().get(ent);
+        ComponentType& GetComponent(entity_type ent) noexcept {
+            return const_cast<ComponentType&>(const_cast<const Registry*>(this)->GetComponent<ComponentType>(ent));
         }
 
         template<typename...ComponentTypes>
         std::enable_if_t<(sizeof...(ComponentTypes) > 1), std::tuple<const ComponentTypes&...>> GetComponents(entity_type ent) const noexcept {
-            return std::tuple<const ComponentTypes&...>{ Get<ComponentTypes>(ent)... };
+            return std::tuple<const ComponentTypes&...>(GetComponent<ComponentTypes>(ent)...);
         }
 
         template<typename...ComponentTypes>
         std::enable_if_t<(sizeof...(ComponentTypes) > 1), std::tuple<ComponentTypes&...>> GetComponents(entity_type ent) noexcept {
-            return std::tuple<ComponentTypes&...>{ Get<ComponentTypes>(ent)... };
+            return std::tuple<ComponentTypes&...>(GetComponent<ComponentTypes>(ent)...);
         }
 
         template<typename TagType, typename...Args>
@@ -386,26 +386,26 @@ namespace vpsk {
         template<typename TagType>
         sink_type GetTagCreationAndAssignmentSink() noexcept {
             assureTagStorage<TagType>();
-            return std::get<1>(tags[tag_family::Type<TagType>()]).sink();
+            return std::get<1>(tags[tag_family::Type<TagType>()]).GetSink();
         }
 
         // Listeners are invoked BEFORE removal or destruction, but are invoked when this process begins
         template<typename TagType>
         sink_type GetTagDestructionAndRemovalSink() noexcept {
             assureTagStorage<TagType>();
-            return std::get<2>(tags[tag_family::Type<TagType>()]).sink();
+            return std::get<2>(tags[tag_family::Type<TagType>()]).GetSink();
         }
 
         template<typename ComponentType>
         sink_type GetComponentCreationAndAssignmentSink() noexcept {
             assureComponentStorage<ComponentType>();
-            return std::get<1>(pools[component_family::Type<ComponentType>()]).sink();
+            return std::get<1>(pools[component_family::Type<ComponentType>()]).GetSink();
         }
 
         template<typename ComponentType>
         sink_type GetComponentDestructionAndRemovalSink() noexcept {
             assureComponentStorage<ComponentType>();
-            return std::get<2>(pools[component_family::Type<ComponentType>()]).sink();
+            return std::get<2>(pools[component_family::Type<ComponentType>()]).GetSink();
         }
 
         // imposes an order on the componentstorage/pool for the given component type.
@@ -523,7 +523,7 @@ namespace vpsk {
             }
 
             if (!handlers[htype]) {
-                using accum_type = size_type[];
+                using accum_type = int[];
                 handlers[htype] = std::make_unique<SparseSet<entity_type>>();
                 auto& handler = handlers[htype];
 
@@ -533,8 +533,8 @@ namespace vpsk {
 
                 auto connect = [this](const auto& ctype) {
                     auto& cpool = pools[ctype];
-                    std::get<1>(cpool).sink().template connect<&Registry::GetComponentCreationAndAssignmentSink<ComponentTypes...>>();
-                    std::get<2>(cpool).sink().template connect<&Registry::GetComponentDestructionAndRemovalSink<ComponentTypes...>>();
+                    std::get<1>(cpool).GetSink().template Connect<&Registry::creating<ComponentTypes...>>();
+                    std::get<2>(cpool).GetSink().template Connect<&Registry::destroying<ComponentTypes...>>();
                 };
 
                 accum_type accumulator = { (assureComponentStorage<ComponentTypes>(), connect(component_family::Type<ComponentTypes>()), 0)... };
@@ -545,17 +545,17 @@ namespace vpsk {
         template<typename...ComponentTypes>
         void DiscardPersistentViews() {
             if (HasPersistentView<ComponentTypes...>()) {
-                using accum_type = size_type[];
+                using accum_type = int[];
 
                 const handler_family::family_type htype = handler_family::Type<ComponentTypes...>();
 
-                auto disconnect = [this](const auto& ctype) {
+                auto disconn = [this](const auto& ctype) {
                     auto& cpool = pools[ctype];
-                    std::get<1>(cpool).sink().template disconnect<&Registry::GetComponentCreationAndAssignmentSink<ComponentTypes...>>();
-                    std::get<2>(cpool).sink().template disconnect<&Registry::GetComponentDestructionAndRemovalSink<ComponentTypes...>>();
+                    std::get<1>(cpool).GetSink().template Disconnect<&Registry::creating<ComponentTypes...>>();
+                    std::get<2>(cpool).GetSink().template Disconnect<&Registry::destroying<ComponentTypes...>>();
                 };
 
-                accum_type accumulator = { (disconnect(component_family::Type<ComponentTypes>()), 0)... };
+                accum_type accumulator = { (disconn(component_family::Type<ComponentTypes>()), 0)... };
                 (void)accumulator;
             }
         }

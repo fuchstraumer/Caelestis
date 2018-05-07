@@ -16,7 +16,7 @@ namespace vpsk {
         using event_family = Family<struct InternalDispatcherEventFamily>;
 
         template<typename Class, typename EventType>
-        using instance_type = typename SignalHandler<void(const EventType&)>::template instance_type<Class>;
+        using instance_type = typename SignalHandler<void(const EventType&)>::template class_instance_type<Class>;
 
         struct BaseSignalWrapper { 
             virtual ~BaseSignalWrapper() noexcept = default;

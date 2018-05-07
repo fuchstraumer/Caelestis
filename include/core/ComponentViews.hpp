@@ -2,7 +2,9 @@
 #ifndef VPSK_COMPONENT_VIEWS_HPP
 #define VPSK_COMPONENT_VIEWS_HPP
 #include "Identifiers.hpp"
+#include <array>
 #include "storage/SparseSet.hpp"
+#include "Exceptions.hpp"
 #include <tuple>
 
 namespace vpsk {
@@ -25,7 +27,7 @@ namespace vpsk {
         // Search/filter "pattern" involves a tuple of component pools we're trying to identify.
         using pattern_type = std::tuple<pool_type<Components>&...>;
         
-        PersistentComponentView(view_type& entity_view, pool_type<Components>&... component_pools) noexcept : entityView(entity_view), componentPools(component_pools) {};
+        PersistentComponentView(view_type& entity_view, pool_type<Components>&... component_pools) noexcept : entityView(entity_view), componentPools(component_pools...) {};
 
     public:
 
@@ -54,14 +56,6 @@ namespace vpsk {
             return entityView.cend();
         }
 
-        iterator cbegin() const noexcept {
-            return entityView.cbegin();
-        }
-
-        iterator cend() const noexcept {
-            return entityView.cend();
-        }
-
         iterator begin() noexcept {
             return entityView.begin();
         }
@@ -76,12 +70,17 @@ namespace vpsk {
 
         template<typename ComponentType>
         const ComponentType& GetComponent(entity_type ent) const noexcept {
+            if (ENTITY_SYSTEM_CHECKS) {
+                if (!HasEntity(ent)) {
+                    throw bad_entity("Could not locate entity with specified component type in persistent view");
+                }
+            }
             return std::get<pool_type<ComponentType>&>(componentPools).get(ent);
         }
 
         template<typename ComponentType>
         ComponentType& GetComponent(entity_type ent) noexcept {
-            return std::get<pool_type<ComponentType>&>(componentPools).get(ent);
+            return const_cast<ComponentType&>(const_cast<const PersistentComponentView*>(this)->GetComponent<ComponentType>(ent));
         }
 
         // Does not have to match or be the full list of components given when defining this view
@@ -104,8 +103,8 @@ namespace vpsk {
 
         template<typename Function>
         void ApplyToEach(Function func) {
-            std::for_each(entityView.begin(), entityView.end(), [&func, this](const auto& ent) {
-                func(ent, std::get<pool_type<Components>&>(pools).get(ent)...);
+            const_cast<const PersistentComponentView*>(this)->ApplyToEach([&func](entity_type ent, const Components&...cmp) {
+                func(ent, const_cast<Components&>(cmp)...);
             });
         }
 
@@ -144,7 +143,7 @@ namespace vpsk {
                 size_type position = static_cast<size_type>(unchecked.size());
 
                 if (sz < extent) {
-                    for (; position && unchecked[pos - 1]->check_has_fast(entity); --position);
+                    for (; position && unchecked[position - 1]->check_has_fast(entity); --position);
                 }
 
                 return !position;
@@ -261,13 +260,11 @@ namespace vpsk {
         }
 
         iterator begin() noexcept {
-            const auto extent = std::min({ std::get<pool_type<ComponentTypes>&>(pools).extent()... });
-            return iterator{ unchecked, extent, view->begin(), view->end() };
+            return cbegin();
         }
 
         iterator end() noexcept {
-            const auto extent = std::min({ std::get<pool_type<ComponentTypes>&>(pools).extent()... });
-            return iterator{ unchecked, extent, view->end(), view->end() }:
+            return cend();
         }
 
         bool HasEntity(entity_type ent) const noexcept {

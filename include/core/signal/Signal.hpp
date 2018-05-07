@@ -18,8 +18,8 @@ namespace vpsk {
             using func_call_type = std::pair<void*, func_proto_type>;
             virtual ~Invoker() noexcept = default;
 
-            bool invoke(Collector& collector, func_proto_type function_prototype, void* instance, Args&&...args) {
-                return collector(function_prototype(instance, std::forward<Args>(args)...));
+            bool invoke(Collector& collector, func_proto_type function_prototype, void* instance, Args...args) {
+                return collector(function_prototype(instance, args...));
             }
         };
 
@@ -29,8 +29,8 @@ namespace vpsk {
             using func_call_type = std::pair<void*, func_proto_type>;
             virtual ~Invoker() noexcept = default;
 
-            bool invoke(Collector& collector, func_proto_type function_prototype, void* instances, Args&&...args) {
-                return proto(instance,std::forward<Args>(args)...), true;
+            bool invoke(Collector& collector, func_proto_type function_prototype, void* instances, Args...args) {
+                return (proto(instance, args...), true);
             }
         };
 
@@ -80,12 +80,12 @@ namespace vpsk {
         using function_call_type = std::pair<void*, function_prototype>;
 
         template<Result(*Function)(Args...)>
-        static Result prototype(void*,Args&&...args) {
+        static Result prototype(void*,Args...args) {
             return (Function)(args...);
         }
 
         template<typename Class, Result(Class::*Member)(Args...args)>
-        static Result prototype(void* instance, Args&&...args) {
+        static Result prototype(void* instance, Args...args) {
             return (static_cast<Class*>(instance)->*Member)(args...);
         }
 
@@ -93,34 +93,16 @@ namespace vpsk {
 
     public:
 
-        template<Result(*Function)(Args...)>
+        template<Result(*Fn)(Args...)>
         void Connect() {
-            Disconnect<Function>();
-            function_calls.emplace_back(nullptr,&prototype<Function>);
+            Disconnect<Fn>();
+            function_calls.emplace_back(nullptr,&prototype<Fn>);
         }
 
-        template<typename Class, Result(Class::*Member)(Args...)=&Class::Receive>
-        void Connect(Class* instance) {
-            Disconnect<Class,Member>(instance);
-            function_calls.emplace_back(instance,&prototype<Class,Member>);
-        }
-
-        template<Result(*Function)(Args...)>
+        template<Result(*Fn)(Args...)>
         void Disconnect() {
-            function_call_type target{nullptr,&prototype<Function>};
+            function_call_type target{nullptr,&prototype<Fn>};
             function_calls.erase(std::remove(function_calls.begin(), function_calls.end(), std::move(target)), function_calls.end());
-        }
-
-        template<typename Class, Result(Class::*Member)(Args...)>
-        void Disconnect(Class* instance) {
-            function_call_type target{ instance, &prototype<Class, Member> };
-            function_calls.erase(std::remove(function_calls.begin(), function_calls.end(), std::move(target)), function_calls.end());
-        }
-
-        template<typename Class>
-        void Disconnect(Class* instance) {
-            auto func = [instance](const function_call_type& call){ return call.first == instance; };
-            function_calls.erase(std::remove_if(function_calls.begin(), function_calls.end(), std::move(func)), function_calls.end());
         }
 
         void DisconnectAll() {
@@ -151,7 +133,7 @@ namespace vpsk {
         }
 
         sink_type GetSink() {
-            return sink_type{ fnCalls };
+            return { fnCalls };
         }
 
         void TriggerSignal(Args...args) {

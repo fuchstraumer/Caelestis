@@ -62,7 +62,7 @@ namespace vpsk {
                 }
             }
 
-            void publish(const Event& event, Derived& ref) {
+            void publish(const EventType& event, Derived& ref) {
                 container_type current_listeners;
                 singleUseListeners.swap(current_listeners);
 
@@ -120,7 +120,7 @@ namespace vpsk {
             friend class Emitter;
 
             Connection() noexcept = default;
-            Connection(typename Handler<EventType>::connection_type connection) : Handler<EventType>::connection_type{std::move(connection)};
+            Connection(typename Handler<EventType>::connection_type connection) : Handler<EventType>::connection_type{ std::move(connection) } {}
         };
 
         Emitter() noexcept = default;
