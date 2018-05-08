@@ -1,4 +1,4 @@
-#include "systems/PipelineResources.hpp"
+#include "systems/BufferResources.hpp"
 #include "core/ShaderResource.hpp"
 #include "resource/Sampler.hpp"
 #include "resource/Image.hpp"
