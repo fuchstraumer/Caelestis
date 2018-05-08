@@ -1,13 +1,14 @@
 #include "resources/stbTexture.hpp"
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "stb/stb_image.h"
 namespace vpsk {
 
-    stbTexture::stbTexture(const vpr::Device * dvc, const char * fname) : Texture<stbTexture>(dvc) {
+    stbTexture::stbTexture(const vpr::Device * dvc, const char * fname) : Texture(dvc) {
         CreateFromFile(fname);
     }
 
     void stbTexture::loadTextureDataFromFile(const char * fname) {
+        stbi_uc * pixels = nullptr;
         pixels = stbi_load(fname, &x, &y, &channels, 4);
         stagingBuffer = std::make_unique<vpr::Buffer>(device);
         stagingBuffer->CreateBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, sizeof(uint8_t) * x * y * channels);
@@ -51,7 +52,7 @@ namespace vpsk {
         return static_cast<uint32_t>(y);
     }
 
-    VkFormat stbTexture::format() const {
+    VkFormat stbTexture::format() const noexcept {
         if (channels == 1) {
             return VK_FORMAT_R8_UNORM;
         }
@@ -69,11 +70,19 @@ namespace vpsk {
         }
     }
 
-    constexpr VkImageLayout stbTexture::finalLayout() const {
+    uint32_t stbTexture::mipLevels() const {
+        return 1;
+    }
+
+    uint32_t stbTexture::arrayLayers() const {
+        return 1;
+    }
+
+    VkImageLayout stbTexture::finalLayout() const noexcept {
         return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
-    constexpr VkImageAspectFlags stbTexture::aspect() const {
+    VkImageAspectFlags stbTexture::aspect() const noexcept {
         return VK_IMAGE_ASPECT_COLOR_BIT;
     }
 

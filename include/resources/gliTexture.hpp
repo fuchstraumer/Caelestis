@@ -6,7 +6,7 @@
 namespace vpsk {
 
     template<typename gli_texture_type>
-    class gliTexture : public Texture<gliTexture> {
+    class gliTexture : public Texture {
     public:
 
         gliTexture(const vpr::Device* dvc, const char* fname);
