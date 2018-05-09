@@ -1,5 +1,5 @@
-#include "core/Registry.hpp"
-#include "core/signal/Emitter.hpp"
+#include "ecs/Registry.hpp"
+#include "ecs/signal/Emitter.hpp"
 #include <string>
 #include <unordered_map>
 #include <unordered_set>

@@ -12,7 +12,6 @@
 
 namespace vpsk {
 
-    
     class Texture {
         Texture(const Texture&) = delete;
         Texture& operator=(const Texture&) = delete;
@@ -53,8 +52,8 @@ namespace vpsk {
         virtual VkFormat format() const noexcept = 0;
         virtual VkImageAspectFlags aspect() const noexcept = 0;
         virtual VkImageLayout finalLayout() const noexcept = 0;
-        virtual uint32_t mipLevels() const = 0;
-        virtual uint32_t arrayLayers() const = 0;
+        virtual uint32_t mipLevels() const noexcept = 0;
+        virtual uint32_t arrayLayers() const noexcept = 0;
 
         const vpr::Device* device;
         VkImageCreateInfo imageInfo;
@@ -71,6 +70,7 @@ namespace vpsk {
         VkSampler samplerShared;
         std::unique_ptr<vpr::Buffer> stagingBuffer;
         std::vector<VkBufferImageCopy> copyInfo;
+
     };
 
 }

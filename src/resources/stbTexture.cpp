@@ -70,11 +70,11 @@ namespace vpsk {
         }
     }
 
-    uint32_t stbTexture::mipLevels() const {
+    uint32_t stbTexture::mipLevels() const noexcept {
         return 1;
     }
 
-    uint32_t stbTexture::arrayLayers() const {
+    uint32_t stbTexture::arrayLayers() const noexcept {
         return 1;
     }
 

@@ -9,6 +9,11 @@ namespace vpsk {
         transferFunctions.emplace_back(std::move(func));
     }
 
+    void ResourceTransferSystem::AddTransferRequest(delegate_t<void(VkCommandBuffer)> func, delegate_t<void(VkCommandBuffer)> signal) {
+        transferFunctions.emplace_back(std::move(func));
+        transferCompleteSignals.emplace_back(std::move(func));
+    }
+
     void ResourceTransferSystem::CompleteTransfers() {
         auto cmd = transferPool->Begin();
         while (!transferFunctions.empty()) {
@@ -17,6 +22,12 @@ namespace vpsk {
             transferFunctions.pop_front();
         }
         transferPool->Submit();
+
+        while (!transferCompleteSignals.empty()) {
+            auto& func = transferCompleteSignals.front();
+            func();
+            transferCompleteSignals.pop_front();
+        }
     }
 
 }

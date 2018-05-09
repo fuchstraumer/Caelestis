@@ -1,36 +1,37 @@
 #pragma once
-#ifndef VPSK_STB_TEXTURE_HPP
-#define VPSK_STB_TEXTURE_HPP
+#ifndef VPSK_GLTF_TEXTURE_HPP
+#define VPSK_GLTF_TEXTURE_HPP
 #include "Texture.hpp"
+
+namespace tinygltf {
+    struct Image;
+}
+
 namespace vpsk {
 
-    class stbTexture : public Texture {
+    class gltfTexture : public Texture {
     public:
 
-        stbTexture(const vpr::Device* dvc, const char* fname);
+        gltfTexture(const vpr::Device* dvc, tinygltf::Image& img, VkSampler sampler);
 
     protected:
 
+        void copyDataToStaging();
+        void generateMipMaps();
         void loadTextureDataFromFile(const char* fname) final;
         void createCopyInformation() final;
+        VkFormat format() const;
         void updateImageInfo() final;
         void updateSamplerInfo() final;
         void updateViewInfo() final;
-
-        uint32_t width() const;
-        uint32_t height() const;
-        VkFormat format() const noexcept final;
         VkImageLayout finalLayout() const noexcept final;
         VkImageAspectFlags aspect() const noexcept final;
         uint32_t mipLevels() const noexcept final;
         uint32_t arrayLayers() const noexcept final;
 
-        int x;
-        int y;
-        int channels;
-
+        tinygltf::Image& image;
     };
 
 }
 
-#endif // !VPSK_STB_TEXTURE_HPP
+#endif //!VPSK_GLTF_TEXTURE_HPP
