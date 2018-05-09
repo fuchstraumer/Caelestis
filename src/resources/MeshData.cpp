@@ -2,7 +2,7 @@
 #include "resource/Buffer.hpp"
 namespace vpsk {
 
-    void MeshData::CreateBuffers(const vpr::Device * device) {
+    void mesh_data_t::CreateBuffers(const vpr::Device * device) {
         
         VBO0 = std::make_unique<vpr::Buffer>(device);
         VBO1 = std::make_unique<vpr::Buffer>(device);
@@ -18,13 +18,13 @@ namespace vpsk {
 
     }
 
-    void MeshData::TransferToDevice(VkCommandBuffer cmd) {
+    void mesh_data_t::TransferToDevice(VkCommandBuffer cmd) {
         VBO0->CopyTo(vboStaging0.get(), cmd, 0);
         VBO1->CopyTo(vboStaging1.get(), cmd, 0);
         EBO->CopyTo(eboStaging.get(), cmd, 0);
     }
 
-    void MeshData::FreeStagingBuffers() {
+    void mesh_data_t::FreeStagingBuffers() {
         vboStaging0.reset();
         vboStaging1.reset();
         eboStaging.reset();
@@ -33,7 +33,7 @@ namespace vpsk {
         Indices.clear(); Indices.shrink_to_fit();
     }
 
-    std::vector<VkBuffer> MeshData::GetVertexBuffers() const {
+    std::vector<VkBuffer> mesh_data_t::GetVertexBuffers() const {
         return std::vector<VkBuffer>{ VBO0->vkHandle(), VBO1->vkHandle() };
     }
 

@@ -16,7 +16,10 @@ namespace vpsk {
         glm::vec2 UV;
     };
 
-    struct MeshData {
+    /**All mesh objects should use this mesh data format. They don't have to bind or use
+     * all fields at drawtime, but this helps standardize things considerably. 
+     */
+    struct mesh_data_t {
 
         std::vector<glm::vec3> Positions;
         std::vector<vertex_data_t> Vertices;
@@ -33,6 +36,7 @@ namespace vpsk {
         std::vector<VkBuffer> GetVertexBuffers() const;
 
     private:
+
         std::unique_ptr<vpr::Buffer> vboStaging0;
         std::unique_ptr<vpr::Buffer> vboStaging1;
         std::unique_ptr<vpr::Buffer> eboStaging;
