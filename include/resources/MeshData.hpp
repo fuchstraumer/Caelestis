@@ -30,6 +30,8 @@ namespace vpsk {
         void TransferToDevice(VkCommandBuffer cmd);
         void FreeStagingBuffers();
 
+        std::vector<VkBuffer> GetVertexBuffers() const;
+
     private:
         std::unique_ptr<vpr::Buffer> vboStaging0;
         std::unique_ptr<vpr::Buffer> vboStaging1;

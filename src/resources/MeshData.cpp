@@ -33,4 +33,8 @@ namespace vpsk {
         Indices.clear(); Indices.shrink_to_fit();
     }
 
+    std::vector<VkBuffer> MeshData::GetVertexBuffers() const {
+        return std::vector<VkBuffer>{ VBO0->vkHandle(), VBO1->vkHandle() };
+    }
+
 }
