@@ -18,8 +18,10 @@ SOURCE_GROUP("systems" FILES ${SYSTEMS})
 SOURCE_GROUP("components" FILES ${COMPONENTS})
 
 ADD_LIBRARY(VulpesSceneKit STATIC ${ECS} ${SCRIPT_BINDINGS} ${SIGNALS} ${STORAGE} ${SYSTEMS} ${COMPONENTS} ${RESOURCES})
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
-"$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")
+"$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
 
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
