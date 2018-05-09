@@ -17,3 +17,6 @@
 	path = third_party/eastl
 	url = https://github.com/electronicarts/eastl
     
+[submodule "third_party/gltf2-loader"]
+	path = third_party/gltf2-loader
+	url = https://github.com/Lugdunum3D/glTF2-loader
