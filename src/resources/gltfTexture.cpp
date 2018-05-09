@@ -1,5 +1,4 @@
 #include "resources/gltfTexture.hpp"
-#include "tinygltf/tiny_gltf.h"
 #include "resource/Buffer.hpp"
 #include "command/CommandPool.hpp"
 namespace vpsk {
