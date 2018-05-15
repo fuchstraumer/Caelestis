@@ -14,6 +14,9 @@
 
 namespace vpsk {
 
+    struct ResourceData;
+    using ResourceDataHandle = std::weak_ptr<ResourceData>;
+
     struct LoadRequest {
         std::string AbsolutePath;
         delegate_t<void(ResourceDataHandle&)> Signal;
@@ -25,15 +28,12 @@ namespace vpsk {
         virtual void Load(const LoadRequest& request) = 0; 
     };
     
-    using ResourceDataHandle = std::weak_ptr<ResourceData>;
-    
     class ResourceLoader {
         ResourceLoader(const ResourceLoader&) = delete;
         ResourceLoader& operator=(const ResourceLoader&) = delete;
     public:
 
         ResourceLoader() noexcept {};
-
 
         void Add(const LoadRequest& item);
         ResourceDataHandle& GetResource(const std::string& absolute_file_path);
