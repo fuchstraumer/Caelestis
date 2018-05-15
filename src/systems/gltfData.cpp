@@ -1,17 +1,14 @@
-#include "systems/gltfLoader.hpp"
+#include "systems/gltfData.hpp"
 #include <experimental/filesystem>
 #include <vulkan/vulkan.h>
 #include "fx-gltf/include/fx/gltf.h"
+#include <mutex>
+
 namespace vpsk {
 
     static std::unordered_map<std::string, fx::gltf::Document>& GetProgramDocuments() noexcept {
         static std::unordered_map<std::string, fx::gltf::Document> map;
         return map;
-    }
-
-    static std::unordered_map<std::string, mesh_data_t>& GetMeshData() noexcept {
-        static std::unordered_map<std::string, mesh_data_t> meshes;
-        return meshes;
     }
 
     static uint32_t CalculateDataTypeSize(fx::gltf::Accessor const & accessor) noexcept {
@@ -84,43 +81,46 @@ namespace vpsk {
         }
     }
 
-    gltfLoader::gltfLoader(const vpr::Device * dvc, const char * fname) : device(dvc) {
-        loadFromFile(fname);
-    }
-
-    void gltfLoader::setDocumentPtr(const char * fname) {
+    void gltfData::Load(const LoadRequest & request) {
         namespace fs = std::experimental::filesystem;
-        fs::path document_path = fs::absolute(fs::path(fname));
+        FilePath = fs::absolute(fs::path(request.AbsolutePath)).string();
 
-        if (!fs::exists(document_path)) {
+        if (!fs::exists(FilePath)) {
             throw std::runtime_error("Invalid gltf file path!");
         }
+        
+        FileName = fs::path(request.AbsolutePath).filename().string();
 
-        bool is_binary = false;
-        const std::string extension = document_path.extension().string();
+        const std::string extension = fs::path(request.AbsolutePath).extension().string();
         if (extension == ".glb") {
-            is_binary = true;
+            binaryFile = true;
         }
+
+        loadFromFile();
+    }
+
+    void gltfData::loadFromFile() {
+        static std::mutex documentMutex;
 
         auto doc_map = GetProgramDocuments();
-        const std::string path_str = document_path.string();
 
-        if (doc_map.count(path_str) != 0) {
-            document = &doc_map.at(path_str);
+        if (doc_map.count(FilePath) != 0) {
+            document = &doc_map.at(FilePath);
         }
         else {
-            if (is_binary) {
-                doc_map.emplace(path_str, fx::gltf::LoadFromBinary(path_str));
+            if (binaryFile) {
+                std::lock_guard<std::mutex> guard(documentMutex);
+                doc_map.emplace(FilePath, fx::gltf::LoadFromBinary(FilePath));
             }
             else {
-                doc_map.emplace(path_str, fx::gltf::LoadFromText(path_str));
+                std::lock_guard<std::mutex> guard(documentMutex);
+                doc_map.emplace(FilePath, fx::gltf::LoadFromText(FilePath));
             }
-            document = &doc_map.at(path_str);
+            document = &doc_map.at(FilePath);
         }
     }
 
-    void gltfLoader::loadFromFile(const char* fname) {
-        setDocumentPtr(fname);
+    void gltfData::parseDocument() {
 
     }
 

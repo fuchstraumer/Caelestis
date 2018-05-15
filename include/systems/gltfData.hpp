@@ -1,7 +1,8 @@
 #pragma once
-#ifndef VPSK_GLTF_MODEL_HPP
-#define VPSK_GLTF_MODEL_HPP
+#ifndef VPSK_GLTF_DATA_HPP
+#define VPSK_GLTF_DATA_HPP
 #include "ForwardDecl.hpp"
+#include "systems/ResourceLoader.hpp"
 #include "resources/CommonStructs.hpp"
 #include "resources/MeshData.hpp"
 #include <vulkan/vulkan.h>
@@ -49,7 +50,8 @@ namespace vpsk {
         static_assert(sizeof(parameters_t) == 64, "Invalid parameters size");
     };
 
-    struct gltfData {
+    struct gltfData : ResourceData {
+        void Load(const LoadRequest& request) final;
         std::string FileName;
         std::string FilePath;
         std::unordered_map<std::string, vpr::Sampler*> Samplers;
@@ -58,20 +60,11 @@ namespace vpsk {
         vertex_layout_t VertexLayout;
         mesh_data_t* MeshData;
         gltfMaterial Material;
-    };
-
-    class gltfLoader {
-    public:
-
-        gltfLoader(const vpr::Device* device, const char* fname);
-
     private:
-
-        void setDocumentPtr(const char* fname);
-        void loadFromFile(const char * fname);
-
-        const vpr::Device* device;
         fx::gltf::Document* document;
+        bool binaryFile{ false };
+        void loadFromFile();
+        void parseDocument();
     };
     
 } // vpsk
