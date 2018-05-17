@@ -16,9 +16,6 @@
 [submodule "third_party/eastl"]
 	path = third_party/eastl
 	url = https://github.com/electronicarts/eastl
-[submodule "third_party/fx-gltf"]
-	path = third_party/fx-gltf
-	url = https://github.com/jessey-git/fx-gltf
 [submodule "third_party/json"]
 	path = third_party/json
 	url = https://github.com/nlohmann/json
