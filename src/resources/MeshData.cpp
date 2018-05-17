@@ -37,4 +37,12 @@ namespace vpsk {
         return std::vector<VkBuffer>{ VBO0->vkHandle(), VBO1->vkHandle() };
     }
 
+    mesh_data_t::operator VertexBufferComponent() const {
+        return VertexBufferComponent(GetVertexBuffers());
+    }
+
+    mesh_data_t::operator IndexBufferComponent() const {
+        return IndexBufferComponent(EBO->vkHandle());
+    }
+
 }

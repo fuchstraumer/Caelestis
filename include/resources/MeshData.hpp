@@ -7,6 +7,7 @@
 #include <memory>
 #include "glm/vec3.hpp"
 #include "glm/vec2.hpp"
+#include "ecs/components/VertexBuffer.hpp"
 
 namespace vpsk {
 
@@ -20,6 +21,9 @@ namespace vpsk {
      * all fields at drawtime, but this helps standardize things considerably. 
      */
     struct mesh_data_t {
+
+        explicit operator VertexBufferComponent() const;
+        explicit operator IndexBufferComponent() const;
 
         std::vector<glm::vec3> Positions;
         std::vector<vertex_data_t> Vertices;
