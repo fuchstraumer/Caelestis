@@ -9,6 +9,8 @@ FILE(GLOB COMPONENTS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/components/*.hpp" 
 FILE(GLOB SYSTEMS "${CMAKE_CURRENT_SOURCE_DIR}/include/systems/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/systems/*.cpp")
 FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/resources/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/*.cpp")
 
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
+
 SOURCE_GROUP("ecs\\core" FILES ${ECS})
 SOURCE_GROUP("ecs\\signals" FILES ${SIGNALS})
 SOURCE_GROUP("ecs\\storage" FILES ${STORAGE})
@@ -35,4 +37,4 @@ ENDIF()
 ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
 TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include")
-TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE VulpesSceneKit)
+TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader)
