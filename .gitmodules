@@ -19,6 +19,3 @@
 [submodule "third_party/json"]
 	path = third_party/json
 	url = https://github.com/nlohmann/json
-[submodule "third_party/assimp"]
-	path = third_party/assimp
-	url = https://github.com/assimp/assimp
