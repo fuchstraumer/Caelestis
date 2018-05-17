@@ -8,35 +8,21 @@ namespace vpsk {
     class Texture;
 
     struct MaterialTextures {
-        Texture* Ambient{ nullptr };
         Texture* Diffuse{ nullptr };
-        Texture* Specular{ nullptr };
-        Texture* SpecularHighlight{ nullptr };
-        Texture* Bump{ nullptr };
-        Texture* Displacement{ nullptr };
-        Texture* Alpha{ nullptr };
-        Texture* Reflection{ nullptr };
+        Texture* Normal{ nullptr };
+        Texture* AmbientOcclusion{ nullptr };
         Texture* Roughness{ nullptr };
         Texture* Metallic{ nullptr };
-        Texture* Sheen{ nullptr };
         Texture* Emissive{ nullptr };
-        Texture* Normal{ nullptr };
     };
 
     struct MaterialTextureFlags {
-        bool Ambient{ false };
         bool Diffuse{ false };
-        bool Specular{ false };
-        bool SpecularHighlight{ false };
-        bool Bump{ false };
-        bool Displacement{ false };
-        bool Alpha{ false };
-        bool Reflection{ false };
+        bool Normal{ false };
+        bool AmbientOcclusion{ false };
         bool Roughness{ false };
         bool Metallic{ false };
-        bool Sheen{ false };
         bool Emissive{ false };
-        bool Normal{ false };
     };
 
     struct MaterialParameters {
