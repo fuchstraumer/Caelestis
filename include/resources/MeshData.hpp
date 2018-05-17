@@ -7,7 +7,7 @@
 #include <memory>
 #include "glm/vec3.hpp"
 #include "glm/vec2.hpp"
-#include "ecs/components/VertexBuffer.hpp"
+#include "ecs/components/MeshBufferComponents.hpp"
 
 namespace vpsk {
 
@@ -20,7 +20,7 @@ namespace vpsk {
     /**All mesh objects should use this mesh data format. They don't have to bind or use
      * all fields at drawtime, but this helps standardize things considerably. 
      */
-    struct mesh_data_t {
+    struct MeshData {
 
         explicit operator VertexBufferComponent() const;
         explicit operator IndexBufferComponent() const;

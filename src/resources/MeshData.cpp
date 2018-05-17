@@ -2,7 +2,7 @@
 #include "resource/Buffer.hpp"
 namespace vpsk {
 
-    void mesh_data_t::CreateBuffers(const vpr::Device * device) {
+    void MeshData::CreateBuffers(const vpr::Device * device) {
         
         VBO0 = std::make_unique<vpr::Buffer>(device);
         VBO1 = std::make_unique<vpr::Buffer>(device);
@@ -18,13 +18,13 @@ namespace vpsk {
 
     }
 
-    void mesh_data_t::TransferToDevice(VkCommandBuffer cmd) {
+    void MeshData::TransferToDevice(VkCommandBuffer cmd) {
         VBO0->CopyTo(vboStaging0.get(), cmd, 0);
         VBO1->CopyTo(vboStaging1.get(), cmd, 0);
         EBO->CopyTo(eboStaging.get(), cmd, 0);
     }
 
-    void mesh_data_t::FreeStagingBuffers() {
+    void MeshData::FreeStagingBuffers() {
         vboStaging0.reset();
         vboStaging1.reset();
         eboStaging.reset();
@@ -33,15 +33,15 @@ namespace vpsk {
         Indices.clear(); Indices.shrink_to_fit();
     }
 
-    std::vector<VkBuffer> mesh_data_t::GetVertexBuffers() const {
+    std::vector<VkBuffer> MeshData::GetVertexBuffers() const {
         return std::vector<VkBuffer>{ VBO0->vkHandle(), VBO1->vkHandle() };
     }
 
-    mesh_data_t::operator VertexBufferComponent() const {
+    MeshData::operator VertexBufferComponent() const {
         return VertexBufferComponent(GetVertexBuffers());
     }
 
-    mesh_data_t::operator IndexBufferComponent() const {
+    MeshData::operator IndexBufferComponent() const {
         return IndexBufferComponent(EBO->vkHandle());
     }
 
