@@ -5,21 +5,25 @@ FILE(GLOB ECS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/core/*.hpp")
 FILE(GLOB SIGNALS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/signal/*.hpp")
 FILE(GLOB STORAGE "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/storage/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/storage/*.inl" )
 FILE(GLOB SCRIPT_BINDINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/bindings/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/ecs/bindings/*.cpp")
-FILE(GLOB COMPONENTS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/components/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/ecs/components/*.cpp")
-FILE(GLOB SYSTEMS "${CMAKE_CURRENT_SOURCE_DIR}/include/systems/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/systems/*.cpp")
-FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/resources/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/*.cpp")
-
+FILE(GLOB_RECURSE COMPONENTS "${CMAKE_CURRENT_SOURCE_DIR}/include/components/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/components/*.cpp")
+FILE(GLOB SYSTEMS "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/systems/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/systems/*.cpp")
+FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/resources/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/resources/*.cpp")
+FILE(GLOB RENDERER_CORE "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/*.cpp")
+FILE(GLOB RENDERER_OBJECTS "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/objects/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/objects/*.cpp")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
 
 SOURCE_GROUP("ecs\\core" FILES ${ECS})
 SOURCE_GROUP("ecs\\signals" FILES ${SIGNALS})
 SOURCE_GROUP("ecs\\storage" FILES ${STORAGE})
 SOURCE_GROUP("ecs\\bindings" FILES ${SCRIPT_BINDINGS})
-SOURCE_GROUP("ecs\\components" FILES ${COMPONENTS})
-SOURCE_GROUP("resources" FILES ${RESOURCES})
-SOURCE_GROUP("systems" FILES ${SYSTEMS})
+SOURCE_GROUP("components" FILES ${COMPONENTS})
+SOURCE_GROUP("renderer\\core" FILES ${RENDERER_CORE})
+SOURCE_GROUP("renderer\\resources" FILES ${RESOURCES})
+SOURCE_GROUP("renderer\\systems" FILES ${SYSTEMS})
+SOURCE_GROUP("renderer\\objects" FILES ${RENDERER_OBJECTS})
 
-ADD_LIBRARY(VulpesSceneKit STATIC ${ECS} ${SCRIPT_BINDINGS} ${SIGNALS} ${STORAGE} ${SYSTEMS} ${COMPONENTS} ${RESOURCES})
+ADD_LIBRARY(VulpesSceneKit STATIC ${ECS} ${SCRIPT_BINDINGS} ${SIGNALS} ${STORAGE} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE}
+    ${RENDERER_OBJECTS})
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
