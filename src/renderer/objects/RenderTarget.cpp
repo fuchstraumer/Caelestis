@@ -41,8 +41,8 @@ namespace vpsk {
             }
         }
 
-        Viewport.width = width;
-        Viewport.height = height;
+        Viewport.width = static_cast<float>(width);
+        Viewport.height = static_cast<float>(height);
         Viewport.minDepth = 0.0f;
         Viewport.maxDepth = 1.0f;
         Viewport.x = 0;
@@ -74,8 +74,8 @@ namespace vpsk {
             msaaUpToDate.emplace_back(VK_TRUE);
         }
 
-        Viewport.width = size;
-        Viewport.height = size;
+        Viewport.width = static_cast<float>(size);
+        Viewport.height = static_cast<float>(size);
         Viewport.minDepth = 0.0f;
         Viewport.maxDepth = 1.0f;
         Viewport.x = 0;

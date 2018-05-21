@@ -7,7 +7,7 @@
 #include <memory>
 #include "glm/vec3.hpp"
 #include "glm/vec2.hpp"
-#include "ecs/components/MeshBufferComponents.hpp"
+#include "components/graphics/MeshBufferComponents.hpp"
 
 namespace vpsk {
 

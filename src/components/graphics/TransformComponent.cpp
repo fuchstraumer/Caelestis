@@ -1,4 +1,4 @@
-#include "components/Transform.hpp"
+#include "components/graphics/TransformComponent.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/mat3x3.hpp"
 namespace vpsk {

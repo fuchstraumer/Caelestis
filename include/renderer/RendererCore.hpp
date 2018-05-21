@@ -15,10 +15,11 @@ namespace vpsk {
     // New renderers cannot be created, the static singleton renderer can only be retrieved.
 
     class PlatformWindow;
+    class ResourceTransferSystem;
 
     struct RendererConfig {
-        int Width;
-        int Height;
+        int Width{ 1440 };
+        int Height{ 900 };
         std::string ApplicationName{ "AppName" };
         std::string EngineName{ "VulpesEngine" };
         uint32_t ApplicationVersion{ VK_MAKE_VERSION(0,1,0) };
@@ -27,7 +28,9 @@ namespace vpsk {
         VkSampleCountFlags MSAA_SampleCount{ VK_SAMPLE_COUNT_4_BIT };
         bool EnableSamplerAnisotropy{ true };
         float SamplerAnisotropy{ 4.0f };
-    } DefaultRendererConfig;
+    };
+
+    inline static RendererConfig DefaultRendererConfig;
 
     class RendererCore {
         RendererCore();
@@ -46,8 +49,11 @@ namespace vpsk {
         vpr::Instance* Instance() noexcept;
         const vpr::Swapchain* Swapchain() const noexcept;
         vpr::Swapchain* Swapchain() noexcept;
+        ResourceTransferSystem* TransferSystem() noexcept;
 
     protected:
+         
+        std::unique_ptr<ResourceTransferSystem> transferSystem;
         std::unique_ptr<vpr::Instance> instance;
         std::unique_ptr<vpr::Device> device;
         std::unique_ptr<vpr::Swapchain> swapchain;

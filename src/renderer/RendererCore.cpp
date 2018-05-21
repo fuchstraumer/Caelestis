@@ -5,7 +5,7 @@
 #include "core/PhysicalDevice.hpp"
 #include "core/LogicalDevice.hpp"
 #include "render/Swapchain.hpp"
-
+#include "renderer/systems/TransferSystem.hpp"
 namespace vpsk {
 
     RendererCore::RendererCore() {
@@ -24,13 +24,22 @@ namespace vpsk {
 
         instance = std::make_unique<vpr::Instance>(false, &application_info, window->glfwWindow());
         window->SetWindowUserPointer(this);
-        device = std::make_unique<vpr::Device>(instance.get(), instance->GetPhysicalDevice(), false);
+        device = std::make_unique<vpr::Device>(instance.get(), instance->GetPhysicalDevice(), true);
         swapchain = std::make_unique<vpr::Swapchain>(instance.get(), device.get());
+        transferSystem = std::make_unique<ResourceTransferSystem>(device.get());
+    }
 
+    RendererCore::~RendererCore()
+    {
+    }
+
+    RendererCore & RendererCore::GetRenderer() noexcept {
+        static RendererCore renderer;
+        return renderer;
     }
 
     std::atomic<bool>& RendererCore::ShouldResize() noexcept {
-        std::atomic<bool> flag(false);
+        static std::atomic<bool> flag(false);
         return flag;
     }
 
@@ -40,6 +49,26 @@ namespace vpsk {
 
     vpr::Device * RendererCore::Device() noexcept {
         return device.get();
+    }
+
+    const vpr::Instance * RendererCore::Instance() const noexcept {
+        return instance.get();
+    }
+
+    vpr::Instance * RendererCore::Instance() noexcept {
+        return instance.get();
+    }
+
+    const vpr::Swapchain * RendererCore::Swapchain() const noexcept {
+        return swapchain.get();
+    }
+
+    vpr::Swapchain * RendererCore::Swapchain() noexcept {
+        return swapchain.get();
+    }
+
+    ResourceTransferSystem * RendererCore::TransferSystem() noexcept {
+        return transferSystem.get();
     }
 
 }

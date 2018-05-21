@@ -1,4 +1,4 @@
-#include "resources/MeshData.hpp"
+#include "renderer/resources/MeshData.hpp"
 #include "resource/Buffer.hpp"
 namespace vpsk {
 
