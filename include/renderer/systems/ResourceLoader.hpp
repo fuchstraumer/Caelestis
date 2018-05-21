@@ -10,43 +10,54 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <functional>
 #include "ecs/signal/Delegate.hpp"
 
 namespace vpsk {
 
-    struct ResourceData;
-    using ResourceDataHandle = std::weak_ptr<ResourceData>;
+    using FactoryFunctor = delegate_t<void*(const char*)>;
+    using SignalFunctor = delegate_t<void(void*)>;
 
-    struct LoadRequest {
-        std::string AbsolutePath;
-        delegate_t<void(ResourceDataHandle&)> Signal;
-    };
-
-    // Specialized objects should inherit from this
-    struct ResourceData {
-        virtual ~ResourceData() = default;
-        virtual void Load(const LoadRequest& request) = 0; 
-    };
-    
     class ResourceLoader {
         ResourceLoader(const ResourceLoader&) = delete;
         ResourceLoader& operator=(const ResourceLoader&) = delete;
     public:
 
-        ResourceLoader() noexcept {};
+        ResourceLoader();
 
-        void Add(const LoadRequest& item);
-        ResourceDataHandle& GetResource(const std::string& absolute_file_path);
+        void Subscribe(const std::string& file_type, FactoryFunctor func);
+        void Load(const std::string& file_type, const std::string& file_path, SignalFunctor signal);
+        void Unload(const std::string& file_type, const std::string& path);
 
-        static ResourceLoader& GetResourceLoader() noexcept;
+        void Start();
+        void Stop();
+
+        static ResourceLoader& GetResourceLoader();
+
+        struct ResourceData {
+            void* Data;
+            std::string FileType;
+            std::string AbsoluteFilePath;
+            size_t RefCount{ 0 };
+        };
 
     private:
-    
-        std::unordered_map<std::string, std::shared_ptr<ResourceData>> data;
-        std::queue<LoadRequest> requests;
-        std::recursive_mutex queueMutex;
+
+        struct loadRequest {
+            loadRequest(ResourceData& dest) : destinationData(dest) {}
+            ResourceData& destinationData;
+            SignalFunctor signal;
+            FactoryFunctor factory;
+        };
+
+        void workerFunction();
+
+        std::unordered_map<std::string, FactoryFunctor> factories;
+        std::unordered_map<std::string, ResourceData> resources;
+        std::queue<loadRequest> requests;
+        std::mutex queueMutex;
         std::condition_variable cVar;
-        std::atomic<bool> empty;
+        std::atomic<bool> shutdown{ false };
         std::array<std::thread, 2> workers;
     };
 
