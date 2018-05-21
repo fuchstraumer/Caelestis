@@ -10,7 +10,10 @@ FILE(GLOB SYSTEMS "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/systems/*.hpp" "
 FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/resources/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/resources/*.cpp")
 FILE(GLOB RENDERER_CORE "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/*.cpp")
 FILE(GLOB RENDERER_OBJECTS "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/objects/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/objects/*.cpp")
+FILE(GLOB IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.cpp")
+
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender")
 
 SOURCE_GROUP("ecs\\core" FILES ${ECS})
 SOURCE_GROUP("ecs\\signals" FILES ${SIGNALS})
@@ -21,13 +24,15 @@ SOURCE_GROUP("renderer\\core" FILES ${RENDERER_CORE})
 SOURCE_GROUP("renderer\\resources" FILES ${RESOURCES})
 SOURCE_GROUP("renderer\\systems" FILES ${SYSTEMS})
 SOURCE_GROUP("renderer\\objects" FILES ${RENDERER_OBJECTS})
+SOURCE_GROUP("imgui" FILES ${IMGUI})
 
 ADD_LIBRARY(VulpesSceneKit STATIC ${ECS} ${SCRIPT_BINDINGS} ${SIGNALS} ${STORAGE} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE}
-    ${RENDERER_OBJECTS})
+    ${RENDERER_OBJECTS} ${IMGUI})
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
 "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender)
 
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
@@ -40,5 +45,6 @@ ENDIF()
 
 ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
-TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include")
-TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader)
+TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
+TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader VulpesRender VulpesSceneKit)
