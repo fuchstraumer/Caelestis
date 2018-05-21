@@ -87,11 +87,11 @@ namespace vpsk {
             return *this;
         }
 
-        delegate_t(delegate_t&& other) noexcept : invocation(std::move(other.invocation)) {}
+        //delegate_t(delegate_t&& other) noexcept : invocation(std::move(other.invocation)) {}
 
-        delegate_t& operator=(delegate_t&& other) noexcept {
-            invocation = std::move(other.invocation);
-        }
+        //delegate_t& operator=(delegate_t&& other) noexcept {
+        //    invocation = std::move(other.invocation);
+        //}
 
         template<typename LambdaFunc>
         explicit delegate_t(const LambdaFunc& func) {
@@ -132,12 +132,12 @@ namespace vpsk {
 
         template<class T, Result(T::*Method)(Args...)>
         static delegate_t create(T* object) {
-            return delegate_t(object, method_stub<T,Method>);
+            return delegate_t{ object, method_stub<T,Method> };
         }
 
         template<class T, Result(T::*Method)(Args...) const>
         static delegate_t create(const T* object) {
-            return delegate_t(const_cast<T*>(object), const_method_stub<T,Method>);
+            return delegate_t{ const_cast<T*>(object), const_method_stub<T,Method> };
         }
 
         template<Result(*Function)(Args...)>
@@ -163,26 +163,26 @@ namespace vpsk {
         }
 
         template<class T, Result(T::*Method)(Args...)>
-        static Result method_stub(void* this_ptr, Args&&...args) {
+        static Result method_stub(void* this_ptr, Args...args) {
             T* object_ptr = static_cast<T*>(this_ptr);
-            return (object_ptr->*Method)(std::forward<Args>(args)...);
+            return (object_ptr->*Method)(args...);
         }
 
         template<class T, Result(T::*Method)(Args...) const>
-        static Result const_method_stub(void* this_ptr, Args&&...args) {
+        static Result const_method_stub(void* this_ptr, Args...args) {
             T* const object_ptr = static_cast<T*>(this_ptr);
-            return (object_ptr->*Method)(std::forward<Args>(args)...);
+            return (object_ptr->*Method)(args...);
         }
 
         template<Result(*Function)(Args...)>
-        static Result function_stub(void* this_ptr, Args&&...args) {
-            return (Function)(std::forward<Args>(args)...);
+        static Result function_stub(void* this_ptr, Args...args) {
+            return (Function)(args...);
         }
 
         template<typename LambdaFunc>
         static Result lambda_stub(void* this_ptr, Args...args) {
             LambdaFunc* p = static_cast<LambdaFunc*>(this_ptr);
-            return (p->operator())(std::forward<Args>(args)...);
+            return (p->operator())(args...);
         }
 
     };
