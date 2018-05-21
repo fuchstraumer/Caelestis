@@ -1,8 +1,7 @@
 #pragma once
 #ifndef VPSK_RESOURCE_POOL_HPP
 #define VPSK_RESOURCE_POOL_HPP
-#include <string>
-#include <memory>
+#include "Resource.hpp"
 #include <unordered_map>
 
 namespace vpsk {
@@ -22,7 +21,7 @@ namespace vpsk {
         Texture* FindTexture(const std::string& name);
 
     private:
-        std::unordered_map<std::string, std::unique_ptr<MeshData>> meshes;
+        std::unordered_map<std::string, std::unique_ptr<Resource>> meshes;
         std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
     };
     

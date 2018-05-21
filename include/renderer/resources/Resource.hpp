@@ -45,7 +45,7 @@ namespace vpsk {
             }
         };
 
-        Resource(const Type resource_type, const std::string& name);
+        Resource(const Type resource_type, const std::string& file_path);
         Resource(const Resource&) = delete;
         Resource(Resource&&) = delete;
         Resource& operator=(const Resource&) = delete;
@@ -58,6 +58,7 @@ namespace vpsk {
         void SetName(std::string name);
 
     protected:
+        std::string absoluteFilePath;
         std::string name;
         Handle handle;
     };
