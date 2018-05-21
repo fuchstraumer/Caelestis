@@ -11,6 +11,7 @@ namespace vpsk {
 
     protected:
 
+        void createFromLoadedData(std::weak_ptr<void> data_ptr);
         void loadTextureDataFromFile(const char* fname) final;
         void createCopyInformation() final;
         void updateImageInfo() final;
@@ -24,10 +25,6 @@ namespace vpsk {
         VkImageAspectFlags aspect() const noexcept final;
         uint32_t mipLevels() const noexcept final;
         uint32_t arrayLayers() const noexcept final;
-
-        int x;
-        int y;
-        int channels;
 
     };
 

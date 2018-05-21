@@ -1,6 +1,7 @@
-#include "resources/stbTexture.hpp"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
+#include "renderer/resources/stbTexture.hpp"
+#include "renderer/resources/TextureData.hpp"
+#include "renderer/systems/ResourceLoader.hpp"
+#include "renderer/RendererCore.hpp"
 namespace vpsk {
 
     stbTexture::stbTexture(const vpr::Device * dvc, const char * fname) : Texture(dvc) {
@@ -8,12 +9,19 @@ namespace vpsk {
     }
 
     void stbTexture::loadTextureDataFromFile(const char * fname) {
-        stbi_uc * pixels = nullptr;
-        pixels = stbi_load(fname, &x, &y, &channels, 4);
-        stagingBuffer = std::make_unique<vpr::Buffer>(device);
-        stagingBuffer->CreateBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, sizeof(uint8_t) * x * y * channels);
-        stagingBuffer->CopyToMapped(pixels, sizeof(uint8_t) * x * y * channels, 0);
-        stbi_image_free(pixels);
+        auto& loader = ResourceLoader::GetResourceLoader();
+        loader.Subscribe("STB_IMAGE", FactoryFunctor::create<&LoadSTB_Image>());
+        loader.Load("STB_IMAGE", fname, SignalFunctor::create<stbTexture, &stbTexture::createFromLoadedData>(this));
+    }
+
+    void stbTexture::createFromLoadedData(std::weak_ptr<void> data_ptr) {
+        backingData = data_ptr;
+        vpr::Device* device_ptr = RendererCore::GetRenderer().Device();
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+        stagingBuffer = std::make_unique<vpr::Buffer>(device_ptr);
+        stagingBuffer->CreateBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, sizeof(uint8_t) * ptr->x * ptr->y * ptr->channels);
+        stagingBuffer->CopyToMapped(ptr->pixels, sizeof(uint8_t) * ptr->x * ptr->y * ptr->channels, 0);
+        finishSetup();
     }
 
     void stbTexture::createCopyInformation() {
@@ -45,24 +53,28 @@ namespace vpsk {
     }
 
     uint32_t stbTexture::width() const {
-        return static_cast<uint32_t>(x);
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+        return static_cast<uint32_t>(ptr->x);
     }
 
     uint32_t stbTexture::height() const {
-        return static_cast<uint32_t>(y);
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+        return static_cast<uint32_t>(ptr->y);
     }
 
     VkFormat stbTexture::format() const noexcept {
-        if (channels == 1) {
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+
+        if (ptr->channels == 1) {
             return VK_FORMAT_R8_UNORM;
         }
-        else if (channels == 2) {
+        else if (ptr->channels == 2) {
             return VK_FORMAT_R8G8_UNORM;
         }
-        else if (channels == 3) {
+        else if (ptr->channels == 3) {
             return VK_FORMAT_R8G8B8_UNORM;
         }
-        else if (channels == 4) {
+        else if (ptr->channels == 4) {
             return VK_FORMAT_R8G8B8A8_UNORM;
         }
         else {

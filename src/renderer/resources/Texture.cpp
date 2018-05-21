@@ -1,4 +1,6 @@
-#include "resources/Texture.hpp"
+#include "renderer/resources/Texture.hpp"
+#include "renderer/systems/TransferSystem.hpp"
+#include "renderer/RendererCore.hpp"
 
 namespace vpsk {
 
@@ -26,15 +28,6 @@ namespace vpsk {
   
     void Texture::CreateFromFile(const char * fname) {
         loadTextureDataFromFile(fname);
-        createCopyInformation();
-        updateImageInfo();
-        createImage();
-        updateViewInfo();
-        createView();
-        if (!usingSharedSampler) {
-            updateSamplerInfo();
-            createSampler();
-        }
     }
     
     void Texture::CreateFromBuffer(VkBuffer staging_buffer, VkBufferImageCopy * copies, const size_t num_copies) {
@@ -46,7 +39,7 @@ namespace vpsk {
         }
     }
   
-    void Texture::TransferToDevice(VkCommandBuffer cmd) const {
+    void Texture::TransferToDevice(VkCommandBuffer cmd) {
         auto barrier0 = vpr::Image::GetMemoryBarrier(image->vkHandle(), format(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         barrier0.subresourceRange = { aspect(), 0, mipLevels(), 0, arrayLayers() };
         auto barrier1 = vpr::Image::GetMemoryBarrier(image->vkHandle(), format(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalLayout());
@@ -116,6 +109,26 @@ namespace vpsk {
  
     void Texture::setDescriptorInfo() const {
         descriptorInfo = VkDescriptorImageInfo{ Sampler(), View(), finalLayout() };
+    }
+
+    void Texture::finishSetup() {
+        createCopyInformation();
+        updateImageInfo();
+        createImage();
+        updateViewInfo();
+        createView();
+        if (!usingSharedSampler) {
+            updateSamplerInfo();
+            createSampler();
+        }
+        scheduleDeviceTransfer();
+    }
+
+    void Texture::scheduleDeviceTransfer() {
+        ResourceTransferSystem::TransferDelegate transfer_func = ResourceTransferSystem::TransferDelegate::create<Texture, &Texture::TransferToDevice>(this);
+        ResourceTransferSystem::SignalDelegate signal_func = ResourceTransferSystem::SignalDelegate::create<Texture, &Texture::FreeStagingBuffer>(this);
+        auto* loader = RendererCore::GetRenderer().TransferSystem();
+        loader->AddTransferRequest(transfer_func, signal_func);
     }
 
 }

@@ -22,9 +22,10 @@ namespace vpsk {
         Texture& operator=(Texture&& other) noexcept;
         virtual ~Texture() = default;
 
+        void LoadFromFile(const char* fname);
         void CreateFromFile(const char* fname);
         void CreateFromBuffer(VkBuffer staging_buffer, VkBufferImageCopy* copies, const size_t num_copies);
-        void TransferToDevice(VkCommandBuffer cmd) const;
+        void TransferToDevice(VkCommandBuffer cmd);
         void FreeStagingBuffer();
         const VkImage& Image() const noexcept;
         const VkSampler& Sampler() const noexcept;
@@ -45,6 +46,8 @@ namespace vpsk {
         void setDescriptorInfo() const;
 
         virtual void loadTextureDataFromFile(const char* fname) = 0;
+        void finishSetup();
+        void scheduleDeviceTransfer();
         virtual void createCopyInformation() = 0;
         virtual void updateImageInfo() = 0;
         virtual void updateViewInfo() = 0;
@@ -62,7 +65,8 @@ namespace vpsk {
         bool viewInfoSet{ false };
         mutable VkDescriptorImageInfo descriptorInfo;
         mutable bool descriptorInfoSet{ false };
- 
+        
+        std::weak_ptr<void> backingData;
         std::unique_ptr<vpr::Image> image;
         bool usingSharedSampler{ false };
         std::unique_ptr<vpr::Sampler> samplerUnique;
