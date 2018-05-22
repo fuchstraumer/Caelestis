@@ -22,6 +22,11 @@ namespace vpsk {
      */
     struct MeshData {
 
+        MeshData() noexcept;
+        ~MeshData();
+        MeshData(MeshData&& other) noexcept;
+        MeshData& operator=(MeshData&& other) noexcept;
+
         explicit operator VertexBufferComponent() const;
         explicit operator IndexBufferComponent() const;
 

@@ -11,7 +11,7 @@ namespace vpsk {
 
     protected:
 
-        void createFromLoadedData(std::weak_ptr<void> data_ptr);
+        void createFromLoadedData(void* data_ptr);
         void loadTextureDataFromFile(const char* fname) final;
         void createCopyInformation() final;
         void updateImageInfo() final;

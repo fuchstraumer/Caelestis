@@ -5,7 +5,8 @@
 
 namespace vpsk {
 
-    class MeshData;
+    struct MeshData;
+
     std::unique_ptr<MeshData> CreateBox();
     std::unique_ptr<MeshData> CreateIcosphere(const size_t detail_level);
     void GenerateTangentVectors(MeshData* mesh);
