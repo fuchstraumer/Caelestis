@@ -37,6 +37,26 @@ namespace vpsk {
         return std::vector<VkBuffer>{ VBO0->vkHandle(), VBO1->vkHandle() };
     }
 
+    MeshData::MeshData() noexcept : VBO0{ nullptr }, VBO1{ nullptr }, EBO{ nullptr }, vboStaging0{ nullptr }, vboStaging1{ nullptr }, eboStaging{ nullptr } {}
+
+    MeshData::~MeshData() {}
+
+    MeshData::MeshData(MeshData && other) noexcept : VBO0(std::move(other.VBO0)), VBO1(std::move(other.VBO1)), EBO(std::move(other.EBO)), Positions(std::move(other.Positions)),
+        Vertices(std::move(other.Vertices)), Indices(std::move(other.Indices)), vboStaging0(std::move(other.vboStaging0)), vboStaging1(std::move(other.vboStaging1)), eboStaging(std::move(other.eboStaging)) { }
+
+    MeshData& MeshData::operator=(MeshData && other) noexcept {
+        VBO0 = std::move(other.VBO0);
+        VBO1 = std::move(other.VBO1);
+        EBO = std::move(other.EBO);
+        Positions = std::move(other.Positions);
+        Vertices = std::move(other.Vertices);
+        Indices = std::move(other.Indices);
+        vboStaging0 = std::move(other.vboStaging0);
+        vboStaging1 = std::move(other.vboStaging1);
+        eboStaging = std::move(other.eboStaging);
+        return *this;
+    }
+
     MeshData::operator VertexBufferComponent() const {
         return VertexBufferComponent(GetVertexBuffers());
     }
