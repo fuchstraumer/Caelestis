@@ -66,7 +66,7 @@ namespace vpsk {
         mutable VkDescriptorImageInfo descriptorInfo;
         mutable bool descriptorInfoSet{ false };
         
-        std::weak_ptr<void> backingData;
+        void* backingData;
         std::unique_ptr<vpr::Image> image;
         bool usingSharedSampler{ false };
         std::unique_ptr<vpr::Sampler> samplerUnique;
