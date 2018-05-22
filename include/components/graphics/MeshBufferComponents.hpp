@@ -11,14 +11,14 @@ namespace vpsk {
         VertexBufferComponent(const std::vector<VkBuffer>& buffers) : FirstIdx(0), BindingCount(static_cast<uint32_t>(buffers.size())),
             Buffers(buffers), Offsets(size_t(buffers.size()), VkDeviceSize(0)) {}
         VertexBufferComponent(const std::vector<VkBuffer>& buffers, const std::vector<VkDeviceSize>& offsets, uint32_t idx = 0) : FirstIdx(std::move(idx)),
-            Buffers(buffers), Offsets(offsets), BindingCount(buffers.size()) {}
+            Buffers(buffers), Offsets(offsets), BindingCount(static_cast<uint32_t>(buffers.size())) {}
         void operator()(VkCommandBuffer cmd) {
             vkCmdBindVertexBuffers(cmd, FirstIdx, BindingCount, Buffers.data(), Offsets.data());
         }
-        const uint32_t FirstIdx;
-        const uint32_t BindingCount;
-        const std::vector<VkBuffer> Buffers;
-        const std::vector<VkDeviceSize> Offsets;
+        uint32_t FirstIdx;
+        uint32_t BindingCount;
+        std::vector<VkBuffer> Buffers;
+        std::vector<VkDeviceSize> Offsets;
     };
 
     struct IndexBufferComponent {
@@ -27,9 +27,9 @@ namespace vpsk {
         void operator()(VkCommandBuffer cmd) {
             vkCmdBindIndexBuffer(cmd, Buffer, Offset, IndexType);
         }
-        const VkBuffer Buffer{ VK_NULL_HANDLE };
-        const VkDeviceSize Offset{ 0 };
-        const VkIndexType IndexType{ VK_INDEX_TYPE_UINT32 };
+        VkBuffer Buffer{ VK_NULL_HANDLE };
+        VkDeviceSize Offset{ 0 };
+        VkIndexType IndexType{ VK_INDEX_TYPE_UINT32 };
     };
 
 }
