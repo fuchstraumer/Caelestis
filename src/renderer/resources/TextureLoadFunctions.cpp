@@ -1,4 +1,4 @@
-#include "renderer/resources/TextureData.hpp"
+#include "renderer/resources/TextureLoadFunctions.hpp"
 #include "gli/gli.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
@@ -24,8 +24,6 @@ namespace vpsk {
         data = std::make_unique<gli::texture>(gli::load(fname));
     }
 
-    gli_image_data_t::~gli_image_data_t()
-    {
-    }
+    gli_image_data_t::~gli_image_data_t() {}
 
 }
