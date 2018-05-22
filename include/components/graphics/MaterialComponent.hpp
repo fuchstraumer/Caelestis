@@ -14,6 +14,11 @@ namespace vpsk {
         Texture* Roughness{ nullptr };
         Texture* Metallic{ nullptr };
         Texture* Emissive{ nullptr };
+        bool operator==(const MaterialTextures& other) const noexcept {
+            return (Diffuse == other.Diffuse) && (Normal == other.Normal) &&
+                (AmbientOcclusion == other.AmbientOcclusion) && (Roughness == other.Roughness) &&
+                (Metallic == other.Metallic) && (Emissive == other.Emissive);
+        }
     };
 
     struct MaterialTextureFlags {
@@ -23,6 +28,11 @@ namespace vpsk {
         bool Roughness{ false };
         bool Metallic{ false };
         bool Emissive{ false };
+        bool operator==(const MaterialTextureFlags& other) const noexcept {
+            return (Diffuse == other.Diffuse) && (Normal == other.Normal) &&
+                (AmbientOcclusion == other.AmbientOcclusion) && (Roughness == other.Roughness) &&
+                (Metallic == other.Metallic) && (Emissive == other.Emissive);
+        }
     };
 
     struct MaterialParameters {
@@ -32,23 +42,26 @@ namespace vpsk {
         glm::vec4 transmittance{ 0.0f, 0.0f, 0.0f, 0.0f };
         glm::vec4 emission{ 0.0f, 0.0f, 0.0f, 0.0f };
         float shininess{ 0.0f };
-        float ior{ 0.0f };
         float alpha{ 0.0f };
-        int illuminationModel{ 0 };
         float roughness{ 0.0f };
         float metallic{ 0.0f };
-        float sheen{ 0.0f };
-        float clearcoat_thickness{ 0.0f };
-        float clearcoat_roughness{ 0.0f };
-        float anisotropy{ 0.0f };
-        float anisotropy_rotation{ 0.0f };
-        float padding{ 0.0f };
+        bool operator==(const MaterialParameters& other) const noexcept {
+            return (ambient == other.ambient) && (diffuse == other.diffuse) &&
+                (specular == other.specular) && (transmittance == other.transmittance) &&
+                (emission == other.emission) && (shininess == other.shininess) &&
+                (alpha == other.alpha) && (roughness == other.roughness) && 
+                (metallic == other.metallic);
+        }
     };
 
     struct MaterialComponent {
         MaterialTextures Textures;
         MaterialParameters Parameters;
         MaterialTextureFlags Flags;
+        bool operator==(const MaterialComponent& other) const noexcept {
+            return (Textures == other.Textures) && (Parameters == other.Parameters) &&
+                (Flags == other.Flags);
+        }
     };
 
 }
