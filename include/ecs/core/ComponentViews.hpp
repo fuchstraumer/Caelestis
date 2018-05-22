@@ -3,7 +3,7 @@
 #define VPSK_COMPONENT_VIEWS_HPP
 #include "Identifiers.hpp"
 #include <array>
-#include "storage/SparseSet.hpp"
+#include "ecs/storage/SparseSet.hpp"
 #include "Exceptions.hpp"
 #include <tuple>
 

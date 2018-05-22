@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <functional>
 #include <utility>
-#include "../EntityTraits.hpp"
+#include "../core/EntityTraits.hpp"
 
 namespace vpsk {
 

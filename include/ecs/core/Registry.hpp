@@ -8,8 +8,8 @@
 #include "ComponentViews.hpp"
 #include "Family.hpp"
 #include "Identifiers.hpp"
-#include "storage/SparseSet.hpp"
-#include "signal/Signal.hpp"
+#include "ecs/storage/SparseSet.hpp"
+#include "ecs/signal/Signal.hpp"
 
 namespace vpsk {
 
