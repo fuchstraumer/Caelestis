@@ -3,7 +3,8 @@
 #define VPSK_GLI_TEXTURE_HPP
 #include "Texture.hpp"
 #include "gli/gli.hpp"
-#include "renderer/resources/TextureData.hpp"
+#include "renderer/resources/TextureLoadFunctions.hpp"
+#include "renderer/RendererCore.hpp"
 #include "renderer/systems/ResourceLoader.hpp"
 #include "resource/Buffer.hpp"
 namespace vpsk {
@@ -15,7 +16,7 @@ namespace vpsk {
         gliTexture(const vpr::Device* dvc, const char* fname);
 
         void loadTextureDataFromFile(const char* fname) final;
-        void createFromLoadedData(std::weak_ptr<void> data_ptr);
+        void createFromLoadedData(void* data_ptr);
         void createCopyInformation();
 
         void updateImageInfo() final;
@@ -50,10 +51,10 @@ namespace vpsk {
     }
 
     template<typename gli_texture_type>
-    inline void gliTexture<gli_texture_type>::createFromLoadedData(std::weak_ptr<void> data) {
+    inline void gliTexture<gli_texture_type>::createFromLoadedData(void* data) {
         backingData = data;
-        gli::texture* ptr = reinterpret_cast<gli::texture*>(backingData.lock().get());
-        stagingBuffer = std::make_unique<vpr::Buffer>(device);
+        gli::texture* ptr = reinterpret_cast<gli::texture*>(backingData);
+        stagingBuffer = std::make_unique<vpr::Buffer>(RendererCore::GetRenderer().Device());
         stagingBuffer->CreateBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, static_cast<VkDeviceSize>(ptr->size()));
         stagingBuffer->CopyToMapped(ptr->data(), ptr->size(), 0);
         finishSetup();
@@ -61,7 +62,7 @@ namespace vpsk {
 
     template<>
     inline void gliTexture<gli::texture2d>::createCopyInformation() {
-        gli::texture2d* ptr = reinterpret_cast<gli::texture2d*>(backingData.lock().get());
+        gli::texture2d* ptr = reinterpret_cast<gli::texture2d*>(backingData);
         uint32_t offset = 0;
         for (uint32_t i = 0; i < ptr->levels(); ++i) {
             copyInfo.emplace_back(
@@ -81,7 +82,7 @@ namespace vpsk {
     template<>
     inline void gliTexture<gli::texture2d_array>::createCopyInformation() {
         uint32_t offset = 0;
-        gli::texture2d_array* ptr = reinterpret_cast<gli::texture2d_array*>(backingData.lock().get());
+        gli::texture2d_array* ptr = reinterpret_cast<gli::texture2d_array*>(backingData);
         const uint32_t layer_count = static_cast<uint32_t>(ptr->layers());
         const uint32_t level_count = static_cast<uint32_t>(ptr->levels());
         for (uint32_t layer = 0; layer < layer_count; ++layer) {
@@ -104,7 +105,7 @@ namespace vpsk {
     template<>
     inline void gliTexture<gli::texture_cube>::createCopyInformation() {
         uint32_t offset = 0;
-        gli::texture_cube* ptr = reinterpret_cast<gli::texture_cube*>(backingData.lock().get());
+        gli::texture_cube* ptr = reinterpret_cast<gli::texture_cube*>(backingData);
         const uint32_t level_count = static_cast<uint32_t>(ptr->levels());
         for (uint32_t face_idx = 0; face_idx < 6; ++face_idx) {
             for (uint32_t level = 0; level < level_count; ++level) {
@@ -153,13 +154,13 @@ namespace vpsk {
 
     template<typename gli_texture_type>
     inline uint32_t gliTexture<gli_texture_type>::width() const {
-        gli::texture* ptr = reinterpret_cast<gli::texture*>(backingData.lock().get());
+        gli::texture* ptr = reinterpret_cast<gli::texture*>(backingData);
         return static_cast<uint32_t>(ptr->extent().x);
     }
 
     template<typename gli_texture_type>
     inline uint32_t gliTexture<gli_texture_type>::height() const {
-        gli::texture* ptr = reinterpret_cast<gli::texture*>(backingData.lock().get());
+        gli::texture* ptr = reinterpret_cast<gli::texture*>(backingData);
         return static_cast<uint32_t>(ptr->extent().y);
     }
 
@@ -195,7 +196,7 @@ namespace vpsk {
 
     template<typename gli_texture_type>
     inline constexpr VkExtent3D gliTexture<gli_texture_type>::extent() const noexcept {
-        gli::texture* data = reinterpret_cast<gli::texture*>(backingData.lock().get());
+        gli::texture* data = reinterpret_cast<gli::texture*>(backingData);
         return VkExtent3D{
             static_cast<uint32_t>(data->extent().x),
             static_cast<uint32_t>(data->extent().y),
@@ -216,19 +217,19 @@ namespace vpsk {
     template<typename gli_texture_type>
     inline VkFormat gliTexture<gli_texture_type>::format() const noexcept {
         // gli format underlying ID should map to a vulkan format 
-        gli::texture* data = reinterpret_cast<gli::texture*>(backingData.lock().get());
+        gli::texture* data = reinterpret_cast<gli::texture*>(backingData);
         return VkFormat(data->format());
     }
 
     template<typename gli_texture_type>
     inline uint32_t gliTexture<gli_texture_type>::mipLevels() const noexcept {
-        gli::texture* data = reinterpret_cast<gli::texture*>(backingData.lock().get());
+        gli::texture* data = reinterpret_cast<gli::texture*>(backingData);
         return static_cast<uint32_t>(data->levels());
     }
 
     template<typename gli_texture_type>
     inline uint32_t gliTexture<gli_texture_type>::arrayLayers() const noexcept {
-        gli::texture* data = reinterpret_cast<gli::texture*>(backingData.lock().get());
+        gli::texture* data = reinterpret_cast<gli::texture*>(backingData);
         return static_cast<uint32_t>(data->layers());
     }
 

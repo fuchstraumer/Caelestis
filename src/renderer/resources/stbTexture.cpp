@@ -1,5 +1,5 @@
 #include "renderer/resources/stbTexture.hpp"
-#include "renderer/resources/TextureData.hpp"
+#include "renderer/resources/TextureLoadFunctions.hpp"
 #include "renderer/systems/ResourceLoader.hpp"
 #include "renderer/RendererCore.hpp"
 namespace vpsk {
@@ -14,10 +14,10 @@ namespace vpsk {
         loader.Load("STB_IMAGE", fname, SignalFunctor::create<stbTexture, &stbTexture::createFromLoadedData>(this));
     }
 
-    void stbTexture::createFromLoadedData(std::weak_ptr<void> data_ptr) {
+    void stbTexture::createFromLoadedData(void* data_ptr) {
         backingData = data_ptr;
         vpr::Device* device_ptr = RendererCore::GetRenderer().Device();
-        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData);
         stagingBuffer = std::make_unique<vpr::Buffer>(device_ptr);
         stagingBuffer->CreateBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, sizeof(uint8_t) * ptr->x * ptr->y * ptr->channels);
         stagingBuffer->CopyToMapped(ptr->pixels, sizeof(uint8_t) * ptr->x * ptr->y * ptr->channels, 0);
@@ -53,17 +53,17 @@ namespace vpsk {
     }
 
     uint32_t stbTexture::width() const {
-        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData);
         return static_cast<uint32_t>(ptr->x);
     }
 
     uint32_t stbTexture::height() const {
-        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData);
         return static_cast<uint32_t>(ptr->y);
     }
 
     VkFormat stbTexture::format() const noexcept {
-        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData.lock().get());
+        stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData);
 
         if (ptr->channels == 1) {
             return VK_FORMAT_R8_UNORM;

@@ -17,13 +17,7 @@ namespace vpsk {
     }
 
     void* LoadGLI_Texture(const char * fname) {
-        return new gli_image_data_t(fname);
+        return new gli::texture(gli::load(fname));
     }
-
-    gli_image_data_t::gli_image_data_t(const char * fname) {
-        data = std::make_unique<gli::texture>(gli::load(fname));
-    }
-
-    gli_image_data_t::~gli_image_data_t() {}
 
 }
