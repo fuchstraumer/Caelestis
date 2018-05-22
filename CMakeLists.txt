@@ -11,6 +11,7 @@ FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/resources/*.hp
 FILE(GLOB RENDERER_CORE "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/*.cpp")
 FILE(GLOB RENDERER_OBJECTS "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/objects/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/objects/*.cpp")
 FILE(GLOB IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.cpp")
+FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp")
 
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender")
@@ -25,6 +26,7 @@ SOURCE_GROUP("renderer\\resources" FILES ${RESOURCES})
 SOURCE_GROUP("renderer\\systems" FILES ${SYSTEMS})
 SOURCE_GROUP("renderer\\objects" FILES ${RENDERER_OBJECTS})
 SOURCE_GROUP("imgui" FILES ${IMGUI})
+SOURCE_GROUP("util" FILES ${UTIL})
 
 ADD_LIBRARY(VulpesSceneKit STATIC ${ECS} ${SCRIPT_BINDINGS} ${SIGNALS} ${STORAGE} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE}
     ${RENDERER_OBJECTS} ${IMGUI})
