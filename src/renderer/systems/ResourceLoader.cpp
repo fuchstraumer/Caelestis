@@ -29,7 +29,7 @@ namespace vpsk {
             throw std::domain_error("Tried to load resource type for which there is no factory!");
         }
 
-        resourceData data;
+        ResourceData data;
         data.FileType = file_type;
         data.AbsoluteFilePath = absolute_path;
         data.RefCount = 1;
@@ -52,7 +52,7 @@ namespace vpsk {
             auto iter = resources.find(path);
             --iter->second.RefCount;
             if (iter->second.RefCount == 0) {
-                iter->second.Data.reset();
+                delete iter->second.Data;
             }
             resources.erase(iter);
         }
@@ -92,9 +92,8 @@ namespace vpsk {
             requests.pop();
             lock.unlock();
             // proceed to load.
-            request.destinationData.Data = std::make_shared<void>(request.factory(request.destinationData.AbsoluteFilePath.c_str()));
-            std::weak_ptr<void> ptr(request.destinationData.Data);
-            request.signal(ptr);
+            request.destinationData.Data = request.factory(request.destinationData.AbsoluteFilePath.c_str());
+            request.signal(request.destinationData.Data);
         }
     }
 

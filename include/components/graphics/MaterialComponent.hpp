@@ -2,6 +2,7 @@
 #ifndef VPSK_MATERIAL_COMPONENT_HPP
 #define VPSK_MATERIAL_COMPONENT_HPP
 #include "glm/vec4.hpp"
+#include <string>
 
 namespace vpsk {
 
@@ -58,9 +59,9 @@ namespace vpsk {
         MaterialTextures Textures;
         MaterialParameters Parameters;
         MaterialTextureFlags Flags;
+        std::string Name;
         bool operator==(const MaterialComponent& other) const noexcept {
-            return (Textures == other.Textures) && (Parameters == other.Parameters) &&
-                (Flags == other.Flags);
+            return Name == other.Name;
         }
     };
 

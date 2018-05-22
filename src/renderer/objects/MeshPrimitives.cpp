@@ -162,7 +162,7 @@ namespace vpsk {
                 const uint32_t& i1 = result->Indices[j * 3 + 1];
                 const uint32_t& i2 = result->Indices[j * 3 + 2];
 
-                const uint32_t i3 = result->Positions.size();
+                const uint32_t i3 = static_cast<uint32_t>(result->Positions.size());
                 const uint32_t i4 = i3 + 1;
                 const uint32_t i5 = i4 + 1;
 
