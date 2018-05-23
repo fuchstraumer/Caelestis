@@ -3,7 +3,7 @@
 namespace vpsk {
 
     static std::unordered_set<std::string>& GetStorage() noexcept {
-        std::unordered_set<std::string> storage{};
+        static std::unordered_set<std::string> storage{};
         return storage;
     }
 

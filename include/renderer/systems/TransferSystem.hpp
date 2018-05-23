@@ -2,7 +2,7 @@
 #ifndef VPSK_RESOURCE_TRANSFER_SYSTEM_HPP
 #define VPSK_RESOURCE_TRANSFER_SYSTEM_HPP
 #include "ForwardDecl.hpp"
-#include "ecs/signal/Delegate.hpp"
+#include "chrysocyon/signal/Delegate.hpp"
 #include <list>
 #include <vulkan/vulkan.h>
 #include <memory>

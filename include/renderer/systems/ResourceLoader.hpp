@@ -11,7 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
-#include "ecs/signal/Delegate.hpp"
+#include "chrysocyon/signal/Delegate.hpp"
 
 namespace vpsk {
 

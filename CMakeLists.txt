@@ -15,6 +15,7 @@ FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT
 
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon")
 
 SOURCE_GROUP("ecs\\core" FILES ${ECS})
 SOURCE_GROUP("ecs\\signals" FILES ${SIGNALS})
@@ -34,7 +35,7 @@ TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/th
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
 "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
-TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender)
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon)
 
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
@@ -49,4 +50,4 @@ ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
 TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
-TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader VulpesRender VulpesSceneKit)
+TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader VulpesRender VulpesSceneKit chrysocyon)
