@@ -1,99 +1,53 @@
-INCLUDE(ExternalProject)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
 PROJECT(VulpesSceneKit)
 
-FILE(GLOB GEOMETRIES "${CMAKE_CURRENT_SOURCE_DIR}/include/geometries/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/geometries/*.cpp")
-FILE(GLOB CAMERAS "${CMAKE_CURRENT_SOURCE_DIR}/include/camera/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/camera/*.cpp")
-FILE(GLOB LIGHTS "${CMAKE_CURRENT_SOURCE_DIR}/include/lights/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/lights/*.cpp")
-FILE(GLOB MATH "${CMAKE_CURRENT_SOURCE_DIR}/include/math/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/math/*.cpp")
-FILE(GLOB SCENE "${CMAKE_CURRENT_SOURCE_DIR}/include/scene/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/scene/*.cpp")
-FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.h"
-               "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cc")
-FILE(GLOB IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.cpp")
-FILE(GLOB GUI "${CMAKE_CURRENT_SOURCE_DIR}/include/gui/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/*.cpp")
-FILE(GLOB_RECURSE GUI_ADDONS "${CMAKE_CURRENT_SOURCE_DIR}/include/gui/addons/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/addons/*.cpp")
-FILE(GLOB_RECURSE SHADERS "${CMAKE_CURRENT_SOURCE_DIR}/rsrc/*.vert" "${CMAKE_CURRENT_SOURCE_DIR}/rsrc/*.frag" "${CMAKE_CURRENT_SOURCE_DIR}/rsrc/*.spv" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/rsrc/*.comp" "${CMAKE_CURRENT_SOURCE_DIR}/rsrc/*.geom")
-FILE(GLOB RENDER "${CMAKE_CURRENT_SOURCE_DIR}/include/render/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/render/*.cpp")
-FILE(GLOB PASSES "${CMAKE_CURRENT_SOURCE_DIR}/include/pass/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/pass/*.cpp")
-FILE(GLOB FEATURES "${CMAKE_CURRENT_SOURCE_DIR}/include/features/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/features/*.cpp")
-FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/resources/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/*.cpp")
+FILE(GLOB ECS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/core/*.hpp")
+FILE(GLOB SIGNALS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/signal/*.hpp")
+FILE(GLOB STORAGE "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/storage/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/storage/*.inl" )
+FILE(GLOB SCRIPT_BINDINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/bindings/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/ecs/bindings/*.cpp")
+FILE(GLOB_RECURSE COMPONENTS "${CMAKE_CURRENT_SOURCE_DIR}/include/components/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/components/*.cpp")
+FILE(GLOB SYSTEMS "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/systems/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/systems/*.cpp")
+FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/resources/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/resources/*.cpp")
+FILE(GLOB RENDERER_CORE "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/*.cpp")
+FILE(GLOB RENDERER_OBJECTS "${CMAKE_CURRENT_SOURCE_DIR}/include/renderer/objects/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/objects/*.cpp")
+FILE(GLOB IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.cpp")
+FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp")
 
-SOURCE_GROUP("geometries" FILES ${GEOMETRIES})
-SOURCE_GROUP("render" FILES ${RENDER})
-SOURCE_GROUP("cameras" FILES ${CAMERAS})
-SOURCE_GROUP("lights" FILES ${LIGHTS})
-SOURCE_GROUP("math" FILES ${MATH})
-SOURCE_GROUP("scene" FILES ${SCENE})
-SOURCE_GROUP("util" FILES ${UTIL})
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon")
+
+SOURCE_GROUP("ecs\\core" FILES ${ECS})
+SOURCE_GROUP("ecs\\signals" FILES ${SIGNALS})
+SOURCE_GROUP("ecs\\storage" FILES ${STORAGE})
+SOURCE_GROUP("ecs\\bindings" FILES ${SCRIPT_BINDINGS})
+SOURCE_GROUP("components" FILES ${COMPONENTS})
+SOURCE_GROUP("renderer\\core" FILES ${RENDERER_CORE})
+SOURCE_GROUP("renderer\\resources" FILES ${RESOURCES})
+SOURCE_GROUP("renderer\\systems" FILES ${SYSTEMS})
+SOURCE_GROUP("renderer\\objects" FILES ${RENDERER_OBJECTS})
 SOURCE_GROUP("imgui" FILES ${IMGUI})
-SOURCE_GROUP("gui" FILES ${GUI})
-SOURCE_GROUP("gui addons" FILES ${GUI_ADDONS})
-SOURCE_GROUP("shaders" FILES ${SHADERS})
-SOURCE_GROUP("shader tools" FILES ${SHADER_TOOLS})
-SOURCE_GROUP("pass" FILES ${PASSES})
-SOURCE_GROUP("feature" FILES ${FEATURES})
-SOURCE_GROUP("resources" FILES ${RESOURCES})
+SOURCE_GROUP("util" FILES ${UTIL})
 
-FIND_PACKAGE(Vulkan REQUIRED)
-
-SET(TINYOBJLOADER_LIBRARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/lib/")
-ADD_SUBDIRECTORY("third_party/tinyobjloader")
-ADD_SUBDIRECTORY("third_party/vulpesrender")
-ADD_SUBDIRECTORY("third_party/shadertools")
-
-ADD_LIBRARY(VulpesSceneKit STATIC ${RESOURCES} ${GEOMETRIES} ${FEATURES} ${PASSES} ${SHADER_TOOLS} ${RENDER} 
-                                  ${CAMERAS} ${LIGHTS} ${MATH} ${SCENE} ${UTIL} ${IMGUI} ${GUI} ${GUI_ADDONS} 
-                                  ${SHADERS})
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC $<BUILD_INTERFACE:${Vulkan_INCLUDE_DIRS}> )
-TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE ${Vulkan_LIBRARIES})
+ADD_LIBRARY(VulpesSceneKit STATIC ${ECS} ${SCRIPT_BINDINGS} ${SIGNALS} ${STORAGE} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE}
+    ${RENDERER_OBJECTS} ${IMGUI})
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
+"$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon)
 
 IF(MSVC)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /Gm")
+    TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
 ELSEIF(UNIX)
     # Enables more symbols to be loaded when debugging with GDB
     TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC "-DGLIBCXX_DEBUG")
     # Somehow, GLFW gets made x64 but this and VPR can get made as x86
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 ENDIF()
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ext/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "$ENV{VULKAN_SDK}/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
-TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC -DGLM_LANG_STL11_FORCED)
-TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
-
-OPTION(BUILD_EX_SCENES "Build example scenes" ON)
-
-IF(BUILD_EX_SCENES) 
-
-ADD_EXECUTABLE(ClusteredForward "tests/ClusteredForward.cpp")
-TARGET_INCLUDE_DIRECTORIES(ClusteredForward PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
-"${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
-TARGET_LINK_LIBRARIES(ClusteredForward PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
-TARGET_LINK_LIBRARIES(ClusteredForward PUBLIC glfw ShaderTools)
-TARGET_COMPILE_DEFINITIONS(ClusteredForward PUBLIC -DGLM_LANG_STL11_FORCED)
-TARGET_COMPILE_DEFINITIONS(ClusteredForward PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
-
-ADD_EXECUTABLE(VolumetricForward "tests/VolumetricForward.cpp")
-TARGET_INCLUDE_DIRECTORIES(VolumetricForward PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
-"${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
-TARGET_LINK_LIBRARIES(VolumetricForward PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
-TARGET_LINK_LIBRARIES(VolumetricForward PUBLIC glfw ShaderTools)
-TARGET_COMPILE_DEFINITIONS(VolumetricForward PUBLIC -DGLM_LANG_STL11_FORCED)
-TARGET_COMPILE_DEFINITIONS(VolumetricForward PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
-
-ADD_EXECUTABLE(RendergraphSketch "tests/RendergraphSketch.cpp") 
-TARGET_INCLUDE_DIRECTORIES(RendergraphSketch PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include/VulpesRender" 
-"${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}")
-TARGET_LINK_LIBRARIES(RendergraphSketch PUBLIC VulpesSceneKit tinyobjloader VulpesRender)
-TARGET_LINK_LIBRARIES(RendergraphSketch PUBLIC glfw ShaderTools)
-TARGET_COMPILE_DEFINITIONS(RendergraphSketch PUBLIC -DGLM_LANG_STL11_FORCED)
-TARGET_COMPILE_DEFINITIONS(RendergraphSketch PUBLIC -DGLM_ENABLE_EXPERIMENTAL -DGLM_FORCE_DEPTH_ZERO_TO_ONE -DGLM_FORCE_RADIANS)
-
-ENDIF()
+ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
+TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
+TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader VulpesRender VulpesSceneKit chrysocyon)

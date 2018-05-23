@@ -13,3 +13,15 @@
 [submodule "third_party/stb"]
 	path = third_party/stb
 	url = https://github.com/nothings/stb
+[submodule "third_party/eastl"]
+	path = third_party/eastl
+	url = https://github.com/electronicarts/eastl
+[submodule "third_party/json"]
+	path = third_party/json
+	url = https://github.com/nlohmann/json
+[submodule "third_party/opencollada"]
+	path = third_party/opencollada
+	url = https://github.com/khronosGroup/OpenCOLLADA
+[submodule "third_party/chrysocyon"]
+	path = third_party/chrysocyon
+	url = https://github.com/fuchstraumer/chrysocyon
