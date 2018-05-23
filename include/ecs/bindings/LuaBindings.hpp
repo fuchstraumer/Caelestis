@@ -1,7 +1,7 @@
 #pragma once
 #ifndef VPSK_ECS_LUA_BINDINGS_HPP
 #define VPSK_ECS_LUA_BINDINGS_HPP
-#include "core/Registry.hpp"
+#include "ecs/core/Registry.hpp"
 
 namespace vpsk {
 
