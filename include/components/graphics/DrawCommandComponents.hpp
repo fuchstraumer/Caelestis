@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.h>
 namespace vpsk {
 
-    class BaseDrawCommandComponent {
+    struct BaseDrawCommandComponent {
         uint32_t VertexCount;
         uint32_t InstanceCount;
         uint32_t FirstVertex;
@@ -14,7 +14,7 @@ namespace vpsk {
         }
     };
 
-    class IndexedDrawCommandComponent {
+    struct IndexedDrawCommandComponent {
         uint32_t IndexCount;
         uint32_t InstanceCount;
         uint32_t FirstIndex;
