@@ -5,11 +5,14 @@
 #include <unordered_map>
 #include <variant>
 #include <functional>
+#include <memory>
 
 namespace vpsk {
     
     using cvar_t = std::variant<float, double, int64_t, uint64_t, bool, std::string>;
     using cvar_map_t = std::unordered_map<std::string, cvar_t>;
+
+    class RenderTarget;
 
     class RenderableComponent {
     public:
@@ -31,6 +34,7 @@ namespace vpsk {
         virtual void Compose();
         
     protected:
+
         virtual void ResizeCallback();
     };
 
