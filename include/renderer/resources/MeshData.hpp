@@ -14,16 +14,16 @@ namespace vpsk {
     struct vertex_data_t {
         glm::vec3 Normal;
         glm::vec3 Tangent;
-        glm::vec2 UV;
+        glm::vec3 Bitangent;
+        glm::vec3 UV;
     };
-
     /**All mesh objects should use this mesh data format. They don't have to bind or use
      * all fields at drawtime, but this helps standardize things considerably. 
      */
     struct MeshData {
 
         MeshData() noexcept;
-        ~MeshData();
+        virtual ~MeshData();
         MeshData(MeshData&& other) noexcept;
         MeshData& operator=(MeshData&& other) noexcept;
 
@@ -38,17 +38,43 @@ namespace vpsk {
         std::unique_ptr<vpr::Buffer> VBO1;
         std::unique_ptr<vpr::Buffer> EBO;
 
-        void CreateBuffers(const vpr::Device* device);
-        void TransferToDevice(VkCommandBuffer cmd);
-        void FreeStagingBuffers();
+        virtual void CreateBuffers(const vpr::Device* device);
+        virtual void TransferToDevice(VkCommandBuffer cmd);
+        virtual void FreeStagingBuffers();
 
-        std::vector<VkBuffer> GetVertexBuffers() const;
+        virtual std::vector<VkBuffer> GetVertexBuffers() const;
 
     private:
 
         std::unique_ptr<vpr::Buffer> vboStaging0;
         std::unique_ptr<vpr::Buffer> vboStaging1;
         std::unique_ptr<vpr::Buffer> eboStaging;
+    };
+
+    
+    struct vertex_animation_data_t {
+        glm::vec3 BoneWeights;
+        glm::vec2 BoneWeights2;
+        glm::ivec3 BoneIDs;
+        glm::ivec2 BoneIDs2;
+    };
+
+    struct AnimatedMeshData : MeshData {
+        AnimatedMeshData() noexcept;
+        ~AnimatedMeshData();
+        AnimatedMeshData(AnimatedMeshData&& other) noexcept;
+        AnimatedMeshData& operator=(AnimatedMeshData&& other) noexcept;
+
+        std::unique_ptr<vpr::Buffer> VBO2;
+        std::vector<vertex_animation_data_t> AnimationData;
+
+        void CreateBuffers(const vpr::Device* device) final;
+        void TransferToDevice(VkCommandBuffer cmd) final;
+        void FreeStagingBuffers() final;
+
+        std::vector<VkBuffer> GetVertexBuffers() const final;
+    private:
+        std::unique_ptr<vpr::Buffer> vboStaging2;
     };
 
 }

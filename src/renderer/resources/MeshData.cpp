@@ -65,4 +65,45 @@ namespace vpsk {
         return IndexBufferComponent(EBO->vkHandle());
     }
 
+    AnimatedMeshData::AnimatedMeshData() noexcept : MeshData(), VBO2{nullptr}, vboStaging2{nullptr} {}
+
+    AnimatedMeshData::~AnimatedMeshData() {}
+
+    AnimatedMeshData::AnimatedMeshData(AnimatedMeshData&& other) noexcept : MeshData(std::move(other)), VBO2(std::move(other.VBO2)),
+        vboStaging2(std::move(other.vboStaging2)), AnimationData(std::move(AnimationData)) {}
+
+    AnimatedMeshData& AnimatedMeshData::operator=(AnimatedMeshData&& other) noexcept {
+        MeshData::operator=(std::move(other));
+        VBO2 = std::move(other.VBO2);
+        vboStaging2 = std::move(other.vboStaging2);
+        AnimationData = std::move(other.AnimationData);
+        return *this;
+    }
+
+    void AnimatedMeshData::CreateBuffers(const vpr::Device * device) {
+        MeshData::CreateBuffers(device);
+
+        VBO2 = std::make_unique<vpr::Buffer>(device);
+        VBO2->CreateBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+            sizeof(vertex_animation_data_t) * AnimationData.size());
+        
+        vboStaging2 = vpr::Buffer::CreateStagingBuffer(device, AnimationData.data(), sizeof(vertex_animation_data_t) * AnimationData.size());
+
+    }
+
+    void AnimatedMeshData::TransferToDevice(VkCommandBuffer cmd) {
+        MeshData::TransferToDevice(cmd);
+        VBO2->CopyTo(vboStaging2.get(), cmd, 0);
+    }
+
+    void AnimatedMeshData::FreeStagingBuffers() {
+        MeshData::FreeStagingBuffers();
+        vboStaging2.reset();
+        AnimationData.clear(); AnimationData.shrink_to_fit();
+    }
+
+    std::vector<VkBuffer> AnimatedMeshData::GetVertexBuffers() const {
+        return std::vector<VkBuffer>{ VBO0->vkHandle(), VBO1->vkHandle(), VBO2->vkHandle() };
+    }
+    
 }
