@@ -18,7 +18,12 @@ namespace vpsk {
     class RenderGraph;
 
     class PipelineSubmission {
+        PipelineSubmission(const PipelineSubmission&) = delete;
+        PipelineSubmission& operator=(const PipelineSubmission&) = delete;
+        friend class RenderGraph;
+        friend class FeatureRenderer;
     public:
+
         PipelineSubmission(RenderGraph& graph, std::string name, size_t idx, VkPipelineStageFlags stages);
         ~PipelineSubmission();
 
