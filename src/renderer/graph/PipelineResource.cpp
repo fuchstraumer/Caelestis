@@ -2,8 +2,8 @@
 
 namespace vpsk {
 
-    PipelineResource::PipelineResource(std::string _name, std::string parent_group_name) : name(std::move(_name)), 
-        parentSetName(std::move(parent_group_name))  {}
+    PipelineResource::PipelineResource(std::string _name, size_t physical_idx) : name(std::move(_name)), 
+        idx(std::move(physical_idx))  {}
 
     PipelineResource::~PipelineResource() {}
 

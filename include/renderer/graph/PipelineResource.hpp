@@ -57,7 +57,7 @@ namespace vpsk {
     class PipelineResource {
     public:
         
-        PipelineResource(std::string name, std::string parent_group_name);
+        PipelineResource(std::string name, size_t physical_idx);
         ~PipelineResource();
 
         bool IsBuffer() const;
