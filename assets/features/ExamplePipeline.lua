@@ -143,6 +143,8 @@ ExampleDefaultPipeline = {
     ShaderGroupName = "Default"
     -- Used to set the base pipeline handle or index field, as appropriate,
     -- to enable pipeline derivatives and speed up pipeline construction
+    -- Default is actually "None", which just says there's no suitable base pipeline
+    -- to use.
     BasePipelineName = "BasePipeline"
 }
 
