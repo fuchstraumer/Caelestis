@@ -1,5 +1,5 @@
-#include "renderer/InputHandler.hpp"
-#include "renderer/PlatformWindow.hpp"
+#include "InputHandler.hpp"
+#include "PlatformWindow.hpp"
 #include "imgui/imgui.h"
 namespace vpsk {
 

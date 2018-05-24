@@ -1,5 +1,5 @@
-#include "renderer/objects/DepthTarget.hpp"
-#include "renderer/RendererCore.hpp"
+#include "objects/DepthTarget.hpp"
+#include "RendererCore.hpp"
 #include <vulkan/vulkan.h>
 #include "resource/Image.hpp"
 #include "core/LogicalDevice.hpp"

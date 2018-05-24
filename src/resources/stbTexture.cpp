@@ -1,7 +1,7 @@
-#include "renderer/resources/stbTexture.hpp"
-#include "renderer/resources/TextureLoadFunctions.hpp"
-#include "renderer/systems/ResourceLoader.hpp"
-#include "renderer/RendererCore.hpp"
+#include "resources/stbTexture.hpp"
+#include "resources/TextureLoadFunctions.hpp"
+#include "systems/ResourceLoader.hpp"
+#include "RendererCore.hpp"
 namespace vpsk {
 
     stbTexture::stbTexture(const vpr::Device * dvc, const char * fname) : Texture(dvc) {

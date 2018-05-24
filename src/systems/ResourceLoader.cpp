@@ -1,4 +1,4 @@
-#include "renderer/systems/ResourceLoader.hpp"
+#include "systems/ResourceLoader.hpp"
 #include <experimental/filesystem>
 namespace vpsk {
 

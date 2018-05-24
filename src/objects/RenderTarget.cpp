@@ -1,6 +1,6 @@
-#include "renderer/objects/RenderTarget.hpp"
-#include "renderer/objects/DepthTarget.hpp"
-#include "renderer/RendererCore.hpp"
+#include "objects/RenderTarget.hpp"
+#include "objects/DepthTarget.hpp"
+#include "RendererCore.hpp"
 #include "core/LogicalDevice.hpp"
 #include "resource/Image.hpp"
 

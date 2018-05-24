@@ -1,6 +1,6 @@
-#include "renderer/resources/Texture.hpp"
-#include "renderer/systems/TransferSystem.hpp"
-#include "renderer/RendererCore.hpp"
+#include "resources/Texture.hpp"
+#include "systems/TransferSystem.hpp"
+#include "RendererCore.hpp"
 
 namespace vpsk {
 

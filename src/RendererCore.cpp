@@ -1,11 +1,11 @@
-#include "renderer/RendererCore.hpp"
-#include "renderer/PlatformWindow.hpp"
+#include "RendererCore.hpp"
+#include "PlatformWindow.hpp"
 #include "imgui/imgui.h"
 #include "core/Instance.hpp"
 #include "core/PhysicalDevice.hpp"
 #include "core/LogicalDevice.hpp"
 #include "render/Swapchain.hpp"
-#include "renderer/systems/TransferSystem.hpp"
+#include "systems/TransferSystem.hpp"
 namespace vpsk {
 
     RendererCore::RendererCore() {

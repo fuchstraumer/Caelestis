@@ -3,9 +3,9 @@
 #define VPSK_GLI_TEXTURE_HPP
 #include "Texture.hpp"
 #include "gli/gli.hpp"
-#include "renderer/resources/TextureLoadFunctions.hpp"
-#include "renderer/RendererCore.hpp"
-#include "renderer/systems/ResourceLoader.hpp"
+#include "resources/TextureLoadFunctions.hpp"
+#include "RendererCore.hpp"
+#include "systems/ResourceLoader.hpp"
 #include "resource/Buffer.hpp"
 namespace vpsk {
 

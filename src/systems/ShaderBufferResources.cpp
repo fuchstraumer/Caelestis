@@ -1,4 +1,4 @@
-#include "renderer/systems/ShaderBufferResources.hpp"
+#include "systems/ShaderBufferResources.hpp"
 #include "core/ShaderResource.hpp"
 #include "resource/Buffer.hpp"
 

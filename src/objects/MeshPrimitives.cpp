@@ -1,5 +1,5 @@
-#include "renderer/objects/MeshPrimitives.hpp"
-#include "renderer/resources/MeshData.hpp"
+#include "objects/MeshPrimitives.hpp"
+#include "resources/MeshData.hpp"
 #include <array>
 #include <vector>
 #include "glm/glm.hpp"

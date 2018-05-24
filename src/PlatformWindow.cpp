@@ -1,6 +1,6 @@
-#include "renderer/PlatformWindow.hpp"
-#include "renderer/InputHandler.hpp"
-#include "renderer/RendererCore.hpp"
+#include "PlatformWindow.hpp"
+#include "InputHandler.hpp"
+#include "RendererCore.hpp"
 #include "imgui/imgui.h"
 #if defined(_WIN32) 
 #undef APIENTRY

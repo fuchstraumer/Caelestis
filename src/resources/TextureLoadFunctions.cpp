@@ -1,4 +1,4 @@
-#include "renderer/resources/TextureLoadFunctions.hpp"
+#include "resources/TextureLoadFunctions.hpp"
 #include "gli/gli.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
