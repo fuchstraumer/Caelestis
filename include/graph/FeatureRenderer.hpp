@@ -15,6 +15,26 @@ namespace st {
 }
 namespace vpsk {
 
+    /*
+        Quick list of feature ideas:
+        - Reflection
+        - SSR
+        - MotionBlur
+        - Scene
+        - WaterRipple
+        - Depth (Linear/Logarithmic)
+        - Particle
+        - VolumetricLights (clustered forward stuff, too?)
+        - Composition: might be best as a separate object, for interfacing 
+            with the backbuffer and swapchain and such
+        - DOF, Bloom, MotionBlur, Chomatic Aberration, SSAO, and so on... 
+            - effectively, post processing runs. Maybe also good to as a separate class for FX/post-processing
+              since these won't likely be using the same list of entities, instead applying shaders to fullscreen 
+              quads and tris
+            - would still need to integrate with the rendergraph, though
+        - Debug visualizations
+    */
+
     class RenderGraph;
     class RenderTarget;
     class PipelineSubmission;
@@ -27,7 +47,7 @@ namespace vpsk {
         // RenderGraph should be able to freely play with this object.
         friend class RenderGraph;
     public:
-        FeatureRenderer(const char* lua_script_path);
+        FeatureRenderer(RenderGraph& _graph, const char* lua_script_path);
         ~FeatureRenderer();
 
         feature_cvar_t& GetCVar(const std::string& name);
@@ -42,7 +62,7 @@ namespace vpsk {
         RenderGraph& graph;
         std::unique_ptr<RenderTarget> renderTarget;
         std::unique_ptr<vpr::CommandPool> commandPool;
-        std::unordered_map<std::string, std::unique_ptr<PipelineSubmission>> submissions;
+        std::vector<PipelineSubmission*> submissions;
         std::unordered_map<std::string, feature_cvar_t> cvarMap;
     };
 

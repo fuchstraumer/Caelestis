@@ -72,7 +72,8 @@ namespace vpsk {
         std::unordered_map<std::string, vpr::Image*> backingImages;
         std::unordered_map<std::string, size_t> resourceNameMap;
         std::vector<std::unique_ptr<PipelineResource>> resources;
-        std::unique_ptr<DescriptorResources> descriptorResources;
+        // string "name" is for the pack the resources belong to.
+        std::unordered_map<std::string, std::unique_ptr<DescriptorResources>> descriptorResources;
         std::unordered_map<std::string, std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
 
         const vpr::Device* device;
