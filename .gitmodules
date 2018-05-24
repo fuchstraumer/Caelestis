@@ -25,3 +25,6 @@
 [submodule "third_party/chrysocyon"]
 	path = third_party/chrysocyon
 	url = https://github.com/fuchstraumer/chrysocyon
+[submodule "third_party/luajit"]
+	path = third_party/luajit
+	url = https://github.com/LuaDist/luajit
