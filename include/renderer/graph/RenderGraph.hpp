@@ -11,6 +11,7 @@ namespace vpsk {
     class PipelineResource;
     class PipelineSubmission;
     class DescriptorResources;
+    class ResourceDimensions;
 
     class RenderGraph {
     public:
@@ -71,10 +72,8 @@ namespace vpsk {
         std::unordered_map<std::string, vpr::Image*> backingImages;
         std::unordered_map<std::string, size_t> resourceNameMap;
         std::vector<std::unique_ptr<PipelineResource>> resources;
-        std::unordered_map<std::string, std::unique_ptr<PipelineSubmission>> submissions;
-
         std::unique_ptr<DescriptorResources> descriptorResources;
-        std::vector<std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
+        std::unordered_map<std::string, std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
 
         const vpr::Device* device;
     };

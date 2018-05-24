@@ -1,4 +1,6 @@
 
+local dimensions = require("cfDimensions.lua");
+
 FeatureName = "ClusteredForward"
 Description = [[
     Uses the Clustered Forward rendering technique
@@ -8,7 +10,15 @@ Description = [[
 ShaderPack = "ClusteredForward"
 
 cvars = {
-    
+    { "ResolutionX", GetScreenX() },
+    { "ResolutionY", GetScreenY() },
+    { "MinLights", 1024 },
+    { "MaxLights", 4096 },
+    { "NumLights", dimensions.NumLights() },
+    { "GenerateLights", false },
+    { "TileWidth", 64 },
+    { "TileHeight", 64 },
+    { "TileCountX", }
 }
 
 PipelineSubmissions = {

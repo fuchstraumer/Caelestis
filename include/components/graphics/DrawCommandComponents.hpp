@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.h>
 namespace vpsk {
 
-    struct BaseDrawCommandComponent {
+    struct DrawCommandComponent {
         uint32_t VertexCount;
         uint32_t InstanceCount;
         uint32_t FirstVertex;
@@ -23,6 +23,9 @@ namespace vpsk {
         void operator()(VkCommandBuffer cmd) {
             vkCmdDrawIndexed(cmd, IndexCount, InstanceCount, FirstIndex, VertexOffset, FirstInstance);
         }
+    };
+
+    struct DrawIndirectCommandComponent {
     };
 
 }
