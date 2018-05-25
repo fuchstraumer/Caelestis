@@ -25,11 +25,11 @@ namespace vpsk {
         glm::vec3( 0.0f, 0.0f,-1.0f)
     };
 
-    static const std::array<glm::vec2, 4> BOX_UVS {
-        glm::vec2( 0.0f, 0.0f ),
-        glm::vec2( 1.0f, 0.0f ),
-        glm::vec2( 1.0f, 1.0f ),
-        glm::vec2( 0.0f, 1.0f )
+    static const std::array<glm::vec3, 4> BOX_UVS {
+        glm::vec3( 0.0f, 0.0f, 0.0f ),
+        glm::vec3( 1.0f, 0.0f, 0.0f ),
+        glm::vec3( 1.0f, 1.0f, 0.0f ),
+        glm::vec3( 0.0f, 1.0f, 0.0f )
     };
 
     static constexpr float GOLDEN_RATIO = 1.61803398875f;
@@ -121,8 +121,8 @@ namespace vpsk {
             v3.Data.UV = BOX_UVS[3];
         };
 
-        auto add_vertex = [&result](vertex_t&& vert)->size_t {
-            const size_t idx = result->Positions.size();
+        auto add_vertex = [&result](vertex_t&& vert)->uint32_t {
+            const uint32_t idx = static_cast<uint32_t>(result->Positions.size());
             result->Positions.emplace_back(std::move(vert.Position));
             result->Vertices.emplace_back(std::move(vert.Data));
             return idx;
@@ -151,7 +151,7 @@ namespace vpsk {
         result->Indices.assign(ICOSPHERE_INDICES.cbegin(), ICOSPHERE_INDICES.cend());
         result->Positions.assign(ICOSPHERE_POSITIONS.cbegin(), ICOSPHERE_POSITIONS.cend());
         for (const auto& vert : ICOSPHERE_POSITIONS) {
-            result->Vertices.emplace_back(vertex_data_t{ vert, glm::vec3(0.0f), glm::vec2(0.0f) });
+            result->Vertices.emplace_back(vertex_data_t{ vert, glm::vec3(0.0f), glm::vec3(0.0f) });
         }
 
         for (size_t i = 0; i < detail_level; ++i) {
@@ -171,11 +171,11 @@ namespace vpsk {
 
                 result->Indices.insert(result->Indices.end(), { i3, i1, i4, i5, i3, i4, i5, i4, i2 });
                 result->Positions.emplace_back(0.5f * (result->Positions[i0] + result->Positions[i1]));
-                result->Vertices.emplace_back(vertex_data_t{ result->Positions.back(), glm::vec3(0.0f), glm::vec2(0.0f) });
+                result->Vertices.emplace_back(vertex_data_t{ result->Positions.back(), glm::vec3(0.0f), glm::vec3(0.0f) });
                 result->Positions.emplace_back(0.5f * (result->Positions[i1] + result->Positions[i2]));
-                result->Vertices.emplace_back(vertex_data_t{ result->Positions.back(), glm::vec3(0.0f), glm::vec2(0.0f) });
+                result->Vertices.emplace_back(vertex_data_t{ result->Positions.back(), glm::vec3(0.0f), glm::vec3(0.0f) });
                 result->Positions.emplace_back(0.5f * (result->Positions[i2] + result->Positions[i0]));
-                result->Vertices.emplace_back(vertex_data_t{ result->Positions.back(), glm::vec3(0.0f), glm::vec2(0.0f) });
+                result->Vertices.emplace_back(vertex_data_t{ result->Positions.back(), glm::vec3(0.0f), glm::vec3(0.0f) });
             }
         }
 
@@ -185,7 +185,7 @@ namespace vpsk {
             result->Vertices[i].UV.y = -norm.y * 0.5f + 0.5f;
         }
 
-        auto add_vertex_w_uv = [&](const size_t& i, const glm::vec2& uv) {
+        auto add_vertex_w_uv = [&](const size_t& i, const glm::vec3& uv) {
             result->Vertices[i].UV = uv;
         };
 
@@ -194,19 +194,19 @@ namespace vpsk {
         auto& indices = result->Indices;
 
         for(size_t i = 0; i < num_triangles; ++i) {
-            const glm::vec2& uv0 = vertexData[indices[i * 3]].UV;
-            const glm::vec2& uv1 = vertexData[indices[i * 3 + 1]].UV;
-            const glm::vec2& uv2 = vertexData[indices[i * 3 + 2]].UV;
+            const glm::vec3& uv0 = vertexData[indices[i * 3]].UV;
+            const glm::vec3& uv1 = vertexData[indices[i * 3 + 1]].UV;
+            const glm::vec3& uv2 = vertexData[indices[i * 3 + 2]].UV;
             const float d1 = uv1.x - uv0.x;
             const float d2 = uv2.x - uv0.x;
             if(std::abs(d1) > 0.5f && std::abs(d2) > 0.5f){
-                add_vertex_w_uv(i * 3, uv0 + glm::vec2((d1 > 0.0f) ? 1.0f : -1.0f, 0.0f));
+                add_vertex_w_uv(i * 3, uv0 + glm::vec3((d1 > 0.0f) ? 1.0f : -1.0f, 0.0f, 0.0f));
             }
             else if(std::abs(d1) > 0.5f) {
-                add_vertex_w_uv(i * 3 + 1, uv1 + glm::vec2((d1 < 0.0f) ? 1.0f : -1.0f, 0.0f));
+                add_vertex_w_uv(i * 3 + 1, uv1 + glm::vec3((d1 < 0.0f) ? 1.0f : -1.0f, 0.0f, 0.0f));
             }
             else if(std::abs(d2) > 0.5f) {
-                add_vertex_w_uv(i * 3 + 2, uv2 + glm::vec2((d2 < 0.0f) ? 1.0f : -1.0f, 0.0f));
+                add_vertex_w_uv(i * 3 + 2, uv2 + glm::vec3((d2 < 0.0f) ? 1.0f : -1.0f, 0.0f, 0.0f));
             }
         }
         
