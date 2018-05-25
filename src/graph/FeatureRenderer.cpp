@@ -100,8 +100,6 @@ namespace vpsk {
         { "StencilReference", VK_DYNAMIC_STATE_STENCIL_REFERENCE }
     };
 
-    
-
     FeatureRenderer::FeatureRenderer(RenderGraph& _graph, const char* lua_script_name) : graph(_graph) {
         
     }
