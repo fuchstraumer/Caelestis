@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VPSK_PIPELINE_RESOURCES_COMPONENT_HPP
-#define VPSK_PIPELINE_RESOURCES_COMPONENT_HPP
+#ifndef VPSK_BUFFER_RESOURCE_CACHE_HPP
+#define VPSK_BUFFER_RESOURCE_CACHE_HPP
 #include "ForwardDecl.hpp"
 #include <memory>
 #include <string>
@@ -40,4 +40,4 @@ namespace vpsk {
 
 }
 
-#endif //!VPSK_PIPELINE_RESOURCE_COMPONENT_HPP
+#endif //!VPSK_BUFFER_RESOURCE_CACHE_HPP
