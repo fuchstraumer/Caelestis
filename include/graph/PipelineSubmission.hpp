@@ -27,6 +27,7 @@ namespace vpsk {
         PipelineSubmission(RenderGraph& graph, std::string name, size_t idx, VkPipelineStageFlags stages);
         ~PipelineSubmission();
 
+        void RecordCommands(VkCommandBuffer cmd);
         void AddShaders(const st::ShaderGroup* group);
 
         PipelineResource& SetDepthStencilInput(const std::string& name);
@@ -68,7 +69,7 @@ namespace vpsk {
         const VkPipelineStageFlags& GetStages() const noexcept;
         const std::string& GetName() const noexcept;
 
-        bool NeedRenderpass() const noexcept;
+        bool NeedRenderPass() const noexcept;
         bool GetClearColor(size_t idx, VkClearColorValue* value = nullptr) noexcept;
         bool GetClearDepth(VkClearDepthStencilValue* value = nullptr) const noexcept;
 
@@ -83,7 +84,7 @@ namespace vpsk {
         delegate_t<void(VkCommandBuffer)> recordSubmissionCb;
         delegate_t<bool()> needPassCb;
         delegate_t<bool(size_t, VkClearColorValue*)> getClearColorValueCb;
-        delegate_t<bool(VkClearDepthStencilValue*)> getDepthClearValueCb;
+        delegate_t<bool(VkClearDepthStencilValue*)> getClearDepthValueCb;
 
         std::vector<PipelineResource*> colorOutputs;
         std::vector<PipelineResource*> resolveOutputs;
