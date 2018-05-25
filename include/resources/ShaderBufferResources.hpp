@@ -22,7 +22,9 @@ namespace vpsk {
         ShaderBufferResources& operator=(const ShaderBufferResources&) = delete;
     public:
 
-        ShaderBufferResources(const vpr::Device* dvc, const std::vector<const st::ShaderResource*>& resources);
+        ShaderBufferResources(const vpr::Device* dvc);
+        void AddResources(const std::vector<const st::ShaderResource*>& resources);
+        void AddResource(const st::ShaderResource* resource);
         vpr::Buffer* at(const char* name);
         vpr::Buffer* find(const char* name);
 
@@ -31,6 +33,7 @@ namespace vpsk {
         void createUniformBuffer(const st::ShaderResource * uniform_buffer);
         void createStorageBuffer(const st::ShaderResource * storage_buffer);
         void createResources(const std::vector<const st::ShaderResource*>& resources);
+        void createResource(const st::ShaderResource * rsrc);
         const vpr::Device* device;
         std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> buffers;
     };

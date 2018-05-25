@@ -1,11 +1,20 @@
-#include "systems/ShaderBufferResources.hpp"
+#include "resources/ShaderBufferResources.hpp"
 #include "core/ShaderResource.hpp"
 #include "resource/Buffer.hpp"
 
 namespace vpsk {
 
-    ShaderBufferResources::ShaderBufferResources(const vpr::Device* dvc, const std::vector<const st::ShaderResource*>& resources) : device(dvc) {
+    ShaderBufferResources::ShaderBufferResources(const vpr::Device* dvc) : device(dvc) {
+    }
+
+    void ShaderBufferResources::AddResources(const std::vector<const st::ShaderResource*>& resources) {
         createResources(resources);
+    }
+
+    void ShaderBufferResources::AddResource(const st::ShaderResource * resource) {
+        if (buffers.count(resource->GetName()) == 0) {
+            createResource(resource);
+        }
     }
 
     vpr::Buffer * ShaderBufferResources::at(const char * name) {
@@ -45,29 +54,36 @@ namespace vpsk {
 
     void ShaderBufferResources::createResources(const std::vector<const st::ShaderResource*>& resources) {
         for (const auto& rsrc : resources) {
-            switch (rsrc->GetType()) {
-            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                createTexelBuffer(rsrc, false);
-                break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                createTexelBuffer(rsrc, true);
-                break;
-            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                createUniformBuffer(rsrc);
-                break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                createStorageBuffer(rsrc);
-                break;
-            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                createUniformBuffer(rsrc);
-                break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                createStorageBuffer(rsrc);
-                break;
-            default:
-                break;
+            if (buffers.count(rsrc->GetName()) == 0) {
+                createResource(rsrc);
             }
         }
+    }
+
+    void ShaderBufferResources::createResource(const st::ShaderResource* rsrc) {
+        switch (rsrc->GetType()) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+            createTexelBuffer(rsrc, false);
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+            createTexelBuffer(rsrc, true);
+            break;
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            createUniformBuffer(rsrc);
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            createStorageBuffer(rsrc);
+            break;
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+            createUniformBuffer(rsrc);
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+            createStorageBuffer(rsrc);
+            break;
+        default:
+            break;
+        }
+    }
     }
 
 }
