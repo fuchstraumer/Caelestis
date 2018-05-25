@@ -1,10 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
 PROJECT(VulpesSceneKit)
 
-FILE(GLOB ECS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/core/*.hpp")
-FILE(GLOB SIGNALS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/signal/*.hpp")
-FILE(GLOB STORAGE "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/storage/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/storage/*.inl" )
-FILE(GLOB SCRIPT_BINDINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/ecs/bindings/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/ecs/bindings/*.cpp")
 FILE(GLOB_RECURSE COMPONENTS "${CMAKE_CURRENT_SOURCE_DIR}/include/components/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/components/*.cpp")
 FILE(GLOB SYSTEMS "${CMAKE_CURRENT_SOURCE_DIR}/include/systems/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/systems/*.cpp")
 FILE(GLOB RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include/resources/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/*.cpp")
@@ -12,16 +8,15 @@ FILE(GLOB RENDERER_CORE "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp" "${CMAKE_CUR
 FILE(GLOB RENDERER_OBJECTS "${CMAKE_CURRENT_SOURCE_DIR}/include/objects/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/objects/*.cpp")
 FILE(GLOB IMGUI "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/*.cpp")
 FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp")
+FILE(GLOB GRAPH "${CMAKE_CURRENT_SOURCE_DIR}/include/graph/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/graph/*.cpp")
 
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon")
-ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit")
+#ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools")
 
-SOURCE_GROUP("ecs\\core" FILES ${ECS})
-SOURCE_GROUP("ecs\\signals" FILES ${SIGNALS})
-SOURCE_GROUP("ecs\\storage" FILES ${STORAGE})
-SOURCE_GROUP("ecs\\bindings" FILES ${SCRIPT_BINDINGS})
+SOURCE_GROUP("graph" FILES ${GRAPH})
 SOURCE_GROUP("components" FILES ${COMPONENTS})
 SOURCE_GROUP("core" FILES ${RENDERER_CORE})
 SOURCE_GROUP("resources" FILES ${RESOURCES})
@@ -30,13 +25,12 @@ SOURCE_GROUP("objects" FILES ${RENDERER_OBJECTS})
 SOURCE_GROUP("imgui" FILES ${IMGUI})
 SOURCE_GROUP("util" FILES ${UTIL})
 
-ADD_LIBRARY(VulpesSceneKit STATIC ${ECS} ${SCRIPT_BINDINGS} ${SIGNALS} ${STORAGE} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE}
-    ${RENDERER_OBJECTS} ${IMGUI})
+ADD_LIBRARY(VulpesSceneKit STATIC ${GRAPH} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE} ${RENDERER_OBJECTS} ${IMGUI})
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
 "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
-TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua)
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools)
 
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
@@ -51,4 +45,4 @@ ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
 TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
-TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader VulpesRender VulpesSceneKit chrysocyon liblua)
+TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader VulpesRender VulpesSceneKit chrysocyon liblua ShaderTools)
