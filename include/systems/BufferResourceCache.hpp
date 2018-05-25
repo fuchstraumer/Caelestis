@@ -17,12 +17,13 @@ namespace vpsk {
     /** Represents resources that won't be loaded into or read from by the host. Shader-only buffer resources, effectively.
      *  Thus they exist a bit outside of our usual loader system.
     */
-    class ShaderBufferResources {
-        ShaderBufferResources(const ShaderBufferResources&) = delete;
-        ShaderBufferResources& operator=(const ShaderBufferResources&) = delete;
+    class BufferResourceCache {
+        BufferResourceCache(const BufferResourceCache&) = delete;
+        BufferResourceCache& operator=(const BufferResourceCache&) = delete;
     public:
 
-        ShaderBufferResources(const vpr::Device* dvc);
+        BufferResourceCache(const vpr::Device* dvc);
+        ~BufferResourceCache();
         void AddResources(const std::vector<const st::ShaderResource*>& resources);
         void AddResource(const st::ShaderResource* resource);
         vpr::Buffer* at(const char* name);

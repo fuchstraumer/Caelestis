@@ -12,7 +12,7 @@ namespace vpsk {
     class PipelineSubmission;
     class DescriptorResources;
     class ResourceDimensions;
-    class ShaderBufferResources;
+    class BufferResourceCache;
 
     class RenderGraph {
     public:
@@ -21,7 +21,7 @@ namespace vpsk {
 
         PipelineSubmission& AddSubmission(const std::string& name, VkPipelineStageFlags stages);
         PipelineResource& GetResource(const std::string& name);
-        ShaderBufferResources& BufferResourceCache();
+        BufferResourceCache& BufferResourceCache();
 
         void Bake();
         void Reset();
@@ -77,7 +77,7 @@ namespace vpsk {
         // string "name" is for the pack the resources belong to.
         std::unordered_map<std::string, std::unique_ptr<DescriptorResources>> descriptorResources;
         std::unordered_map<std::string, std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
-        std::unique_ptr<ShaderBufferResources> bufferResources;
+        std::unique_ptr<BufferResourceCache> bufferResources;
         const vpr::Device* device;
     };
 
