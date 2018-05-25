@@ -4,9 +4,9 @@
 #include <string_view>
 #include <random>
 #include <iostream>
-#include "renderer/RendererCore.hpp"
-#include "renderer/objects/MeshPrimitives.hpp"
-#include "renderer/resources/MeshData.hpp"
+#include "RendererCore.hpp"
+#include "objects/MeshPrimitives.hpp"
+#include "resources/MeshData.hpp"
 #include "components/graphics/DrawCommandComponents.hpp"
 #include "components/NameComponent.hpp"
 #include "chrysocyon/core/Registry.hpp" 
