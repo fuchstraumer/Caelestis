@@ -3,7 +3,7 @@
 namespace vpsk {
 
     RenderGraph::RenderGraph(const vpr::Device * dvc) : device(dvc) {
-        bufferResources = std::make_unique<ShaderBufferResources>(device);
+        bufferResources = std::make_unique<BufferResourceCache>(device);
     }
 
     PipelineResource& RenderGraph::GetResource(const std::string& name) {
@@ -20,7 +20,7 @@ namespace vpsk {
         }
     }
 
-    ShaderBufferResources & RenderGraph::BufferResourceCache() {
+    BufferResourceCache & RenderGraph::BufferResourceCache() {
         return *bufferResources;
     }
 
