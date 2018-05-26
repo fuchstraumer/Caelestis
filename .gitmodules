@@ -19,12 +19,6 @@
 [submodule "third_party/json"]
 	path = third_party/json
 	url = https://github.com/nlohmann/json
-[submodule "third_party/opencollada"]
-	path = third_party/opencollada
-	url = https://github.com/khronosGroup/OpenCOLLADA
 [submodule "third_party/chrysocyon"]
 	path = third_party/chrysocyon
 	url = https://github.com/fuchstraumer/chrysocyon
-[submodule "third_party/luajit"]
-	path = third_party/luajit
-	url = https://github.com/LuaDist/luajit
