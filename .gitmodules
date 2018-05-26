@@ -22,3 +22,6 @@
 [submodule "third_party/chrysocyon"]
 	path = third_party/chrysocyon
 	url = https://github.com/fuchstraumer/chrysocyon
+[submodule "third_party/doctest"]
+	path = third_party/doctest
+	url = https://github.com/onqtam/doctest
