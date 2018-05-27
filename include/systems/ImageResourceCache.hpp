@@ -24,6 +24,10 @@ namespace vpsk {
 
         ImageResourceCache(const vpr::Device* dvc);
         ~ImageResourceCache();
+            
+        void CreateTexture(const std::string& file_path);
+        vpr::Image* CreateImage(const std::string& name, const VkImageCreateInfo& img_info, const VkImageViewCreateInfo& view_info);
+        vpr::Sampler* CreateSampler(const std::string& name, const VkSamplerCreateInfo& sampler_info);
 
         void AddResources(const std::vector<st::ShaderResource*>& resources);
         void AddResource(const st::ShaderResource* rsrc);
@@ -36,6 +40,7 @@ namespace vpsk {
         vpr::Sampler* Sampler(const std::string& name);
 
     private:
+        const vpr::Device* device;
         std::unordered_map<std::string, std::unique_ptr<vpr::Sampler>> samplers;
         std::unordered_map<std::string, std::unique_ptr<vpsk::Texture>> textures;
         std::unordered_map<std::string, std::unique_ptr<vpr::Image>> images;
