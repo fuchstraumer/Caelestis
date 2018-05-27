@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.h>
 #include "resource/Image.hpp"
 #include "core/LogicalDevice.hpp"
+#include "doctest/doctest.h"
+
 namespace vpsk {
 
     DepthTarget::DepthTarget() : image(nullptr), imageMSAA(nullptr) {}
@@ -52,3 +54,16 @@ namespace vpsk {
     }
 
 }
+
+#ifdef VPSK_TESTING_ENABLED
+TEST_SUITE("DepthTarget") {
+    TEST_CASE("CreateDepthTarget") {
+        std::unique_ptr<vpsk::DepthTarget> target = std::make_unique<vpsk::DepthTarget>();
+        target->Create(1440, 900, VK_SAMPLE_COUNT_1_BIT);
+    }
+    TEST_CASE("CreateDepthTargetMultisampled") {
+        std::unique_ptr<vpsk::DepthTarget> target = std::make_unique<vpsk::DepthTarget>();
+        target->Create(1440, 900, VK_SAMPLE_COUNT_4_BIT);
+    }
+}
+#endif // VPSK_UNIT_TESTING

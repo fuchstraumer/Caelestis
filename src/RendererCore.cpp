@@ -6,6 +6,9 @@
 #include "core/LogicalDevice.hpp"
 #include "render/Swapchain.hpp"
 #include "systems/TransferSystem.hpp"
+#include "doctest/doctest.h"
+#include "easylogging++.h"
+INITIALIZE_EASYLOGGINGPP
 namespace vpsk {
 
     RendererCore::RendererCore() {
@@ -29,8 +32,12 @@ namespace vpsk {
         transferSystem = std::make_unique<ResourceTransferSystem>(device.get());
     }
 
-    RendererCore::~RendererCore()
-    {
+    RendererCore::~RendererCore() {
+        transferSystem.reset();
+        swapchain.reset();
+        window.reset();
+        device.reset();
+        instance.reset();
     }
 
     RendererCore & RendererCore::GetRenderer() noexcept {
@@ -72,3 +79,23 @@ namespace vpsk {
     }
 
 }
+
+#ifdef VPSK_TESTING_ENABLED
+TEST_SUITE_BEGIN("RendererCore");
+
+TEST_CASE("RetrieveRenderer") {
+    try {
+        auto& renderer = vpsk::RendererCore::GetRenderer();
+    }
+    catch (...) {
+        throw std::runtime_error("Failed to retrieve renderer.");
+    }
+}
+
+TEST_CASE("RendererRetrieveDevice") {
+    vpr::Device* dvc = vpsk::RendererCore::GetRenderer().Device();
+    CHECK(dvc != nullptr);
+}
+
+TEST_SUITE_END();
+#endif // VPSK_TESTING_ENABLED
