@@ -1,9 +1,15 @@
 #include "graph/RenderGraph.hpp"
-#include "resources/ShaderBufferResources.hpp"
+#include "graph/PipelineResource.hpp"
+#include "resource/DescriptorSet.hpp"
+
 namespace vpsk {
 
     RenderGraph::RenderGraph(const vpr::Device * dvc) : device(dvc) {
-        bufferResources = std::make_unique<BufferResourceCache>(device);
+        bufferResources = std::make_unique<vpsk::BufferResourceCache>(device);
+    }
+
+    RenderGraph::~RenderGraph()
+    {
     }
 
     PipelineResource& RenderGraph::GetResource(const std::string& name) {

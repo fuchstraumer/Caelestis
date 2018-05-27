@@ -5,19 +5,19 @@
 #include <vulkan/vulkan.h>
 #include <string>
 #include <unordered_map>
+#include "systems/BufferResourceCache.hpp"
 
 namespace vpsk {
 
     class PipelineResource;
     class PipelineSubmission;
-    class DescriptorResources;
     class ResourceDimensions;
-    class BufferResourceCache;
 
     class RenderGraph {
     public:
 
         RenderGraph(const vpr::Device* dvc);
+        ~RenderGraph();
 
         PipelineSubmission& AddSubmission(const std::string& name, VkPipelineStageFlags stages);
         PipelineResource& GetResource(const std::string& name);
@@ -30,7 +30,6 @@ namespace vpsk {
         void SetBackbufferDimensions(const ResourceDimensions& dimensions);
 
         const vpr::Device* GetDevice() const noexcept;
-        DescriptorResources* GetDescriptorResources();
 
     private:
 
@@ -75,9 +74,7 @@ namespace vpsk {
         std::unordered_map<std::string, size_t> resourceNameMap;
         std::vector<std::unique_ptr<PipelineResource>> resources;
         // string "name" is for the pack the resources belong to.
-        std::unordered_map<std::string, std::unique_ptr<DescriptorResources>> descriptorResources;
-        std::unordered_map<std::string, std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
-        std::unique_ptr<BufferResourceCache> bufferResources;
+        std::unique_ptr<vpsk::BufferResourceCache> bufferResources;
         const vpr::Device* device;
     };
 

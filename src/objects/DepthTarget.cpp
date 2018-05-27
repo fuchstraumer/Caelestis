@@ -39,6 +39,10 @@ namespace vpsk {
         }
     }
 
+    void DepthTarget::CreateAsCube(uint32_t size, bool independent_faces)
+    {
+    }
+
     const vpr::Image * DepthTarget::GetImage() const noexcept {
         return image.get();
     }

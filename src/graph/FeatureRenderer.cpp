@@ -1,5 +1,7 @@
 #include "graph/FeatureRenderer.hpp"
 #include "graph/RenderGraph.hpp"
+#include "command/CommandPool.hpp"
+#include "objects/RenderTarget.hpp"
 
 namespace vpsk {
 
@@ -102,6 +104,10 @@ namespace vpsk {
 
     FeatureRenderer::FeatureRenderer(RenderGraph& _graph, const char* lua_script_name) : graph(_graph) {
         
+    }
+
+    FeatureRenderer::~FeatureRenderer()
+    {
     }
 
 }

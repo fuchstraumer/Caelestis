@@ -1,5 +1,8 @@
 #include "graph/PipelineSubmission.hpp"
 #include "graph/RenderGraph.hpp"
+#include "resource/PipelineLayout.hpp"
+#include "resource/PipelineCache.hpp"
+
 namespace vpsk {
 
     PipelineSubmission::PipelineSubmission(RenderGraph& rgraph, std::string _name, size_t _idx, VkPipelineStageFlags _stages) 

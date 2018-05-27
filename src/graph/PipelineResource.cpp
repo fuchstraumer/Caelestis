@@ -1,4 +1,4 @@
-#include "renderer/graph/PipelineResource.hpp"
+#include "graph/PipelineResource.hpp"
 
 namespace vpsk {
 
