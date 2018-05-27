@@ -36,8 +36,8 @@ namespace vpsk {
         if (sample_count_flags > 1) {
             image_info.samples = VkSampleCountFlagBits(1);
             imageMSAA = std::make_unique<vpr::Image>(renderer.Device());
-            image->Create(image_info);
-            image->CreateView(VK_IMAGE_ASPECT_DEPTH_BIT);
+            imageMSAA->Create(image_info);
+            imageMSAA->CreateView(VK_IMAGE_ASPECT_DEPTH_BIT);
         }
     }
 
@@ -80,14 +80,17 @@ TEST_SUITE("DepthTarget") {
     TEST_CASE("CreateDepthTarget") {
         std::unique_ptr<vpsk::DepthTarget> target = std::make_unique<vpsk::DepthTarget>();
         target->Create(1440, 900, VK_SAMPLE_COUNT_1_BIT);
+        target.reset();
     }
     TEST_CASE("CreateDepthTargetMultisampled") {
         std::unique_ptr<vpsk::DepthTarget> target = std::make_unique<vpsk::DepthTarget>();
         target->Create(1440, 900, VK_SAMPLE_COUNT_4_BIT);
+        target.reset();
     }
     TEST_CASE("CreateCubeDepthTarget") {
         std::unique_ptr<vpsk::DepthTarget> target = std::make_unique<vpsk::DepthTarget>();
         target->CreateAsCube(512);
+        target.reset();
     }
 }
 #endif // VPSK_UNIT_TESTING
