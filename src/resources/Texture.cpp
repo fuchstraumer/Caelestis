@@ -4,14 +4,15 @@
 
 namespace vpsk {
 
-    Texture::Texture(const vpr::Device * dvc) noexcept : device(dvc), image(std::make_unique<vpr::Image>(dvc)), samplerUnique(nullptr), samplerShared(VK_NULL_HANDLE) {}
+    Texture::Texture(const vpr::Device * dvc) noexcept : device(dvc), image(nullptr), sampler(nullptr) {}
     
     Texture::Texture(Texture && other) noexcept : device(other.device), imageInfo(std::move(other.imageInfo)), samplerInfo(std::move(other.samplerInfo)), viewInfo(std::move(other.viewInfo)),
-        viewInfoSet(std::move(other.viewInfoSet)), descriptorInfo(std::move(other.descriptorInfo)), descriptorInfoSet(std::move(other.descriptorInfoSet)), image(std::move(other.image)), samplerUnique(std::move(other.samplerUnique)),
-        stagingBuffer(std::move(other.stagingBuffer)), copyInfo(std::move(other.copyInfo)), samplerShared(std::move(other.samplerShared)) {}
+        viewInfoSet(std::move(other.viewInfoSet)), descriptorInfo(std::move(other.descriptorInfo)), descriptorInfoSet(std::move(other.descriptorInfoSet)), image(std::move(other.image)),
+        stagingBuffer(std::move(other.stagingBuffer)), copyInfo(std::move(other.copyInfo)), sampler(std::move(other.sampler)) {}
 
     Texture& Texture::operator=(Texture && other) noexcept {
         device = other.device;
+        sampler = std::move(other.sampler);
         imageInfo = std::move(other.imageInfo);
         samplerInfo = std::move(other.samplerInfo);
         viewInfo = std::move(other.viewInfo);
@@ -19,8 +20,6 @@ namespace vpsk {
         descriptorInfo = std::move(other.descriptorInfo);
         descriptorInfoSet = std::move(other.descriptorInfoSet);
         image = std::move(other.image);
-        samplerUnique = std::move(other.samplerUnique);
-        samplerShared = std::move(other.samplerShared);
         stagingBuffer = std::move(other.stagingBuffer);
         copyInfo = std::move(other.copyInfo);
         return *this;
@@ -34,9 +33,6 @@ namespace vpsk {
         copyInfo = std::vector<VkBufferImageCopy>{ copies, copies + num_copies };
         createImage();
         createView();
-        if (!usingSharedSampler) {
-            createSampler();
-        }
     }
   
     void Texture::TransferToDevice(VkCommandBuffer cmd) {
@@ -56,16 +52,11 @@ namespace vpsk {
     const VkImage & Texture::Image() const noexcept {
         return image->vkHandle();
     }
-  
-    const VkSampler& Texture::Sampler() const noexcept {
-        if (!usingSharedSampler) {
-            return samplerUnique->vkHandle();
-        }
-        else {
-            return samplerShared;
-        }
+
+    const VkSampler & Texture::Sampler() const noexcept {
+        return sampler->vkHandle();
     }
-  
+
     const VkImageView& Texture::View() const noexcept {
         return image->View();
     }
@@ -88,23 +79,13 @@ namespace vpsk {
     void Texture::SetViewInfo(VkImageViewCreateInfo view_info) {
         viewInfo = std::move(view_info);
     }
-   
-    void Texture::SetSharedSampler(VkSampler handle) {
-        samplerShared = std::move(handle);
-        usingSharedSampler = true;
-        samplerUnique.reset(); // potentially free a bit of memory
-    }
-  
+
     void Texture::createImage() {
         image->Create(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
  
     void Texture::createView() {
         image->CreateView(viewInfo);
-    }
-  
-    void Texture::createSampler() {
-        samplerUnique = std::make_unique<vpr::Sampler>(device, samplerInfo);
     }
  
     void Texture::setDescriptorInfo() const {
@@ -117,10 +98,6 @@ namespace vpsk {
         createImage();
         updateViewInfo();
         createView();
-        if (!usingSharedSampler) {
-            updateSamplerInfo();
-            createSampler();
-        }
         scheduleDeviceTransfer();
     }
 

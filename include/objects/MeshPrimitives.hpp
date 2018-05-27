@@ -7,8 +7,13 @@ namespace vpsk {
 
     struct MeshData;
 
-    std::unique_ptr<MeshData> CreateBox();
-    std::unique_ptr<MeshData> CreateIcosphere(const size_t detail_level);
+    enum class ExtraFeatures {
+        None,
+        GenerateTangents
+    };
+
+    std::unique_ptr<MeshData> CreateBox(const ExtraFeatures features = ExtraFeatures::None);
+    std::unique_ptr<MeshData> CreateIcosphere(const size_t detail_level, const ExtraFeatures features = ExtraFeatures::None);
     void GenerateTangentVectors(MeshData* mesh);
 
 }

@@ -35,14 +35,12 @@ namespace vpsk {
         void SetImageInfo(VkImageCreateInfo image_info);
         void SetSamplerInfo(VkSamplerCreateInfo sampler_info);
         void SetViewInfo(VkImageViewCreateInfo view_info);
-
-        void SetSharedSampler(VkSampler handle);
+        void SetSampler(vpr::Sampler* _sampler);
 
     protected:
 
         void createImage();
         void createView();
-        void createSampler();
         void setDescriptorInfo() const;
 
         virtual void loadTextureDataFromFile(const char* fname) = 0;

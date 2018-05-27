@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+
 namespace st {
     class ShaderPack;
     class ShaderResource;
@@ -23,6 +24,8 @@ namespace vpsk {
         // ShaderPacks aren't owned/loaded by this object: they are cached/stored elsewhere
         // TODO is how to load/manage these, rn thinking rendergraph should own them
         ShaderResourcePack(RenderGraph& _graph, const st::ShaderPack* pack);
+        ShaderResourcePack(ShaderResourcePack&& other) noexcept;
+        ShaderResourcePack& operator=(ShaderResourcePack&& other) noexcept;
         ~ShaderResourcePack();
 
         vpr::DescriptorSet* DescriptorSet(const char* group_name) noexcept;

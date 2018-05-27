@@ -51,7 +51,6 @@ namespace vpsk {
         for (size_t i = 0; i < names.NumStrings; ++i) {
             groupToIdxMap.emplace(names.Strings[i], i);
         }
-        descriptorSets.resize(groupToIdxMap.size(), nullptr);
     }
 
     void ShaderResourcePack::createDescriptorPool() {
@@ -101,7 +100,7 @@ namespace vpsk {
         buffer_cache.AddResources(resources);
         
         const size_t& idx = groupToIdxMap.at(name);
-        descriptorSets[idx] = std::make_unique<vpr::DescriptorSet>(graph.GetDevice());
+        descriptorSets[idx] = std::move(std::make_unique<vpr::DescriptorSet>(graph.GetDevice()));
         for (const auto& rsrc : resources) {
             if (is_buffer_type(rsrc->GetType())) {
                 vpr::Buffer* buffer = buffer_cache.at(name.c_str());

@@ -30,4 +30,8 @@ namespace vpsk {
         return *bufferResources;
     }
 
+    const vpr::Device * RenderGraph::GetDevice() const noexcept {
+        return device;
+    }
+
 }

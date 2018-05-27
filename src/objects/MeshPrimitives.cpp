@@ -63,7 +63,7 @@ namespace vpsk {
         8, 6, 7, 9, 8, 1
     };
 
-    std::unique_ptr<MeshData> CreateBox() {
+    std::unique_ptr<MeshData> CreateBox(const ExtraFeatures features) {
         std::unique_ptr<MeshData> result = std::make_unique<MeshData>();
 
         struct vertex_t {
@@ -141,11 +141,14 @@ namespace vpsk {
             build_face(i);
         }
 
-        GenerateTangentVectors(result.get());
+        if (features == ExtraFeatures::GenerateTangents) {
+            GenerateTangentVectors(result.get());
+        }
+
         return std::move(result);
     }
 
-    std::unique_ptr<MeshData> CreateIcosphere(const size_t detail_level) {
+    std::unique_ptr<MeshData> CreateIcosphere(const size_t detail_level, const ExtraFeatures features) {
         
         std::unique_ptr<MeshData> result = std::make_unique<MeshData>();
         result->Indices.assign(ICOSPHERE_INDICES.cbegin(), ICOSPHERE_INDICES.cend());
@@ -158,9 +161,9 @@ namespace vpsk {
             const size_t num_triangles = result->Indices.size();
 
             for (size_t j = 0; j < num_triangles; ++j) {
-                const uint32_t& i0 = result->Indices[j * 3 + 0];
-                const uint32_t& i1 = result->Indices[j * 3 + 1];
-                const uint32_t& i2 = result->Indices[j * 3 + 2];
+                const uint32_t i0 = result->Indices[j * 3 + 0];
+                const uint32_t i1 = result->Indices[j * 3 + 1];
+                const uint32_t i2 = result->Indices[j * 3 + 2];
 
                 const uint32_t i3 = static_cast<uint32_t>(result->Positions.size());
                 const uint32_t i4 = i3 + 1;
@@ -179,6 +182,11 @@ namespace vpsk {
             }
         }
 
+        for (size_t i = 0; i < result->Positions.size(); ++i) {
+            result->Positions[i] = glm::normalize(result->Positions[i]);
+            result->Vertices[i].Normal = glm::normalize(result->Vertices[i].Normal);
+        }
+
         for(size_t i = 0; i < result->Positions.size(); ++i) {
             const glm::vec3& norm = result->Vertices[i].Normal;
             result->Vertices[i].UV.x = (glm::atan((float)norm.x, -norm.z) / FLOAT_PI) * 0.5f + 0.5f;
@@ -186,7 +194,8 @@ namespace vpsk {
         }
 
         auto add_vertex_w_uv = [&](const size_t& i, const glm::vec3& uv) {
-            result->Vertices[i].UV = uv;
+            const uint32_t idx = result->Indices[i];
+            result->Vertices[idx].UV = uv;
         };
 
         const size_t num_triangles = result->Indices.size() / 3;
@@ -210,7 +219,10 @@ namespace vpsk {
             }
         }
         
-        GenerateTangentVectors(result.get());
+        if (features == ExtraFeatures::GenerateTangents) {
+            GenerateTangentVectors(result.get());
+        }
+
         return std::move(result);
     }
 
@@ -249,6 +261,11 @@ namespace vpsk {
                 glm::vec3 tmp0 = pos0 * (-uv1.y * r);
                 glm::vec3 tmp1 = pos1 * (-uv0.y * r);
                 mesh->Vertices[indices[j]].Tangent = tmp0 - tmp1;
+
+                tmp0 = pos1 * (-uv0.x * r);
+                tmp1 = pos0 * (-uv1.x * r);
+                mesh->Vertices[indices[j]].Bitangent = tmp0 - tmp1;
+
             }
         }
     }
