@@ -29,13 +29,3 @@ int main(int argc, char* argv[]) {
     auto& draw_components_view = registry.PersistentView<VertexBufferComponent, IndexBufferComponent, IndexedDrawCommandComponent>();
     draw_components_view.ApplyToEach(&DrawEntity);
 }
-
-void DrawEntity(uint32_t ent, vpsk::VertexBufferComponent& vbo, vpsk::IndexBufferComponent& ibo, vpsk::IndexedDrawCommandComponent& draw_cmd) {
-    using namespace vpsk;
-    VkCommandBuffer cmd_buffer = VK_NULL_HANDLE;
-    // bind our vertex and index buffers
-    vbo(cmd_buffer);
-    ibo(cmd_buffer);
-    // issue an indexed draw command
-    draw_cmd(cmd_buffer);
-}
