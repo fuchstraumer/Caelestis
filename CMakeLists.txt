@@ -13,7 +13,7 @@ FILE(GLOB GRAPH "${CMAKE_CURRENT_SOURCE_DIR}/include/graph/*.hpp" "${CMAKE_CURRE
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon")
-#ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools")
 
 SOURCE_GROUP("graph" FILES ${GRAPH})
@@ -25,12 +25,13 @@ SOURCE_GROUP("objects" FILES ${RENDERER_OBJECTS})
 SOURCE_GROUP("imgui" FILES ${IMGUI})
 SOURCE_GROUP("util" FILES ${UTIL})
 
-ADD_LIBRARY(VulpesSceneKit STATIC ${GRAPH} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE} ${RENDERER_OBJECTS} ${IMGUI})
+ADD_LIBRARY(VulpesSceneKit STATIC ${GRAPH} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE} ${RENDERER_OBJECTS} ${IMGUI} ${UTIL})
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
 "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
-TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools)
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools doctest)
 
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
@@ -40,6 +41,12 @@ ELSEIF(UNIX)
     # Somehow, GLFW gets made x64 but this and VPR can get made as x86
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 ENDIF()
+
+ADD_EXECUTABLE(VPSK_UNIT_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/DoctestDummy.cpp")
+TARGET_COMPILE_OPTIONS(VPSK_UNIT_TESTS PRIVATE "/std:c++17")
+TARGET_INCLUDE_DIRECTORIES(VPSK_UNIT_TESTS PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest" "${CMAKE_CURRENT_SOURCE_DIR}/include" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
+TARGET_LINK_LIBRARIES(VPSK_UNIT_TESTS PRIVATE tinyobjloader VulpesRender VulpesSceneKit chrysocyon liblua ShaderTools doctest)
 
 ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
