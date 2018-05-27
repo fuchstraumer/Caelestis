@@ -12,9 +12,6 @@
 #include "chrysocyon/core/Registry.hpp" 
 #include "chrysocyon/core/ComponentViews.hpp"
 
-#include "util/easylogging++.h"
-INITIALIZE_EASYLOGGINGPP
-
 void DrawEntity(uint32_t ent, vpsk::VertexBufferComponent& vbo, vpsk::IndexBufferComponent& ibo, vpsk::IndexedDrawCommandComponent& draw_cmd);
 
 int main(int argc, char* argv[]) {

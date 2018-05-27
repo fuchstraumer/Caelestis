@@ -30,8 +30,8 @@ TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/th
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
-"$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include")
-TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools doctest)
+"$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest")
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools doctest easyloggingpp)
 
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
@@ -42,13 +42,13 @@ ELSEIF(UNIX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 ENDIF()
 
-ADD_EXECUTABLE(VPSK_UNIT_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/DoctestDummy.cpp")
+ADD_EXECUTABLE(VPSK_UNIT_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/DoctestMain.cpp" ${GRAPH} ${SYSTEMS} ${COMPONENTS} ${RESOURCES} ${RENDERER_CORE} ${RENDERER_OBJECTS} ${IMGUI} ${UTIL})
 TARGET_COMPILE_OPTIONS(VPSK_UNIT_TESTS PRIVATE "/std:c++17")
 TARGET_INCLUDE_DIRECTORIES(VPSK_UNIT_TESTS PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest" "${CMAKE_CURRENT_SOURCE_DIR}/include" 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
-TARGET_LINK_LIBRARIES(VPSK_UNIT_TESTS PRIVATE tinyobjloader VulpesRender VulpesSceneKit chrysocyon liblua ShaderTools doctest)
+TARGET_LINK_LIBRARIES(VPSK_UNIT_TESTS PRIVATE tinyobjloader VulpesRender chrysocyon liblua ShaderTools doctest easyloggingpp)
 
-ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp")
 TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
 TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
