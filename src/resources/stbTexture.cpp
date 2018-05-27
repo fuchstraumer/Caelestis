@@ -2,6 +2,7 @@
 #include "resources/TextureLoadFunctions.hpp"
 #include "systems/ResourceLoader.hpp"
 #include "RendererCore.hpp"
+#include "doctest/doctest.h"
 namespace vpsk {
 
     stbTexture::stbTexture(const vpr::Device * dvc, const char * fname) : Texture(dvc) {
@@ -99,3 +100,9 @@ namespace vpsk {
     }
 
 }
+
+#ifdef VPSK_TESTING_ENABLED
+TEST_SUITE("stbTexture") {
+
+}
+#endif // VPSK_TESTING_ENABLED

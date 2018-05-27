@@ -67,6 +67,7 @@ namespace vpsk {
             image_info.extent.width = size;
             image_info.extent.height = size;
             image_info.format = image_format;
+            image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             image_info.tiling = renderer.Device()->GetFormatTiling(image_format, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
             renderTargets.emplace_back(std::make_unique<vpr::Image>(renderer.Device()));
             renderTargets.back()->Create(image_info);
@@ -97,6 +98,7 @@ namespace vpsk {
         ++numViews;
         auto& renderer = RendererCore::GetRenderer();
         VkImageCreateInfo image_info = renderTargets.back()->CreateInfo();
+        image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_info.format = new_format;
         image_info.tiling = renderer.Device()->GetFormatTiling(new_format, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
         renderTargets.emplace_back(std::make_unique<vpr::Image>(renderer.Device()));
@@ -144,30 +146,47 @@ TEST_SUITE("RenderTarget") {
     TEST_CASE("CreateBaseRenderTargetNoDepth") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
         target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, false);
+        target.reset();
     }
     TEST_CASE("CreateRenderTargetWithDepth") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
         target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true);
+        target.reset();
     }
     TEST_CASE("CreateRenderTargetWithMips") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
         target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true, 2);
+        target.reset();
     }
     TEST_CASE("CreateMultisampledRenderTargetNoDepth") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
         target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, false, 1, VK_SAMPLE_COUNT_4_BIT);
+        target.reset();
     }
     TEST_CASE("CreateMultisampledRenderTargetWithDepth") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
         target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true, 1, VK_SAMPLE_COUNT_4_BIT);
+        target.reset();
     }
     TEST_CASE("CreateCubeRenderTargetNoDepth") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
         target->CreateAsCube(1024, VK_FORMAT_R8G8B8A8_UNORM, false);
+        target.reset();
     }
     TEST_CASE("CreateCubeRenderTargetWithDepth") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
         target->CreateAsCube(1024, VK_FORMAT_R8G8B8A8_UNORM, true);
+        target.reset();
+    }
+    TEST_CASE("CreateDepthOnlyRenderTarget") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true, 1, VK_SAMPLE_COUNT_1_BIT, true);
+        target.reset();
+    }
+    TEST_CASE("CreateMultisampledDepthOnlyRenderTarget") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true, 1, VK_SAMPLE_COUNT_4_BIT, true);
+        target.reset();
     }
     TEST_CASE("CreateAndUseRenderTarget") {
         std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
@@ -177,6 +196,7 @@ TEST_SUITE("RenderTarget") {
         CHECK(target->GetImage(1) != nullptr);
         CHECK(target->GetImageMSAA() != nullptr);
         CHECK(target->GetImageMSAA(1) != nullptr);
+        target.reset();
     }
 }
 #endif // VPSK_TESTING_ENABLED
