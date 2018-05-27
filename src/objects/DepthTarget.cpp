@@ -41,8 +41,28 @@ namespace vpsk {
         }
     }
 
-    void DepthTarget::CreateAsCube(uint32_t size, bool independent_faces)
-    {
+    void DepthTarget::CreateAsCube(uint32_t size, bool independent_faces) {
+        msaaUpToDate = false;
+        auto& renderer = RendererCore::GetRenderer();
+        VkImageCreateInfo image_info = vpr::vk_image_create_info_base;
+        image_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        image_info.extent.width = size;
+        image_info.extent.height = size;
+        image_info.mipLevels = 1;
+        image_info.arrayLayers = 6;
+        image_info.format = renderer.Device()->FindDepthFormat();
+        image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        image_info.tiling = renderer.Device()->GetFormatTiling(image_info.format, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+        image = std::make_unique<vpr::Image>(renderer.Device());
+        image->Create(image_info);
+
+        VkImageViewCreateInfo view_info = vpr::vk_image_view_create_info_base;
+        view_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        view_info.subresourceRange = VkImageSubresourceRange{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 6 };
+        view_info.image = image->vkHandle();
+        view_info.format = image_info.format;
+        image->CreateView(view_info);
     }
 
     const vpr::Image * DepthTarget::GetImage() const noexcept {
@@ -64,6 +84,10 @@ TEST_SUITE("DepthTarget") {
     TEST_CASE("CreateDepthTargetMultisampled") {
         std::unique_ptr<vpsk::DepthTarget> target = std::make_unique<vpsk::DepthTarget>();
         target->Create(1440, 900, VK_SAMPLE_COUNT_4_BIT);
+    }
+    TEST_CASE("CreateCubeDepthTarget") {
+        std::unique_ptr<vpsk::DepthTarget> target = std::make_unique<vpsk::DepthTarget>();
+        target->CreateAsCube(512);
     }
 }
 #endif // VPSK_UNIT_TESTING

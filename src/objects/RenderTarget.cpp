@@ -3,7 +3,7 @@
 #include "RendererCore.hpp"
 #include "core/LogicalDevice.hpp"
 #include "resource/Image.hpp"
-
+#include "doctest/doctest.h"
 namespace vpsk {
 
     
@@ -138,3 +138,45 @@ namespace vpsk {
     }
 
 }
+
+#ifdef VPSK_TESTING_ENABLED
+TEST_SUITE("RenderTarget") {
+    TEST_CASE("CreateBaseRenderTargetNoDepth") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, false);
+    }
+    TEST_CASE("CreateRenderTargetWithDepth") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true);
+    }
+    TEST_CASE("CreateRenderTargetWithMips") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true, 2);
+    }
+    TEST_CASE("CreateMultisampledRenderTargetNoDepth") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, false, 1, VK_SAMPLE_COUNT_4_BIT);
+    }
+    TEST_CASE("CreateMultisampledRenderTargetWithDepth") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true, 1, VK_SAMPLE_COUNT_4_BIT);
+    }
+    TEST_CASE("CreateCubeRenderTargetNoDepth") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->CreateAsCube(1024, VK_FORMAT_R8G8B8A8_UNORM, false);
+    }
+    TEST_CASE("CreateCubeRenderTargetWithDepth") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->CreateAsCube(1024, VK_FORMAT_R8G8B8A8_UNORM, true);
+    }
+    TEST_CASE("CreateAndUseRenderTarget") {
+        std::unique_ptr<vpsk::RenderTarget> target = std::make_unique<vpsk::RenderTarget>();
+        target->Create(1440, 900, VK_FORMAT_R8G8B8A8_UNORM, true, 1, VK_SAMPLE_COUNT_4_BIT);
+        target->Add(VK_FORMAT_R16G16B16A16_SFLOAT); // G-buffer format, for example.
+        CHECK(target->GetImage() != nullptr);
+        CHECK(target->GetImage(1) != nullptr);
+        CHECK(target->GetImageMSAA() != nullptr);
+        CHECK(target->GetImageMSAA(1) != nullptr);
+    }
+}
+#endif // VPSK_TESTING_ENABLED
