@@ -24,26 +24,32 @@ namespace vpsk {
 
         ImageResourceCache(const vpr::Device* dvc);
         ~ImageResourceCache();
-            
-        void CreateTexture(const std::string& file_path);
-        vpr::Image* CreateImage(const std::string& name, const VkImageCreateInfo& img_info, const VkImageViewCreateInfo& view_info);
-        vpr::Sampler* CreateSampler(const std::string& name, const VkSamplerCreateInfo& sampler_info);
+
+        //vpr::Image* CreateImage(const std::string& name, const VkImageCreateInfo& img_info, const VkImageViewCreateInfo& view_info);
+        //vpr::Sampler* CreateSampler(const std::string& name, const VkSamplerCreateInfo& sampler_info);
 
         void AddResources(const std::vector<st::ShaderResource*>& resources);
         void AddResource(const st::ShaderResource* rsrc);
 
-        vpsk::Texture* FindTexture(const std::string& name);
-        vpr::Image* FindImage(const std::string& name);
-        vpr::Sampler* FindSampler(const std::string& name);
-        vpsk::Texture* Texture(const std::string& name);
-        vpr::Image* Image(const std::string& name);
-        vpr::Sampler* Sampler(const std::string& name);
+        vpr::Image* FindImage(const std::string& group_name, const std::string & rsrc_name);
+        vpr::Sampler* FindSampler(const std::string& group_name, const std::string & rsrc_name);
+        vpr::Image* Image(const std::string& group_name, const std::string & rsrc_name);
+        vpr::Sampler* Sampler(const std::string& group_name, const std::string & rsrc_name);
 
+        bool HasImage(const std::string& group_name, const std::string & rsrc_name) const noexcept;
+        bool HasSampler(const std::string& group_name, const std::string & rsrc_name) const noexcept;
+        
     private:
+
+        void createResource(const st::ShaderResource* rsrc);
+        void createCombinedImageSampler(const st::ShaderResource* rsrc);
+        void createSampler(const st::ShaderResource* rsrc);
+        void createSampledImage(const st::ShaderResource* rsrc);
+
         const vpr::Device* device;
-        std::unordered_map<std::string, std::unique_ptr<vpr::Sampler>> samplers;
-        std::unordered_map<std::string, std::unique_ptr<vpsk::Texture>> textures;
-        std::unordered_map<std::string, std::unique_ptr<vpr::Image>> images;
+        std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<vpr::Sampler>>> samplers;
+        std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<vpr::Image>>> images;
+
     };
 
 }
