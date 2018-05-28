@@ -1,11 +1,14 @@
 #include "graph/RenderGraph.hpp"
 #include "graph/PipelineResource.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "systems/BufferResourceCache.hpp"
+#include "systems/ImageResourceCache.hpp"
 
 namespace vpsk {
 
     RenderGraph::RenderGraph(const vpr::Device * dvc) : device(dvc) {
         bufferResources = std::make_unique<vpsk::BufferResourceCache>(device);
+        imageResources = std::make_unique<vpsk::ImageResourceCache>(device);
     }
 
     RenderGraph::~RenderGraph()
@@ -26,11 +29,15 @@ namespace vpsk {
         }
     }
 
-    BufferResourceCache & RenderGraph::BufferResourceCache() {
+    BufferResourceCache& RenderGraph::GetBufferResourceCache() {
         return *bufferResources;
     }
 
-    const vpr::Device * RenderGraph::GetDevice() const noexcept {
+    ImageResourceCache& RenderGraph::GetImageResourceCache() {
+        return *imageResources;
+    }
+
+    const vpr::Device* RenderGraph::GetDevice() const noexcept {
         return device;
     }
 
