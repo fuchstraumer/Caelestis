@@ -28,7 +28,7 @@ namespace vpsk {
         //vpr::Image* CreateImage(const std::string& name, const VkImageCreateInfo& img_info, const VkImageViewCreateInfo& view_info);
         //vpr::Sampler* CreateSampler(const std::string& name, const VkSamplerCreateInfo& sampler_info);
 
-        void AddResources(const std::vector<st::ShaderResource*>& resources);
+        void AddResources(const std::vector<const st::ShaderResource*>& resources);
         void AddResource(const st::ShaderResource* rsrc);
 
         vpr::Image* FindImage(const std::string& group_name, const std::string & rsrc_name);

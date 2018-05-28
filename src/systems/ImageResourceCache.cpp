@@ -98,6 +98,12 @@ namespace vpsk {
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             createCombinedImageSampler(rsrc);
             break;
+        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+            createSampledImage(rsrc);
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            createCombinedImageSampler(rsrc);
+            break;
         default:
             // Probably just a resource type we don't care about.
             break;
@@ -112,10 +118,12 @@ namespace vpsk {
     void ImageResourceCache::createSampler(const st::ShaderResource * rsrc) {
         const std::string group_name = rsrc->ParentGroupName();
         const std::string rsrc_name = rsrc->GetName();
-        auto emplaced = samplers[group_name].emplace(rsrc_name, std::make_unique<vpr::Sampler>(device, rsrc->SamplerInfo()));
-        if (!emplaced.second) {
-            throw std::runtime_error("Failed to create sampler resource.");
-        }
+        if (!HasSampler(group_name, rsrc_name)) {
+            auto emplaced = samplers[group_name].emplace(rsrc_name, std::make_unique<vpr::Sampler>(device, rsrc->SamplerInfo()));
+            if (!emplaced.second) {
+                throw std::runtime_error("Failed to create sampler resource.");
+            }
+        }   
     }
 
     void ImageResourceCache::createSampledImage(const st::ShaderResource * rsrc) {
@@ -125,12 +133,15 @@ namespace vpsk {
 
         const std::string group_name = rsrc->ParentGroupName();
         const std::string rsrc_name = rsrc->GetName();
-        auto emplaced = images[group_name].emplace(rsrc_name, std::make_unique<vpr::Image>(device));
-        if (!emplaced.second) {
-            throw std::runtime_error("Failed to create sampler resource");
+        
+        if (!HasImage(group_name, rsrc_name)) {
+            auto emplaced = images[group_name].emplace(rsrc_name, std::make_unique<vpr::Image>(device));
+            if (!emplaced.second) {
+                throw std::runtime_error("Failed to create sampler resource");
+            }
+            emplaced.first->second->Create(rsrc->ImageInfo());
+            emplaced.first->second->CreateView(rsrc->ImageViewInfo());
         }
-        emplaced.first->second->Create(rsrc->ImageInfo());
-        emplaced.first->second->CreateView(rsrc->ImageViewInfo());
     }
 
 }
