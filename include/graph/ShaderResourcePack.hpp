@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <set>
 
 namespace st {
     class ShaderPack;
@@ -22,27 +23,34 @@ namespace vpsk {
     public:
 
         // ShaderPacks aren't owned/loaded by this object: they are cached/stored elsewhere
-        // TODO is how to load/manage these, rn thinking rendergraph should own them
         ShaderResourcePack(RenderGraph& _graph, const st::ShaderPack* pack);
         ShaderResourcePack(ShaderResourcePack&& other) noexcept;
         ShaderResourcePack& operator=(ShaderResourcePack&& other) noexcept;
         ~ShaderResourcePack();
 
-        vpr::DescriptorSet* DescriptorSet(const char* group_name) noexcept;
-        const vpr::DescriptorSet* DescriptorSet(const char* group_name) const noexcept;
+        vpr::DescriptorSet* DescriptorSet(const char* rsrc_group_name) noexcept;
+        const vpr::DescriptorSet* DescriptorSet(const char* rsrc_group_name) const noexcept;
         vpr::DescriptorPool* DescriptorPool() noexcept;
         const vpr::DescriptorPool* DescriptorPool() const noexcept;
-
+        std::vector<VkDescriptorSet> ShaderGroupSets(const char* shader_group_name) const noexcept;
 
     private:
-        void getGroupNames();
+
+        void createResources(const std::vector<const st::ShaderResource*>& resources);
         void createDescriptorPool();
         void createSingleSet(const std::string& name);
         void createSets();
+        
+        void setupUsageInformation(const std::string& group_name);
+
+        void getGroupNames();
+
         RenderGraph& graph;
         std::unique_ptr<vpr::DescriptorPool> descriptorPool;
-        std::unordered_map<std::string, size_t> groupToIdxMap;
+        std::unordered_map<std::string, size_t> rsrcGroupToIdxMap;
+        std::unordered_map<std::string, std::set<size_t>> shaderGroupSetIndices;
         std::vector<std::unique_ptr<vpr::DescriptorSet>> descriptorSets;
+        std::vector<std::unique_ptr<vpr::DescriptorSetLayout>> setLayouts;
         const st::ShaderPack* shaderPack;
     };
 

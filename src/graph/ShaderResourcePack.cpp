@@ -4,8 +4,11 @@
 #include "core/ShaderPack.hpp"
 #include "graph/RenderGraph.hpp"
 #include "systems/BufferResourceCache.hpp"
+#include "systems/ImageResourceCache.hpp"
 #include "RendererCore.hpp"
 #include "core/ShaderResource.hpp"
+#include "core/ResourceUsage.hpp"
+#include "core/ShaderGroup.hpp"
 #include "resource/Buffer.hpp"
 
 namespace vpsk {
@@ -89,31 +92,49 @@ namespace vpsk {
         }
     }
 
-    void ShaderResourcePack::createSingleSet(const std::string & name) {
+    void ShaderResourcePack::createResources(const std::vector<const st::ShaderResource*>& resources) {
+        std::vector<const st::ShaderResource*> buffer_resources;
+        std::vector<const st::ShaderResource*> image_resources;
+        for (const auto& rsrc : resources) {
+            if (is_buffer_type(rsrc->GetType()) || is_texel_buffer(rsrc->GetType())) {
+                buffer_resources.emplace_back(rsrc);
+            }
+            else {
+                image_resources.emplace_back(rsrc);
+            }
+        }
 
+        auto& buffer_cache = graph.GetBufferResourceCache();
+        buffer_cache.AddResources(buffer_resources);
+        auto& image_cache = graph.GetImageResourceCache();
+        image_cache.AddResources(image_resources);
+    }
+
+    void ShaderResourcePack::setupUsageInformation(const std::string& group_name) {
+        const st::ShaderGroup* group = shaderPack->GetShaderGroup(group_name.c_str());
+        size_t num_usages = 0;
+        group->GetResourceUsages(rsrcGroupToIdxMap.at(group_name), &num_usages, nullptr);
+        std::vector<st::ResourceUsage> usages(num_usages);
+        group->GetResourceUsages(rsrcGroupToIdxMap.at(group_name), &num_usages, usages.data());
+        for (const auto& rsrc : usages) {
+
+        }
+    }
+
+    void ShaderResourcePack::createSingleSet(const std::string & name) {
         size_t num_resources = 0;
         shaderPack->GetResourceGroupPointers(name.c_str(), &num_resources, nullptr);
         std::vector<const st::ShaderResource*> resources(num_resources);
         shaderPack->GetResourceGroupPointers(name.c_str(), &num_resources, resources.data());
-        auto& buffer_cache = graph.BufferResourceCache();
-        // TODO: Non buffer resource cache object
-        buffer_cache.AddResources(resources);
-        
-        const size_t& idx = groupToIdxMap.at(name);
-        descriptorSets[idx] = std::move(std::make_unique<vpr::DescriptorSet>(graph.GetDevice()));
-        for (const auto& rsrc : resources) {
-            if (is_buffer_type(rsrc->GetType())) {
-                vpr::Buffer* buffer = buffer_cache.at(name.c_str());
-                //descriptorSets[idx]->AddDescriptorInfo(buffer->GetDescriptor(), rsrc->GetType(), rsrc->)
-            }
-            else if (is_texel_buffer(rsrc->GetType())) {
+        createResources(resources);
 
-            }
-        }
+        
+        setupUsageInformation(name);
+
     }
 
     void ShaderResourcePack::createSets() {
-        for (const auto& entry : groupToIdxMap) {
+        for (const auto& entry : rsrcGroupToIdxMap) {
             createSingleSet(entry.first);
         }
     }
