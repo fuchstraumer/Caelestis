@@ -1,13 +1,11 @@
 #include "systems/TransferSystem.hpp"
 #include "command/TransferPool.hpp"
+
 namespace vpsk {
 
-    ResourceTransferSystem::ResourceTransferSystem(const vpr::Device * dvc) : transferPool(std::make_unique<vpr::TransferPool>(dvc)) {
-    }
+    ResourceTransferSystem::ResourceTransferSystem(const vpr::Device * dvc) : transferPool(std::make_unique<vpr::TransferPool>(dvc)) {}
 
-    ResourceTransferSystem::~ResourceTransferSystem()
-    {
-    }
+    ResourceTransferSystem::~ResourceTransferSystem() {}
 
     void ResourceTransferSystem::AddTransferRequest(TransferDelegate func) {
         transferFunctions.emplace_back(std::move(func));
