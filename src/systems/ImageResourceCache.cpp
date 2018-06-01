@@ -9,7 +9,7 @@ namespace vpsk {
 
     ImageResourceCache::~ImageResourceCache() { }
 
-    void ImageResourceCache::AddResources(const std::vector<st::ShaderResource*>& resources) {
+    void ImageResourceCache::AddResources(const std::vector<const st::ShaderResource*>& resources) {
         for (const auto& rsrc : resources) {
             createResource(rsrc);
         }
@@ -88,7 +88,7 @@ namespace vpsk {
     }
 
     void ImageResourceCache::createResource(const st::ShaderResource * rsrc) {
-        switch (rsrc->GetType()) {
+        switch (rsrc->DescriptorType()) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
             createSampler(rsrc);
             break;
@@ -116,8 +116,8 @@ namespace vpsk {
     }
 
     void ImageResourceCache::createSampler(const st::ShaderResource * rsrc) {
-        const std::string group_name = rsrc->ParentGroupName();
-        const std::string rsrc_name = rsrc->GetName();
+        const char* group_name = rsrc->ParentGroupName();
+        const char* rsrc_name = rsrc->Name();
         if (!HasSampler(group_name, rsrc_name)) {
             auto emplaced = samplers[group_name].emplace(rsrc_name, std::make_unique<vpr::Sampler>(device, rsrc->SamplerInfo()));
             if (!emplaced.second) {
@@ -127,12 +127,12 @@ namespace vpsk {
     }
 
     void ImageResourceCache::createSampledImage(const st::ShaderResource * rsrc) {
-        if (rsrc->DataIsFromFile()) {
+        if (rsrc->FromFile()) {
             return;
         }
 
-        const std::string group_name = rsrc->ParentGroupName();
-        const std::string rsrc_name = rsrc->GetName();
+        const char* group_name = rsrc->ParentGroupName();
+        const char* rsrc_name = rsrc->Name();
         
         if (!HasImage(group_name, rsrc_name)) {
             auto emplaced = images[group_name].emplace(rsrc_name, std::make_unique<vpr::Image>(device));
