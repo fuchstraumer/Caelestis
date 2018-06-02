@@ -1,0 +1,48 @@
+layout(local_size_x = 32) in;
+SPC const uint ResolutionX = 1920;
+SPC const uint ResolutionY = 1080;
+SPC const uint TileCountX = (1920 - 1) / 64 + 1;
+SPC const uint TileCountY = (1080 - 1) / 64 + 1;
+SPC const uint TileCountZ = 256;
+SPC const uint TileWidth = 64;
+SPC const uint TileHeight = 64;
+#pragma USE_RESOURCES Lights
+#pragma USE_RESOURCES ClusteredForward
+
+int CoordToIdx(uint i, uint j, uint k) {
+    return int(TileCountX * TileCountY * k + TileCountX * j + i);
+}
+
+void main() {
+    uint light_idx = gl_GlobalInvocationID.x;
+
+    if (light_idx < UBO.numLights) {
+        vec4 posRangeIn = imageLoad(positionRanges, int(light_idx));
+        if (posRangeIn.w == 0.0f) {
+            return;
+        }
+
+        // Get i,j,k min/max of current light being processed, telling us what 
+        // grids/bins it affects.
+        uint i_min = imageLoad(lightBounds, int(light_idx*6 + 0)).r;
+        uint j_min = imageLoad(lightBounds, int(light_idx*6 + 1)).r;
+        uint k_min = imageLoad(lightBounds, int(light_idx*6 + 2)).r;
+        uint i_max = imageLoad(lightBounds, int(light_idx*6 + 3)).r;
+        uint j_max = imageLoad(lightBounds, int(light_idx*6 + 4)).r;
+        uint k_max = imageLoad(lightBounds, int(light_idx*6 + 5)).r;
+
+        for (uint i = i_min; i <= i_max; ++i) {
+            for (uint j = j_min; j <= j_max; ++j) {
+                for (uint k = k_min; k <= k_max; ++k) {
+                    int grid_idx = CoordToIdx(i, j, k);
+                    if (imageLoad(Flags, grid_idx).r != 1) {
+                        continue;
+                    }
+                    uint offset = imageLoad(gridLightCountOffsets, grid_idx).r;
+                    uint grid_light_idx = imageAtomicAdd(gridLightCountsCompare, grid_idx, 1);
+                    imageStore(lightList, int(offset + grid_light_idx), uvec4(light_idx, 0, 0, 0));
+                }
+            }
+        }
+    }
+}

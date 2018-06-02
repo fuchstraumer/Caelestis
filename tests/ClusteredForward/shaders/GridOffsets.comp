@@ -1,0 +1,22 @@
+layout(local_size_x = 16, local_size_y  = 16) in;
+SPC const uint ResolutionX = 1920;
+SPC const uint ResolutionY = 1080;
+SPC const uint TileCountX = (1920 - 1) / 64 + 1;
+SPC const uint TileCountY = (1080 - 1) / 64 + 1;
+SPC const uint TileCountZ = 256;
+SPC const uint TileWidth = 64;
+SPC const uint TileHeight = 64;
+#pragma USE_RESOURCES ClusteredForward
+
+void main() {
+    if (gl_GlobalInvocationID.z < TileCountZ && gl_GlobalInvocationID.y < TileCountY && gl_GlobalInvocationID.x < TileCountX) {
+        int idx = int(gl_GlobalInvocationID.z * TileCountX * TileCountY + gl_GlobalInvocationID.y * TileCountX + gl_GlobalInvocationID.x);
+        // Get quantity of lights active in this tile
+        uint count = imageLoad(gridLightCounts, idx).r;
+        if (count > 0) {
+            // Returned value is total light count up to this point
+            uint offset = imageAtomicAdd(gridLightCountTotal, 0, count);
+            imageStore(gridLightCountOffsets, idx, uvec4(offset, 0, 0, 0));
+        }
+    }
+}
