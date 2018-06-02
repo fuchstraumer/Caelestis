@@ -27,8 +27,9 @@ namespace vpsk {
         ~BufferResourceCache();
         void AddResources(const std::vector<const st::ShaderResource*>& resources);
         void AddResource(const st::ShaderResource* resource);
-        vpr::Buffer* at(const char* name);
-        vpr::Buffer* find(const char* name);
+        vpr::Buffer* at(const std::string& group_name, const std::string& name);
+        vpr::Buffer* find(const std::string& group_name, const std::string& name) noexcept;
+        bool HasResource(const std::string& group_name, const std::string& name) const noexcept;
 
     private:
         void createTexelBuffer(const st::ShaderResource * texel_buffer, bool storage);
@@ -37,7 +38,7 @@ namespace vpsk {
         void createResources(const std::vector<const st::ShaderResource*>& resources);
         void createResource(const st::ShaderResource * rsrc);
         const vpr::Device* device;
-        std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>> buffers;
+        std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<vpr::Buffer>>> buffers;
     };
 
 }
