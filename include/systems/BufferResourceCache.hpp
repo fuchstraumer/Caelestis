@@ -14,6 +14,7 @@ namespace st {
 }
 
 namespace vpsk {
+
     /** Represents resources that won't be loaded into or read from by the host. Shader-only buffer resources, effectively.
      *  Thus they exist a bit outside of our usual loader system.
     */
