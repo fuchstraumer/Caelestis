@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <set>
+#include <vulkan/vulkan.h>
 
 namespace st {
     class ShaderPack;

@@ -72,7 +72,7 @@ namespace vpsk {
         std::unordered_map<std::string, vpr::Buffer*> backingBuffers;
         std::unordered_map<std::string, vpr::Image*> backingImages;
         std::unordered_map<std::string, size_t> resourceNameMap;
-        std::vector<std::unique_ptr<PipelineResource>> resources;
+        std::vector<std::unique_ptr<PipelineResource>> pipelineResources;
         // string "name" is for the pack the resources belong to.
         std::unique_ptr<vpsk::BufferResourceCache> bufferResources;
         std::unique_ptr<vpsk::ImageResourceCache> imageResources;

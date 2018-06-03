@@ -11,21 +11,19 @@ namespace vpsk {
         imageResources = std::make_unique<vpsk::ImageResourceCache>(device);
     }
 
-    RenderGraph::~RenderGraph()
-    {
-    }
+    RenderGraph::~RenderGraph() {}
 
     PipelineResource& RenderGraph::GetResource(const std::string& name) {
         auto iter = resourceNameMap.find(name);
         if (iter != resourceNameMap.cend()) {
             const size_t& idx = iter->second;
-            return *resources[idx];
+            return *pipelineResources[idx];
         }
         else {
-            const size_t idx = resources.size();
-            resources.emplace_back(std::make_unique<PipelineResource>(name, idx));
+            const size_t idx = pipelineResources.size();
+            pipelineResources.emplace_back(std::make_unique<PipelineResource>(name, idx));
             resourceNameMap[name] = idx;
-            return *resources.back();
+            return *pipelineResources.back();
         }
     }
 

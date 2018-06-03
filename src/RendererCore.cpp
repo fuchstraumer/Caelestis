@@ -25,9 +25,9 @@ namespace vpsk {
             VK_API_VERSION_1_1
         };
 
-        instance = std::make_unique<vpr::Instance>(false, &application_info, window->glfwWindow());
+        instance = std::make_unique<vpr::Instance>(vpr::Instance::instance_layers::Full , &application_info, window->glfwWindow());
         window->SetWindowUserPointer(this);
-        device = std::make_unique<vpr::Device>(instance.get(), instance->GetPhysicalDevice(), true);
+        device = std::make_unique<vpr::Device>(instance.get(), instance->GetPhysicalDevice(), vpr::Device::device_extensions::RecommendedAll);
         swapchain = std::make_unique<vpr::Swapchain>(instance.get(), device.get());
         transferSystem = std::make_unique<ResourceTransferSystem>(device.get());
     }
