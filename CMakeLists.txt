@@ -13,6 +13,7 @@ FILE(GLOB GRAPH "${CMAKE_CURRENT_SOURCE_DIR}/include/graph/*.hpp" "${CMAKE_CURRE
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon")
+SET(DOCTEST_WITH_TESTS OFF CACHE BOOL "Build tests/examples")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools")
 
