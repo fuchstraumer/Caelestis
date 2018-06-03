@@ -5,6 +5,11 @@
 #include <vulkan/vulkan.h>
 #include <string>
 #include <unordered_map>
+
+namespace st {
+    class ShaderPack;
+}
+
 namespace vpsk {
 
     class PipelineResource;
@@ -21,6 +26,7 @@ namespace vpsk {
 
         PipelineSubmission& AddSubmission(const std::string& name, VkPipelineStageFlags stages);
         PipelineResource& GetResource(const std::string& name);
+        void AddShaderPackResources(const st::ShaderPack* pack);
         BufferResourceCache& GetBufferResourceCache();
         ImageResourceCache& GetImageResourceCache();
         void Bake();
