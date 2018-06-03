@@ -1,6 +1,7 @@
 #include "graph/ShaderResourcePack.hpp"
 #include "resource/DescriptorPool.hpp"
 #include "resource/DescriptorSet.hpp"
+#include "resource/DescriptorSetLayout.hpp"
 #include "core/ShaderPack.hpp"
 #include "graph/RenderGraph.hpp"
 #include "systems/BufferResourceCache.hpp"
@@ -22,9 +23,9 @@ namespace vpsk {
     ShaderResourcePack::~ShaderResourcePack() {}
 
     vpr::DescriptorSet* ShaderResourcePack::DescriptorSet(const char* group_name) noexcept {
-        auto iter = groupToIdxMap.find(group_name);
-        if (iter != groupToIdxMap.end()) {
-            return descriptorSets[groupToIdxMap.at(group_name)].get();
+        auto iter = rsrcGroupToIdxMap.find(group_name);
+        if (iter != rsrcGroupToIdxMap.end()) {
+            return descriptorSets[rsrcGroupToIdxMap.at(group_name)].get();
         }
         else {
             return nullptr;
@@ -32,9 +33,9 @@ namespace vpsk {
     }
 
     const vpr::DescriptorSet* ShaderResourcePack::DescriptorSet(const char* group_name) const noexcept {
-        auto iter = groupToIdxMap.find(group_name);
-        if (iter != groupToIdxMap.cend()) {
-            return descriptorSets[groupToIdxMap.at(group_name)].get();
+        auto iter = rsrcGroupToIdxMap.find(group_name);
+        if (iter != rsrcGroupToIdxMap.cend()) {
+            return descriptorSets[rsrcGroupToIdxMap.at(group_name)].get();
         }
         else {
             return nullptr;
@@ -52,13 +53,13 @@ namespace vpsk {
     void ShaderResourcePack::getGroupNames() {
         auto names = shaderPack->GetResourceGroupNames();
         for (size_t i = 0; i < names.NumStrings; ++i) {
-            groupToIdxMap.emplace(names.Strings[i], i);
+            rsrcGroupToIdxMap.emplace(names.Strings[i], i);
         }
     }
 
     void ShaderResourcePack::createDescriptorPool() {
         auto& renderer = RendererCore::GetRenderer();
-        descriptorPool = std::make_unique<vpr::DescriptorPool>(renderer.Device(), groupToIdxMap.size());
+        descriptorPool = std::make_unique<vpr::DescriptorPool>(renderer.Device(), rsrcGroupToIdxMap.size());
         const auto& rsrc_counts = shaderPack->GetTotalDescriptorTypeCounts();
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, rsrc_counts.UniformBuffers);
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, rsrc_counts.UniformBuffersDynamic);
@@ -96,7 +97,7 @@ namespace vpsk {
         std::vector<const st::ShaderResource*> buffer_resources;
         std::vector<const st::ShaderResource*> image_resources;
         for (const auto& rsrc : resources) {
-            if (is_buffer_type(rsrc->GetType()) || is_texel_buffer(rsrc->GetType())) {
+            if (is_buffer_type(rsrc->DescriptorType()) || is_texel_buffer(rsrc->DescriptorType())) {
                 buffer_resources.emplace_back(rsrc);
             }
             else {
@@ -113,12 +114,12 @@ namespace vpsk {
     void ShaderResourcePack::setupUsageInformation(const std::string& group_name) {
         const st::ShaderGroup* group = shaderPack->GetShaderGroup(group_name.c_str());
         size_t num_usages = 0;
-        group->GetResourceUsages(rsrcGroupToIdxMap.at(group_name), &num_usages, nullptr);
+        /*group->GetResourceUsages(rsrcGroupToIdxMap.at(group_name), &num_usages, nullptr);
         std::vector<st::ResourceUsage> usages(num_usages);
         group->GetResourceUsages(rsrcGroupToIdxMap.at(group_name), &num_usages, usages.data());
         for (const auto& rsrc : usages) {
 
-        }
+        }*/
     }
 
     void ShaderResourcePack::createSingleSet(const std::string & name) {
