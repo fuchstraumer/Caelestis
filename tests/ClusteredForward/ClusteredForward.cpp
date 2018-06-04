@@ -1,5 +1,9 @@
 #include "ClusteredForward.hpp"
 #include "graph/RenderGraph.hpp"
+#include "systems/BufferResourceCache.hpp"
+#include "systems/ImageResourceCache.hpp"
+#include "core/ShaderResource.hpp"
+
 int main(int argc, char* argv[]) {
     std::vector<std::string> args{ argv + 1, argv + argc };
     using namespace st;
@@ -10,15 +14,5 @@ int main(int argc, char* argv[]) {
 
     RendererCore& renderer = RendererCore::GetRenderer();
     RenderGraph graph(renderer.Device());
-
-    std::vector<std::string> resource_group_names;
-    {
-        dll_retrieved_strings_t names = pack.GetResourceGroupNames();
-        for (size_t i = 0; i < names.NumStrings; ++i) {
-            resource_group_names.emplace_back(names.Strings[i]);
-        }
-    }
-
-    
 
 }

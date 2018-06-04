@@ -8,7 +8,6 @@
 #include "systems/TransferSystem.hpp"
 #include "doctest/doctest.h"
 #include "easylogging++.h"
-INITIALIZE_EASYLOGGINGPP
 namespace vpsk {
 
     RendererCore::RendererCore() {
