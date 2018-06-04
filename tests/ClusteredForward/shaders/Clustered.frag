@@ -7,6 +7,8 @@ SPC const uint ResolutionY = 1080;
 SPC const uint TileCountX = (1920 - 1) / 64 + 1;
 SPC const uint TileCountY = (1080 - 1) / 64 + 1;
 SPC const uint TileCountZ = 256;
+SPC const uint TileWidth = 64;
+SPC const uint TileHeight = 64;
 
 uint CoordToIdx(uint i, uint j, uint k) {
     return TileCountX * TileCountY * k + TileCountX * j + i;
@@ -60,7 +62,7 @@ void main() {
     vec3 view_dir = normalize(UBO.viewPosition.xyz - vPosition.xyz);
 
     if (Material.alpha < 1.0f && dot(view_dir, world_normal) < 0.0f) {
-        fragColor = vec4(0.0f);
+        backbuffer = vec4(0.0f);
         return;
     }
 
@@ -73,7 +75,7 @@ void main() {
 
     vec3 lighting = vec3(0.0f);
 
-    if (imageLoad(flags, grid_idx).r == 1) {
+    if (imageLoad(Flags, grid_idx).r == 1) {
         uint offset = imageLoad(lightCountOffsets, grid_idx).r;
         uint light_count = imageLoad(lightCounts, grid_idx).r;
         for (uint i = 0; i < light_count; ++i) {

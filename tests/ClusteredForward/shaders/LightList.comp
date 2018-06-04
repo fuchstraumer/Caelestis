@@ -6,6 +6,7 @@ SPC const uint TileCountY = (1080 - 1) / 64 + 1;
 SPC const uint TileCountZ = 256;
 SPC const uint TileWidth = 64;
 SPC const uint TileHeight = 64;
+#pragma USE_RESOURCES GlobalResources
 #pragma USE_RESOURCES Lights
 #pragma USE_RESOURCES ClusteredForward
 
@@ -38,8 +39,8 @@ void main() {
                     if (imageLoad(Flags, grid_idx).r != 1) {
                         continue;
                     }
-                    uint offset = imageLoad(gridLightCountOffsets, grid_idx).r;
-                    uint grid_light_idx = imageAtomicAdd(gridLightCountsCompare, grid_idx, 1);
+                    uint offset = imageLoad(lightCountOffsets, grid_idx).r;
+                    uint grid_light_idx = imageAtomicAdd(lightCountCompare, grid_idx, 1);
                     imageStore(lightList, int(offset + grid_light_idx), uvec4(light_idx, 0, 0, 0));
                 }
             }

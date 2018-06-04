@@ -12,11 +12,11 @@ void main() {
     if (gl_GlobalInvocationID.z < TileCountZ && gl_GlobalInvocationID.y < TileCountY && gl_GlobalInvocationID.x < TileCountX) {
         int idx = int(gl_GlobalInvocationID.z * TileCountX * TileCountY + gl_GlobalInvocationID.y * TileCountX + gl_GlobalInvocationID.x);
         // Get quantity of lights active in this tile
-        uint count = imageLoad(gridLightCounts, idx).r;
+        uint count = imageLoad(lightCounts, idx).r;
         if (count > 0) {
             // Returned value is total light count up to this point
-            uint offset = imageAtomicAdd(gridLightCountTotal, 0, count);
-            imageStore(gridLightCountOffsets, idx, uvec4(offset, 0, 0, 0));
+            uint offset = imageAtomicAdd(lightCountTotal, 0, count);
+            imageStore(lightCountOffsets, idx, uvec4(offset, 0, 0, 0));
         }
     }
 }

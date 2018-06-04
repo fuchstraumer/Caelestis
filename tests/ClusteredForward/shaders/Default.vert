@@ -1,8 +1,8 @@
 #pragma USE_RESOURCES GlobalResources
 void main() {
-    vPosition = UBO.model * vec4(position, 1.0f);
-    vNormal = UBO.normal * vec4(normal, 1.0f);
-    vTangent = UBO.normal * vec4(tangent, 1.0f);
+    vPosition = mat3(UBO.model) * position;
+    vNormal = mat3(UBO.normal) * normal;
+    vTangent = mat3(UBO.normal) * tangent;
     vUV = uv;
-    gl_Position = UBO.projectionClip * UBO.view * vPosition;
+    gl_Position = UBO.projectionClip * UBO.view * UBO.model * vec4(position, 1.0f);
 }

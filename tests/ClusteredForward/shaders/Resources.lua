@@ -21,16 +21,16 @@ Resources = {
         }
     },
     ClusteredForward = {
-        flags = {
+        Flags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
             Size = dimensions.TotalTileCount(),
             Qualifiers = "restrict"
         },
-        bounds = {
+        lightBounds = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = NumLights * 6,
+            Size = dimensions.NumLights * 6,
             Qualifiers = "restrict"
         },
         lightCounts = {
@@ -69,16 +69,16 @@ Resources = {
             Type = "StorageTexelBuffer",
             Format = "rgba32f",
             Size = dimensions.NumLights,
-            Qualifiers = "restrict readonly"
-        }
+            Qualifiers = "restrict"
+        },
         lightColors = {
-            Type = "UniformTexelBuffer",
+            Type = "StorageTexelBuffer",
             Format = "rgba8",
             Size = dimensions.NumLights,
             Qualifiers = "restrict readonly"
         }
     },
-    ObjMaterial = {
+    ObjMaterials = {
         Material = {
             Type = "UniformBuffer",
             Members = {

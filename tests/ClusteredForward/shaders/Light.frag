@@ -21,7 +21,7 @@ uint CoordToIdx(uvec3 c) {
 }
 
 void main() {
-    vec4 vpos = UBO.view * vPosition;
+    vec4 vpos = UBO.view * vec4(vPosition, 1.0f);
     uint idx = CoordToIdx(viewPosToGrid(gl_FragCoord.xy, vpos.z));
     imageStore(Flags, int(idx), uvec4(1,0,0,0));
 }

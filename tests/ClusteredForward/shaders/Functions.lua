@@ -5,23 +5,23 @@ local dimensions = {
 };
 
 function dimensions.TileCountX()
-    return (GetWindowX() - 1) / dimensionFunctions.TileWidth + 1;
+    return (GetWindowX() - 1) / dimensions.TileWidth + 1;
 end
 
 function dimensions.TileCountY()
-    return (GetWindowY() - 1) / dimensionFunctions.TileHeight + 1;
+    return (GetWindowY() - 1) / dimensions.TileHeight + 1;
 end
 
 function dimensions.TileCountZ()
     return 256;
 end
 
-function dimensions.GetTileSizes()
+function dimensions.TileSizes()
     return dimensions.TileCountX(), dimensions.TileCountY(), dimensions.TileCountZ();
 end
 
-function dimensions.GetTotalTileCount()
-    x, y, z = dimensions.GetTileSizes();
+function dimensions.TotalTileCount()
+    x, y, z = dimensions.TileSizes();
     return x * y * z;
 end
 
