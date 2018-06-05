@@ -33,7 +33,7 @@ TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/i
 "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest")
 TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools easyloggingpp "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
 SET_TARGET_PROPERTIES(VulpesRender ShaderTools easyloggingpp tinyobjloader PROPERTIES FOLDER "VulpesSceneKit Dependencies")
-
+TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PRIVATE "DOCTEST_CONFIG_DISABLE")
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
 ELSEIF(UNIX)
