@@ -73,6 +73,7 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddTextureInput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
+        resource.SetInfo(info);
         resource.ReadInPass(idx);
         textureInputs.emplace_back(&resource);
         return resource;

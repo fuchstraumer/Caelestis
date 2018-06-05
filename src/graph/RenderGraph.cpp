@@ -68,4 +68,44 @@ namespace vpsk {
         return device;
     }
 
+    static constexpr bool is_buffer_type(const VkDescriptorType& type) {
+        if (type == VK_DESCRIPTOR_TYPE_SAMPLER ||
+            type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+            type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+            type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
+
+    buffer_info_t RenderGraph::createPipelineResourceBufferInfo(const st::ShaderResource * resource) const {
+        return buffer_info_t();
+    }
+
+    image_info_t RenderGraph::createPipelineResourceImageInfo(const st::ShaderResource * resource) const {
+        return image_info_t();
+    }
+
+    void RenderGraph::createPipelineResourcesFromPack(const std::unordered_map<std::string, std::vector<const st::ShaderResource*>>& resources) {
+        for (const auto& rsrc_group : resources) {
+            for (const auto& st_rsrc : rsrc_group.second) {
+                auto& resource = GetResource(st_rsrc->Name());
+                resource.SetDescriptorType(st_rsrc->DescriptorType());
+                if (st_rsrc->DescriptorType() == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                    resource.SetStorage(true);
+                }
+                resource.SetParentSetName(st_rsrc->ParentGroupName());
+                if (is_buffer_type(st_rsrc->DescriptorType())) {
+                    resource.SetInfo(createPipelineResourceBufferInfo(st_rsrc));
+                }
+                else {
+                    resource.SetInfo(createPipelineResourceImageInfo(st_rsrc));
+                }
+
+            }
+        }
+    }
+
 }

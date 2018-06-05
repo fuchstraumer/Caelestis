@@ -5,14 +5,16 @@
 #include <vulkan/vulkan.h>
 #include <string>
 #include <unordered_map>
+#include "PipelineResource.hpp"
 
 namespace st {
     class ShaderPack;
+    class ShaderResource;
+    class ShaderGroup;
 }
 
 namespace vpsk {
 
-    class PipelineResource;
     class PipelineSubmission;
     class ResourceDimensions;
     class BufferResourceCache;
@@ -24,6 +26,7 @@ namespace vpsk {
         RenderGraph(const vpr::Device* dvc);
         ~RenderGraph();
 
+        PipelineSubmission& AddSubmission(const st::ShaderGroup* group);
         PipelineSubmission& AddSubmission(const std::string& name, VkPipelineStageFlags stages);
         PipelineResource& GetResource(const std::string& name);
         void AddShaderPackResources(const st::ShaderPack* pack);
@@ -38,6 +41,10 @@ namespace vpsk {
         const vpr::Device* GetDevice() const noexcept;
 
     private:
+
+        buffer_info_t createPipelineResourceBufferInfo(const st::ShaderResource* resource) const;
+        image_info_t createPipelineResourceImageInfo(const st::ShaderResource* resource) const;
+        void createPipelineResourcesFromPack(const std::unordered_map<std::string, std::vector<const st::ShaderResource*>>& resources);
 
         struct pipeline_barrier_t {
             size_t Resource;
