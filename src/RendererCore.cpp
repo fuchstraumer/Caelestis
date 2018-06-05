@@ -7,7 +7,7 @@
 #include "render/Swapchain.hpp"
 #include "systems/TransferSystem.hpp"
 #include "doctest/doctest.h"
-#include "easylogging++.h"
+
 namespace vpsk {
 
     RendererCore::RendererCore() {
