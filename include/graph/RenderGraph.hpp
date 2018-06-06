@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 #include <string>
 #include <unordered_map>
+#include "core/ResourceUsage.hpp"
 #include "PipelineResource.hpp"
 
 namespace st {
@@ -26,10 +27,10 @@ namespace vpsk {
         RenderGraph(const vpr::Device* dvc);
         ~RenderGraph();
 
-        PipelineSubmission& AddSubmission(const st::ShaderGroup* group);
+        void AddShaderPack(const st::ShaderPack* pack);
+
         PipelineSubmission& AddSubmission(const std::string& name, VkPipelineStageFlags stages);
         PipelineResource& GetResource(const std::string& name);
-        void AddShaderPackResources(const st::ShaderPack* pack);
         BufferResourceCache& GetBufferResourceCache();
         ImageResourceCache& GetImageResourceCache();
         void Bake();
@@ -42,9 +43,13 @@ namespace vpsk {
 
     private:
 
+        void addShaderPackResources(const st::ShaderPack* pack);
         buffer_info_t createPipelineResourceBufferInfo(const st::ShaderResource* resource) const;
         image_info_t createPipelineResourceImageInfo(const st::ShaderResource* resource) const;
         void createPipelineResourcesFromPack(const std::unordered_map<std::string, std::vector<const st::ShaderResource*>>& resources);
+        void addResourceUsagesToSubmission(PipelineSubmission& submissions, const std::vector<st::ResourceUsage>& usages);
+        void addSingleGroup(const std::string& name, const st::ShaderGroup* group);
+        void addSubmissionsFromPack(const st::ShaderPack* pack);
 
         struct pipeline_barrier_t {
             size_t Resource;
@@ -84,6 +89,8 @@ namespace vpsk {
         std::unordered_map<std::string, pass_barriers_t> passBarriers;
         std::unordered_map<std::string, vpr::Buffer*> backingBuffers;
         std::unordered_map<std::string, vpr::Image*> backingImages;
+        std::unordered_map<std::string, size_t> submissionNameMap;
+        std::vector<std::unique_ptr<PipelineSubmission>> pipelineSubmissions;
         std::unordered_map<std::string, size_t> resourceNameMap;
         std::vector<std::unique_ptr<PipelineResource>> pipelineResources;
         // string "name" is for the pack the resources belong to.
