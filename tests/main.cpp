@@ -20,6 +20,6 @@ int main(int argc, char* argv[]) {
     RendererCore& renderer = RendererCore::GetRenderer();
     RenderGraph graph(renderer.Device());
 
-    graph.AddShaderPackResources(&pack);
+    graph.AddShaderPack(&pack);
 
 }
