@@ -43,25 +43,25 @@ Resources = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1,
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         },
         lightCountOffsets = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.TotalTileCount(),
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         },
         lightList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1024 * 1024,
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         },
         lightCountCompare = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.TotalTileCount(),
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         }
     },
     Lights = {
