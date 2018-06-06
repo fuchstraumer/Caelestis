@@ -23,11 +23,11 @@ namespace vpsk {
         return transient;
     }
 
-    void PipelineResource::WrittenInPass(size_t idx) {
+    void PipelineResource::WrittenBySubmission(size_t idx) {
         writtenInPasses.emplace(std::move(idx));
     }
 
-    void PipelineResource::ReadInPass(size_t idx) {
+    void PipelineResource::ReadBySubmission(size_t idx) {
         readInPasses.emplace(std::move(idx));
     }
 

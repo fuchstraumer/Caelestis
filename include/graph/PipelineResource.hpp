@@ -65,8 +65,8 @@ namespace vpsk {
         bool IsStorage() const noexcept;
         bool IsTransient() const noexcept;
 
-        void WrittenInPass(size_t idx);
-        void ReadInPass(size_t idx);
+        void WrittenBySubmission(size_t idx);
+        void ReadBySubmission(size_t idx);
 
         void SetIdx(size_t idx);
         void SetParentSetName(std::string _name);

@@ -13,7 +13,7 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::SetDepthStencilInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.ReadInPass(idx);
+        resource.ReadBySubmission(idx);
         depthStencilInput = &resource;
         return resource;
     }
@@ -21,7 +21,7 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::SetDepthStencilOutput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.WrittenInPass(idx);
+        resource.WrittenBySubmission(idx);
         resource.SetInfo(info);
         depthStencilOutput = &resource;
         return resource;
@@ -30,7 +30,7 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddAttachmentInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.ReadInPass(idx);
+        resource.ReadBySubmission(idx);
         attachmentInputs.emplace_back(&resource);
         return resource;
     }
@@ -45,12 +45,12 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddColorOutput(const std::string& name, image_info_t info, const std::string& input) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.WrittenInPass(idx);
+        resource.WrittenBySubmission(idx);
         resource.SetInfo(info);
         colorOutputs.emplace_back(&resource);
         if (!input.empty()) {
             auto& input_resource = graph.GetResource(input);
-            input_resource.ReadInPass(idx);
+            input_resource.ReadBySubmission(idx);
             colorInputs.emplace_back(&input_resource);
             colorScaleInputs.emplace_back(&input_resource);
         }
@@ -64,7 +64,7 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddResolveOutput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.WrittenInPass(idx);
+        resource.WrittenBySubmission(idx);
         resource.SetInfo(info);
         resolveOutputs.emplace_back(&resource);
         return resource;
@@ -74,7 +74,7 @@ namespace vpsk {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.SetInfo(info);
-        resource.ReadInPass(idx);
+        resource.ReadBySubmission(idx);
         textureInputs.emplace_back(&resource);
         return resource;
     }
@@ -82,13 +82,13 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddStorageTextureOutput(const std::string& name, image_info_t info, const std::string& input) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.WrittenInPass(idx);
+        resource.WrittenBySubmission(idx);
         resource.SetInfo(info);
         resource.SetStorage(true);
         storageTextureOutputs.emplace_back(&resource);
         if (!input.empty()) {
             auto& input_resource = graph.GetResource(input);
-            input_resource.ReadInPass(idx);
+            input_resource.ReadBySubmission(idx);
             storageTextureInputs.emplace_back(&input_resource);
         }
         else {
@@ -100,8 +100,8 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddStorageTextureRW(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.ReadInPass(idx);
-        resource.WrittenInPass(idx);
+        resource.ReadBySubmission(idx);
+        resource.WrittenBySubmission(idx);
         resource.SetStorage(true);
         storageTextureOutputs.emplace_back(&resource);
         storageTextureInputs.emplace_back(&resource);
@@ -111,7 +111,7 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddUniformInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.ReadInPass(idx);
+        resource.ReadBySubmission(idx);
         uniformInputs.emplace_back(&resource);
         return resource;
     }
@@ -119,13 +119,13 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddStorageOutput(const std::string& name, buffer_info_t info, const std::string& input) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.WrittenInPass(idx);
+        resource.WrittenBySubmission(idx);
         resource.SetInfo(info);
         resource.SetStorage(true);
         storageOutputs.emplace_back(&resource);
         if (!input.empty()) {
             auto& input_resource = graph.GetResource(input);
-            input_resource.ReadInPass(idx);
+            input_resource.ReadBySubmission(idx);
             storageInputs.emplace_back(&input_resource);
         }
         else {
@@ -137,7 +137,7 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddStorageReadOnlyInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.ReadInPass(idx);
+        resource.ReadBySubmission(idx);
         storageReadOnlyInputs.emplace_back(&resource);
         return resource;
     }
