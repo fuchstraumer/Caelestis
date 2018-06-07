@@ -41,6 +41,7 @@ namespace vpsk {
 
         const vpr::Device* GetDevice() const noexcept;
 
+        static RenderGraph& GetGlobalGraph();
     private:
 
         void addShaderPackResources(const st::ShaderPack* pack);

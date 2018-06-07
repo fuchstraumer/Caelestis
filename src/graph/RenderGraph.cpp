@@ -7,6 +7,7 @@
 #include "core/ShaderPack.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ShaderGroup.hpp"
+#include "RendererCore.hpp"
 namespace vpsk {
 
     static constexpr VkPipelineStageFlags ShaderStagesToPipelineStages(const VkShaderStageFlags& flags) {
@@ -156,6 +157,11 @@ namespace vpsk {
 
     const vpr::Device* RenderGraph::GetDevice() const noexcept {
         return device;
+    }
+
+    RenderGraph& RenderGraph::GetGlobalGraph() {
+        static RenderGraph graph(RendererCore::GetRenderer().Device());
+        return graph;
     }
 
     buffer_info_t RenderGraph::createPipelineResourceBufferInfo(const st::ShaderResource* resource) const {
