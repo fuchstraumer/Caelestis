@@ -7,11 +7,11 @@ namespace vpsk {
 
     PipelineResource::~PipelineResource() {}
 
-    bool PipelineResource::IsBuffer() const {
+    bool PipelineResource::IsBuffer() const noexcept {
         return std::holds_alternative<buffer_info_t>(info);
     }
 
-    bool PipelineResource::IsImage() const {
+    bool PipelineResource::IsImage() const noexcept {
         return std::holds_alternative<image_info_t>(info);
     }
 
@@ -97,6 +97,13 @@ namespace vpsk {
 
     const resource_info_variant_t& PipelineResource::GetInfo() const noexcept {
         return info;
+    }
+
+    bool PipelineResource::operator==(const PipelineResource & other) const noexcept {
+        return (info == other.info) && (readInPasses == other.readInPasses) && (writtenInPasses == other.writtenInPasses) &&
+            (usedStages == other.usedStages) && (name == other.name) && (intendedType == other.intendedType) &&
+            (parentSetName == other.parentSetName) && (idx == other.idx) && (transient == other.transient) &&
+            (storage == other.storage);
     }
 
     bool buffer_info_t::operator==(const buffer_info_t& other) const noexcept {

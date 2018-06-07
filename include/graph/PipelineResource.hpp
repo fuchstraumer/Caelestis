@@ -60,8 +60,8 @@ namespace vpsk {
         PipelineResource(std::string name, size_t physical_idx);
         ~PipelineResource();
 
-        bool IsBuffer() const;
-        bool IsImage() const;
+        bool IsBuffer() const noexcept;
+        bool IsImage() const noexcept;
         bool IsStorage() const noexcept;
         bool IsTransient() const noexcept;
 
@@ -86,6 +86,8 @@ namespace vpsk {
         const std::unordered_set<size_t>& GetPassesReadIn() const noexcept;
         const std::unordered_set<size_t>& GetPassesWrittenIn() const noexcept;
         const resource_info_variant_t& GetInfo() const noexcept;
+
+        bool operator==(const PipelineResource& other) const noexcept;
 
     private:
 
