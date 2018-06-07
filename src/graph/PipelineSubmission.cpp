@@ -2,7 +2,8 @@
 #include "graph/RenderGraph.hpp"
 #include "resource/PipelineLayout.hpp"
 #include "resource/PipelineCache.hpp"
-
+#include "easylogging++.h"
+#include "doctest/doctest.h"
 namespace vpsk {
 
     PipelineSubmission::PipelineSubmission(RenderGraph& rgraph, std::string _name, size_t _idx, VkPipelineStageFlags _stages) 
@@ -22,6 +23,10 @@ namespace vpsk {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenBySubmission(idx);
+        if (!(info.Usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+            LOG(ERROR) << "Tried to add a depth stencil output, but image info structure has invalid usage flags!";
+            throw std::runtime_error("Invalid image usage flags.");
+        }
         resource.SetInfo(info);
         depthStencilOutput = &resource;
         return resource;
@@ -46,6 +51,10 @@ namespace vpsk {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenBySubmission(idx);
+        if (!(info.Usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
+            LOG(ERROR) << "Tried to add a color attachment input, but given image info object lacks requisite image usage flags!";
+            throw std::runtime_error("Invalid image usage flags.");
+        }
         resource.SetInfo(info);
         colorOutputs.emplace_back(&resource);
         if (!input.empty()) {
@@ -64,7 +73,11 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddResolveOutput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
-        resource.WrittenBySubmission(idx);
+        resource.WrittenBySubmission(idx);        
+        if (info.Samples != VK_SAMPLE_COUNT_1_BIT) {
+            LOG(ERROR) << "Image info for resolve output attachment has invalid sample count flags value!";
+            throw std::runtime_error("Invalid sample count flags.");
+        }
         resource.SetInfo(info);
         resolveOutputs.emplace_back(&resource);
         return resource;
@@ -73,6 +86,10 @@ namespace vpsk {
     PipelineResource& PipelineSubmission::AddTextureInput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
+        if (!(info.Usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+            LOG(ERROR) << "Attempted to add a texture input, but image info structure lacks requisite image usage flags!";
+            throw std::runtime_error("Tried to add texture input when image has invalid usage flags.");
+        }
         resource.SetInfo(info);
         resource.ReadBySubmission(idx);
         textureInputs.emplace_back(&resource);
@@ -83,6 +100,9 @@ namespace vpsk {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.WrittenBySubmission(idx);
+        if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+
+        }
         resource.SetInfo(info);
         resource.SetStorage(true);
         storageTextureOutputs.emplace_back(&resource);
@@ -266,3 +286,100 @@ namespace vpsk {
     }
 
 }
+
+#ifdef VPSK_TESTING_ENABLED
+TEST_SUITE("PipelineSubmission") {
+    TEST_CASE("DepthStencilAttachments") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestDepthSubmission", 0, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+        auto& input = submission.SetDepthStencilInput("DepthStencilInput");
+        auto* input_retrieved = submission.GetDepthStencilInput();
+        CHECK(input == *input_retrieved);
+        image_info_t info;
+        auto& output = submission.SetDepthStencilOutput("DepthStencilOutput", info);
+        auto* output_retrieved = submission.GetDepthStencilOutput();
+        CHECK(output == *output_retrieved);
+    }
+    TEST_CASE("InputAttachments") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestInputAttachments", 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        auto& resource = submission.AddAttachmentInput("TestInput");
+        auto& inputs = submission.GetAttachmentInputs();
+        CHECK(std::any_of(inputs.cbegin(), inputs.cend(), [resource](const PipelineResource* rsrc) { return *rsrc == resource; }));
+    }
+    TEST_CASE("HistoryInputs") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestHistoryInputs", 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        auto& resource = submission.AddHistoryInput("TestHistoryInput");
+        auto& inputs = submission.GetHistoryInputs();
+        CHECK(std::any_of(inputs.cbegin(), inputs.cend(), [resource](const PipelineResource* rsrc) { return *rsrc == resource; }));
+    }
+    TEST_CASE("SingleColorOutputNoInput") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestColorOutputs", 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        image_info_t image_info;
+        image_info.Format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_info.Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        auto& resource0 = submission.AddColorOutput("TestColorOutput0", image_info);
+        auto& outputs = submission.GetColorOutputs();
+        CHECK(std::any_of(outputs.cbegin(), outputs.cend(), [resource0](const PipelineResource* output) { return *output == resource0; }));
+    }
+    TEST_CASE("MultiColorOutputSingleInput") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestColorOutputs", 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        image_info_t image_info;
+        image_info.Format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_info.Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        auto& resource0 = submission.AddColorOutput("TestColorOutput0", image_info);
+        auto& gbuffer = RenderGraph::GetGlobalGraph().GetResource("GBuffer");
+        auto& resource1 = submission.AddColorOutput("TestColorOutput1", image_info, "GBuffer");
+        auto& inputs = submission.GetColorInputs();
+        CHECK(std::any_of(inputs.cbegin(), inputs.cend(), [gbuffer](const PipelineResource* resource) {
+            return resource != nullptr ? (*resource == gbuffer) : false;
+        }));
+        auto& outputs = submission.GetColorOutputs();
+        CHECK(std::any_of(outputs.cbegin(), outputs.cend(), [resource0](const PipelineResource* output) { return *output == resource0; }));
+        CHECK(std::any_of(outputs.cbegin(), outputs.cend(), [resource1](const PipelineResource* output) { return *output == resource1; }));
+    }
+    TEST_CASE("ResolveOutput") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestResolveOutputs", 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        image_info_t image_info;
+        image_info.Format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_info.Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        image_info.Samples = VK_SAMPLE_COUNT_1_BIT;
+        auto& output = submission.AddResolveOutput("ResolveTest", image_info);
+        auto outputs_retrieved = submission.GetResolveOutputs();
+        CHECK(std::any_of(outputs_retrieved.cbegin(), outputs_retrieved.cend(), [output](const PipelineResource* rsrc) { return *rsrc == output; }));
+    }
+    TEST_CASE("TextureInput") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestTextureInput", 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        image_info_t image_info;
+        image_info.Format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_info.Usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        auto& texture = submission.AddTextureInput("TextureInput", image_info);
+        auto texture_inputs = submission.GetTextureInputs();
+        CHECK(std::any_of(texture_inputs.cbegin(), texture_inputs.cend(), [texture](const PipelineResource* rsrc) { return *rsrc == texture; }));
+    }
+    TEST_CASE("StorageTextureOutputNoInput") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestStorageOutput", 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        image_info_t image_info;
+        image_info.Usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        auto& storage = submission.AddStorageTextureOutput("Storage", image_info);
+        auto& retrieved = submission.GetStorageTextureOutputs();
+        CHECK(std::any_of(retrieved.cbegin(), retrieved.cend(), [storage](const PipelineResource* rsrc) { return *rsrc == storage; }));
+    }
+    TEST_CASE("StorageTextureOutputWithInput") {
+        using namespace vpsk;
+        PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestStorageOutput", 0, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        image_info_t image_info;
+        image_info.Usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        auto& input = RenderGraph::GetGlobalGraph().GetResource("StorageInput");
+        auto& output = submission.AddStorageTextureOutput("StorageOutput", image_info, "StorageInput");
+        auto& retrieved = submission.GetStorageTextureOutputs();
+        CHECK(std::any_of(retrieved.cbegin(), retrieved.cend(), [output](const PipelineResource* rsrc) { return *rsrc == output; }));
+    }
+}
+#endif // VPSK_TESTING_ENABLED
