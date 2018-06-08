@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <stack>
 #include "core/ResourceUsage.hpp"
 #include "PipelineResource.hpp"
 
@@ -21,6 +23,7 @@ namespace vpsk {
     class ImageResourceCache;
 
     class RenderGraph {
+        friend class PipelineSubmission;
     public:
 
         RenderGraph(const vpr::Device* dvc);
@@ -38,6 +41,7 @@ namespace vpsk {
         void SetBackbufferSource(const std::string& name);
         void SetBackbufferDimensions(const resource_dimensions_t& dimensions);
         resource_dimensions_t GetResourceDimensions(const PipelineResource& rsrc);
+        size_t NumSubmissions() const noexcept;
 
         const vpr::Device* GetDevice() const noexcept;
 
@@ -98,6 +102,10 @@ namespace vpsk {
         std::unique_ptr<vpsk::BufferResourceCache> bufferResources;
         std::unique_ptr<vpsk::ImageResourceCache> imageResources;
         const vpr::Device* device;
+
+        std::vector<std::unordered_set<size_t>> submissionDependencies;
+        std::vector<std::unordered_set<size_t>> submissionMergeDependencies;
+        std::stack<size_t> submissionStack;
     };
 
 }

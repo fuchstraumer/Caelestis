@@ -73,10 +73,18 @@ namespace vpsk {
         bool GetClearColor(size_t idx, VkClearColorValue* value = nullptr) noexcept;
         bool GetClearDepth(VkClearDepthStencilValue* value = nullptr) const noexcept;
 
-        bool ValidateSubmission() const;
+        bool ValidateSubmission();
         void MakeColorInputScaled(const size_t& idx);
 
     private:
+
+        void traverseDependencies(size_t& stack_count);
+        enum traversal_flags : uint32_t {
+            NoCheck = 1,
+            IgnoreSelf = 2,
+            MergeDependency = 3
+        };
+        void dependencyTraversalRecursion(const std::unordered_set<size_t>& passes, size_t& stack_count, const uint32_t& flags);
         
         RenderGraph& graph;
         size_t idx{ std::numeric_limits<size_t>::max() };

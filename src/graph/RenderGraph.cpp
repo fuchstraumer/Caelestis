@@ -8,6 +8,7 @@
 #include "core/ShaderResource.hpp"
 #include "core/ShaderGroup.hpp"
 #include "RendererCore.hpp"
+#include "easylogging++.h"
 namespace vpsk {
 
     static constexpr VkPipelineStageFlags ShaderStagesToPipelineStages(const VkShaderStageFlags& flags) {
@@ -161,6 +162,8 @@ namespace vpsk {
         }
 
 
+    size_t RenderGraph::NumSubmissions() const noexcept {
+        return pipelineSubmissions.size();
     }
 
     const vpr::Device* RenderGraph::GetDevice() const noexcept {
