@@ -32,7 +32,7 @@ namespace vpsk {
         return resource;
     }
 
-    PipelineResource& PipelineSubmission::AddAttachmentInput(const std::string& name) {
+    PipelineResource& PipelineSubmission::AddInputAttachment(const std::string& name) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
         resource.ReadBySubmission(idx);
@@ -481,7 +481,7 @@ namespace vpsk {
                 throw std::logic_error("Submission resource has a self-dependency loop.");
             }
 
-            graph.submissionStack.push(pushed_submission);
+            graph.submissionStack.push_back(pushed_submission);
             graph.pipelineSubmissions[pushed_submission]->traverseDependencies(stack_count);
         }
 
@@ -509,7 +509,7 @@ TEST_SUITE("PipelineSubmission") {
     TEST_CASE("InputAttachments") {
         using namespace vpsk;
         PipelineSubmission submission(RenderGraph::GetGlobalGraph(), "TestInputAttachments", 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-        auto& resource = submission.AddAttachmentInput("TestInput");
+        auto& resource = submission.AddInputAttachment("TestInput");
         auto& inputs = submission.GetAttachmentInputs();
         CHECK(std::any_of(inputs.cbegin(), inputs.cend(), [resource](const PipelineResource* rsrc) { return *rsrc == resource; }));
     }

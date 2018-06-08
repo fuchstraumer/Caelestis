@@ -32,7 +32,7 @@ namespace vpsk {
 
         PipelineResource& SetDepthStencilInput(const std::string& name);
         PipelineResource& SetDepthStencilOutput(const std::string& name, image_info_t info);
-        PipelineResource& AddAttachmentInput(const std::string& name);
+        PipelineResource& AddInputAttachment(const std::string& name);
         PipelineResource& AddHistoryInput(const std::string& name);
         PipelineResource& AddColorOutput(const std::string& name, image_info_t info, const std::string& input = "");
         PipelineResource& AddResolveOutput(const std::string& name, image_info_t info);
