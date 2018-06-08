@@ -155,6 +155,14 @@ namespace vpsk {
         return *imageResources;
     }
 
+    void RenderGraph::Bake() {
+        for (const auto& submission : pipelineSubmissions) {
+            submission->ValidateSubmission();
+        }
+
+
+    }
+
     const vpr::Device* RenderGraph::GetDevice() const noexcept {
         return device;
     }

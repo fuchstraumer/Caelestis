@@ -281,6 +281,76 @@ namespace vpsk {
         }
     }
 
+    bool PipelineSubmission::ValidateSubmission() {
+
+        auto attachment_count_err = [&](const std::string& attachment_type) {
+            LOG(ERROR) << "Pipeline submission " << name << " has a mismatched quantity of " << attachment_type << " inputs and outputs!";
+            throw std::logic_error(std::string("Invalid " + attachment_type + " counts"));
+        };
+
+        if (colorInputs.size() != colorOutputs.size()) {
+            attachment_count_err("color attachment");
+        }
+        if (storageInputs.size() != storageOutputs.size()) {
+            attachment_count_err("storage buffer");
+        }
+        if (storageTextureInputs.size() != storageTextureOutputs.size()) {
+            attachment_count_err("storage texture");
+        }
+        if (!resolveOutputs.empty()) {
+            if (resolveOutputs.size() != colorOutputs.size()) {
+                attachment_count_err("resolve attachment");
+            }
+        }
+
+        for (size_t i = 0; i < colorInputs.size(); ++i) {
+            if (colorInputs[i] == nullptr) {
+                continue;
+            }
+
+            if (graph.GetResourceDimensions(*colorInputs[i]) != graph.GetResourceDimensions(*colorOutputs[i])) {
+                // Need to scale/modify color input before it becomes the output
+                MakeColorInputScaled(i);
+            }
+
+        }
+
+        if (!storageOutputs.empty()) {
+            for (size_t i = 0; i < storageOutputs.size(); ++i) {
+                if (storageInputs[i] == nullptr) {
+                    continue;
+                }
+
+                if (storageOutputs[i]->GetInfo() != storageInputs[i]->GetInfo()) {
+                    LOG(ERROR) << "Mismatch between paired storage input-outputs, when comparing their buffer info objects!";
+                    throw std::logic_error("Mismatched storage buffer input-output info!");
+                }
+            }
+        }
+
+        if (!storageTextureOutputs.empty()) {
+            for (size_t i = 0; i < storageTextureOutputs.size(); ++i) {
+                if (storageTextureInputs[i] == nullptr) {
+                    continue;
+                }
+
+                if (storageTextureOutputs[i]->GetInfo() != storageTextureInputs[i]->GetInfo()) {
+                    LOG(ERROR) << "Mismatch between storage texture input-outputs, when comparing their image info objects!";
+                    throw std::logic_error("Mismatched storage texture input-output infos!");
+                }
+            }
+        }
+
+        if ((depthStencilInput != nullptr) && (depthStencilOutput != nullptr)) {
+            if (depthStencilInput->GetInfo() != depthStencilOutput->GetInfo()) {
+                LOG(ERROR) << "Depth stencil input and output are mismatched in submission " << name << "!";
+                throw std::logic_error("Mismatched depth stencil input-output!");
+            }
+        }
+
+        return true;
+    }
+
     void PipelineSubmission::RecordCommands(VkCommandBuffer cmd) {
         recordSubmissionCb(cmd);
     }

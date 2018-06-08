@@ -52,6 +52,7 @@ namespace vpsk {
         bool Storage{ false };
         VkPipelineStageFlags UsedStages{ VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM };
         bool operator==(const resource_dimensions_t& other) const noexcept;
+        bool operator!=(const resource_dimensions_t& other) const noexcept;
     };
 
     class PipelineResource {

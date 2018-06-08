@@ -17,7 +17,6 @@ namespace st {
 namespace vpsk {
 
     class PipelineSubmission;
-    class ResourceDimensions;
     class BufferResourceCache;
     class ImageResourceCache;
 
@@ -37,7 +36,8 @@ namespace vpsk {
         void Reset();
 
         void SetBackbufferSource(const std::string& name);
-        void SetBackbufferDimensions(const ResourceDimensions& dimensions);
+        void SetBackbufferDimensions(const resource_dimensions_t& dimensions);
+        resource_dimensions_t GetResourceDimensions(const PipelineResource& rsrc);
 
         const vpr::Device* GetDevice() const noexcept;
 

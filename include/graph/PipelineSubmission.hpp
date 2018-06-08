@@ -73,6 +73,9 @@ namespace vpsk {
         bool GetClearColor(size_t idx, VkClearColorValue* value = nullptr) noexcept;
         bool GetClearDepth(VkClearDepthStencilValue* value = nullptr) const noexcept;
 
+        bool ValidateSubmission() const;
+        void MakeColorInputScaled(const size_t& idx);
+
     private:
         
         RenderGraph& graph;
