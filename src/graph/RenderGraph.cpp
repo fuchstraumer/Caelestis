@@ -194,6 +194,16 @@ namespace vpsk {
 
     }
 
+    void RenderGraph::SetBackbufferSource(const std::string & name) {
+        backbufferSource = name;
+    }
+
+    resource_dimensions_t RenderGraph::GetResourceDimensions(const PipelineResource & rsrc) {
+        resource_dimensions_t result;
+        result.BufferInfo = rsrc.GetBufferInfo();
+        return result;
+    }
+
     size_t RenderGraph::NumSubmissions() const noexcept {
         return pipelineSubmissions.size();
     }
