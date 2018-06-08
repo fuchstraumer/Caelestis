@@ -92,6 +92,7 @@ namespace vpsk {
 
     void RenderGraph::AddShaderPack(const st::ShaderPack * pack) {
         addShaderPackResources(pack);
+        addSubmissionsFromPack(pack);
     }
 
     PipelineSubmission& RenderGraph::AddSubmission(const std::string& name, VkPipelineStageFlags stages) {
@@ -247,9 +248,84 @@ namespace vpsk {
         }
     }
 
-    void RenderGraph::addResourceUsagesToSubmission(PipelineSubmission & submissions, const std::vector<st::ResourceUsage>& usages) {
-        for (const auto& usage : usages) {
+    void RenderGraph::addResourceUsagesToSubmission(PipelineSubmission & submission, const std::vector<st::ResourceUsage>& usages) {
 
+        auto add_storage_image = [&](const PipelineResource* rsrc, const st::ResourceUsage& usage) {
+            switch (usage.AccessModifier()) {
+            case st::access_modifier::Read:
+                submission.AddStorageTextureInput(rsrc->GetName(), rsrc->GetImageInfo());
+                break;
+            case st::access_modifier::Write:
+                submission.AddStorageTextureOutput(rsrc->GetName(), rsrc->GetImageInfo());
+                break;
+            case st::access_modifier::ReadWrite:
+                submission.AddStorageTextureRW(rsrc->GetName(), rsrc->GetImageInfo());
+                break;
+            default:
+                throw std::domain_error("Invalid access modifier for resource usage.");
+            }
+        };
+
+        auto add_storage_type = [&](const PipelineResource* rsrc, const st::ResourceUsage& usage) {
+            switch (usage.AccessModifier()) {
+            case st::access_modifier::Read:
+                submission.AddStorageReadOnlyInput(rsrc->GetName());
+                break;
+            case st::access_modifier::Write:
+                submission.AddStorageOutput(rsrc->GetName(), rsrc->GetBufferInfo());
+                break;
+            case st::access_modifier::ReadWrite:
+                submission.AddStorageRW(rsrc->GetName(), rsrc->GetBufferInfo());
+                break;
+            default:
+                throw std::domain_error("Invalid access modifier for resource usage.");
+            }
+        };
+
+        for (const auto& usage : usages) {
+            auto iter = resourceNameMap.find(usage.BackingResource()->Name());
+            if (iter == std::end(resourceNameMap)) {
+                throw std::out_of_range("Couldn't find PipelineResource matching a resource usage!");
+            }
+            auto& resource = pipelineResources[iter->second];
+
+            switch (usage.Type()) {
+            case VK_DESCRIPTOR_TYPE_SAMPLER:
+                // Don't need to do anything, these are immutable and don't need guarding
+                break;
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                submission.AddTextureInput(resource->GetName(), resource->GetImageInfo());
+                break;
+            case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                submission.AddTextureInput(resource->GetName(), resource->GetImageInfo());
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                add_storage_image(resource.get(), usage);
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                submission.AddStorageReadOnlyInput(resource->GetName());
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                add_storage_type(resource.get(), usage);
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                submission.AddUniformInput(resource->GetName());
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                add_storage_type(resource.get(), usage);
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                submission.AddUniformInput(resource->GetName());
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                add_storage_type(resource.get(), usage);
+                break;
+            case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                submission.AddInputAttachment(resource->GetName());
+                break;
+            default:
+                throw std::domain_error("Invalid VkDescriptorType for ResourceUsage object");
+            }
         }
     }
 
