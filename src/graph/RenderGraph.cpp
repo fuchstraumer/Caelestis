@@ -9,6 +9,7 @@
 #include "core/ShaderGroup.hpp"
 #include "RendererCore.hpp"
 #include "easylogging++.h"
+
 namespace vpsk {
 
     static constexpr VkPipelineStageFlags ShaderStagesToPipelineStages(const VkShaderStageFlags& flags) {
@@ -161,6 +162,36 @@ namespace vpsk {
             submission->ValidateSubmission();
         }
 
+        auto backbuffer_iter = resourceNameMap.find(backbufferSource);
+        if (backbuffer_iter == resourceNameMap.end()) {
+            throw std::logic_error("No backbuffer source set for Rendegraph!");
+        }
+
+        submissionDependencies.clear(); submissionDependencies.shrink_to_fit();
+        submissionDependencies.resize(pipelineSubmissions.size());
+        submissionMergeDependencies.clear(); submissionMergeDependencies.shrink_to_fit();
+        submissionMergeDependencies.resize(pipelineSubmissions.size());
+
+        auto& backbuffer_resource = *pipelineResources[backbuffer_iter->second];
+
+        if (backbuffer_resource.GetPassesWrittenIn().empty()) {
+            LOG(ERROR) << "Backbuffer resource for current rendergraph is never written to!";
+            throw std::logic_error("No writes occurred to the backbuffer!");
+        }
+
+        for (auto& submission : backbuffer_resource.GetPassesWrittenIn()) {
+            submissionStack.push_back(submission);
+        }
+
+        std::vector<size_t> temp_submission_stack = submissionStack;
+        for (auto& pushed_submission : submissionStack) {
+            size_t stack_count = 0;
+            pipelineSubmissions[pushed_submission]->traverseDependencies(stack_count);
+        }
+
+        std::reverse(std::begin(submissionStack), std::end(submissionStack));
+
+    }
 
     size_t RenderGraph::NumSubmissions() const noexcept {
         return pipelineSubmissions.size();

@@ -105,7 +105,7 @@ namespace vpsk {
 
         std::vector<std::unordered_set<size_t>> submissionDependencies;
         std::vector<std::unordered_set<size_t>> submissionMergeDependencies;
-        std::stack<size_t> submissionStack;
+        std::vector<size_t> submissionStack;
     };
 
 }
