@@ -12,7 +12,10 @@ namespace vpsk {
     struct buffer_info_t {
         VkDeviceSize Size{ 0 };
         VkBufferUsageFlags Usage{ VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM };
+        // Used for texel buffers
+        VkFormat Format{ VK_FORMAT_UNDEFINED };
         bool operator==(const buffer_info_t& other) const noexcept;
+        bool operator!=(const buffer_info_t& other) const noexcept;
     };
 
     struct image_info_t {
@@ -31,6 +34,7 @@ namespace vpsk {
         VkImageUsageFlags Usage{ VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM };
         VkFormat Format{ VK_FORMAT_UNDEFINED };
         bool operator==(const image_info_t& other) const noexcept;
+        bool operator!=(const image_info_t& other) const noexcept;
     };
 
     using resource_info_variant_t = std::variant<
@@ -87,6 +91,8 @@ namespace vpsk {
         const std::unordered_set<size_t>& GetPassesReadIn() const noexcept;
         const std::unordered_set<size_t>& GetPassesWrittenIn() const noexcept;
         const resource_info_variant_t& GetInfo() const noexcept;
+        const image_info_t & GetImageInfo() const;
+        const buffer_info_t & GetBufferInfo() const;
 
         bool operator==(const PipelineResource& other) const noexcept;
 

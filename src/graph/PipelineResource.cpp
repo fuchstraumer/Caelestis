@@ -99,6 +99,24 @@ namespace vpsk {
         return info;
     }
 
+    const image_info_t& PipelineResource::GetImageInfo() const {
+        if (IsImage()) {
+            return std::get<image_info_t>(info);
+        }
+        else {
+            throw std::logic_error("Attempted to retrieve ImageInfo for object that is not an image.");
+        }
+    }
+
+    const buffer_info_t& PipelineResource::GetBufferInfo() const {
+        if (IsBuffer()) {
+            return std::get<buffer_info_t>(info);
+        }
+        else {
+            throw std::logic_error("Attempted to retrieve buffer info for object that is not a buffer.");
+        }
+    }
+
     bool PipelineResource::operator==(const PipelineResource & other) const noexcept {
         return (info == other.info) && (readInPasses == other.readInPasses) && (writtenInPasses == other.writtenInPasses) &&
             (usedStages == other.usedStages) && (name == other.name) && (intendedType == other.intendedType) &&
@@ -107,7 +125,11 @@ namespace vpsk {
     }
 
     bool buffer_info_t::operator==(const buffer_info_t& other) const noexcept {
-        return (Size == other.Size) && (Usage == other.Usage);
+        return (Size == other.Size) && (Usage == other.Usage) && (Format == other.Format);
+    }
+
+    bool buffer_info_t::operator!=(const buffer_info_t & other) const noexcept {
+        return (Size != other.Size) || (Usage != other.Usage) || (Format != other.Format);
     }
 
     bool image_info_t::operator==(const image_info_t& other) const noexcept {
@@ -115,6 +137,25 @@ namespace vpsk {
             (Samples == other.Samples) && (MipLevels == other.MipLevels) && (ArrayLayers == other.ArrayLayers) &&
             (Anisotropy == other.Anisotropy) && (SizeRelativeName == other.SizeRelativeName) && (Usage == other.Usage) && 
             (Format == other.Format);
+    }
+
+    bool image_info_t::operator!=(const image_info_t & other) const noexcept{
+        return (SizeClass != other.SizeClass) || (SizeX != other.SizeX) || (SizeY != other.SizeY) ||
+            (Samples != other.Samples) || (MipLevels != other.MipLevels) || (ArrayLayers != other.ArrayLayers) ||
+            (Anisotropy != other.Anisotropy) || (SizeRelativeName != other.SizeRelativeName) || (Usage != other.Usage) ||
+            (Format != other.Format);
+    }
+
+    bool resource_dimensions_t::operator==(const resource_dimensions_t & other) const noexcept {
+        return (Format == other.Format) && (BufferInfo == other.BufferInfo) && (Width == other.Width) &&
+            (Height == other.Height) && (Depth == other.Depth) && (Layers == other.Layers) && (Levels == other.Levels) &&
+            (Samples == other.Samples) && (Transient == other.Transient) && (Persistent == other.Persistent) && (Storage == other.Storage);
+    }
+
+    bool resource_dimensions_t::operator!=(const resource_dimensions_t & other) const noexcept {
+        return (Format != other.Format) || (BufferInfo != other.BufferInfo) || (Width != other.Width) ||
+            (Height != other.Height) || (Depth != other.Depth) || (Layers != other.Layers) || (Levels != other.Levels) ||
+            (Samples != other.Samples) || (Transient != other.Transient) || (Persistent != other.Persistent) || (Storage != other.Storage);
     }
 
 }
