@@ -96,6 +96,27 @@ namespace vpsk {
         return resource;
     }
 
+    PipelineResource & PipelineSubmission::AddStorageTextureInput(const std::string & name, image_info_t info, const std::string& output) {
+        auto& resource = graph.GetResource(name);
+        resource.AddUsedPipelineStages(stages);
+        resource.WrittenBySubmission(idx);
+        if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+
+        }
+        resource.SetInfo(info);
+        resource.SetStorage(true);
+        storageTextureInputs.emplace_back(&resource);
+        if (!output.empty()) {
+            auto& output_resource = graph.GetResource(output);
+            output_resource.WrittenBySubmission(idx);
+            storageTextureOutputs.emplace_back(&output_resource);
+        }
+        else {
+            storageTextureOutputs.emplace_back(nullptr);
+        }
+        return resource;
+    }
+
     PipelineResource& PipelineSubmission::AddStorageTextureOutput(const std::string& name, image_info_t info, const std::string& input) {
         auto& resource = graph.GetResource(name);
         resource.AddUsedPipelineStages(stages);
@@ -151,6 +172,18 @@ namespace vpsk {
         else {
             storageInputs.emplace_back(nullptr);
         }
+        return resource;
+    }
+
+    PipelineResource& PipelineSubmission::AddStorageRW(const std::string& name, buffer_info_t info) {
+        auto& resource = graph.GetResource(name);
+        resource.AddUsedPipelineStages(stages);
+        resource.WrittenBySubmission(idx);
+        resource.ReadBySubmission(idx);
+        resource.SetInfo(info);
+        resource.SetStorage(true);
+        storageInputs.emplace_back(&resource);
+        storageOutputs.emplace_back(&resource);
         return resource;
     }
 
@@ -349,6 +382,10 @@ namespace vpsk {
         }
 
         return true;
+    }
+
+    void PipelineSubmission::MakeColorInputScaled(const size_t & idx) {
+        std::swap(colorInputs[idx], colorScaleInputs[idx]);
     }
 
     void PipelineSubmission::traverseDependencies(size_t& stack_count) {

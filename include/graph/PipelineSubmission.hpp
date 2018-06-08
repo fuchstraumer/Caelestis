@@ -37,10 +37,12 @@ namespace vpsk {
         PipelineResource& AddColorOutput(const std::string& name, image_info_t info, const std::string& input = "");
         PipelineResource& AddResolveOutput(const std::string& name, image_info_t info);
         PipelineResource& AddTextureInput(const std::string& name, image_info_t info);
+        PipelineResource& AddStorageTextureInput(const std::string& name, image_info_t info, const std::string& output = "");
         PipelineResource& AddStorageTextureOutput(const std::string& name, image_info_t info, const std::string& input = "");
         PipelineResource& AddStorageTextureRW(const std::string & name, image_info_t info);
         PipelineResource& AddUniformInput(const std::string& name);
         PipelineResource& AddStorageOutput(const std::string& name, buffer_info_t info, const std::string& input = "");
+        PipelineResource& AddStorageRW(const std::string& name, buffer_info_t info);
         PipelineResource& AddStorageReadOnlyInput(const std::string& name);
 
         const std::vector<PipelineResource*>& GetColorOutputs() const noexcept;
