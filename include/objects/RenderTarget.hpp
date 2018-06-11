@@ -2,6 +2,7 @@
 #ifndef VPSK_RENDER_TARGET_HPP
 #define VPSK_RENDER_TARGET_HPP
 #include "ForwardDecl.hpp"
+#include "graph\PipelineResource.hpp"
 #include <vulkan/vulkan.h>
 #include <memory>
 #include <vector>
@@ -18,7 +19,7 @@ namespace vpsk {
         ~RenderTarget();
 
         void Create(uint32_t width, uint32_t height, const VkFormat image_format, const bool has_depth = false, const uint32_t mip_maps = 1,
-            const VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT, bool depth_only = false);
+            const VkSampleCountFlags sample_count = VK_SAMPLE_COUNT_1_BIT, bool depth_only = false);
         void CreateAsCube(uint32_t size, const VkFormat image_format, const bool has_depth = false, const uint32_t mip_maps = 1, bool depth_only = false);
         void Add(const VkFormat new_format);
 
@@ -28,6 +29,7 @@ namespace vpsk {
         vpr::Image* GetImage(const size_t view_idx = 0);
         const vpr::Image* GetImageMSAA(const size_t view_idx = 0) const;
         vpr::Image* GetImageMSAA(const size_t view_idx = 0);
+        image_info_t GetImageInfo() const;
 
         VkViewport Viewport;
     private:

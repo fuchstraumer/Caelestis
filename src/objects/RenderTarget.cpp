@@ -14,7 +14,7 @@ namespace vpsk {
         Clear();
     }
 
-    void RenderTarget::Create(uint32_t width, uint32_t height, const VkFormat image_format, const bool has_depth, const uint32_t mip_maps, const VkSampleCountFlagBits sample_count, bool depth_only) {
+    void RenderTarget::Create(uint32_t width, uint32_t height, const VkFormat image_format, const bool has_depth, const uint32_t mip_maps, const VkSampleCountFlags sample_count, bool depth_only) {
         Clear();
         auto& renderer = RendererCore::GetRenderer();
         if (!depth_only) {
@@ -22,7 +22,7 @@ namespace vpsk {
             image_info.extent.width = width;
             image_info.extent.height = height;
             image_info.mipLevels = mip_maps;
-            image_info.samples = sample_count;
+            image_info.samples = VkSampleCountFlagBits(sample_count);
             image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             image_info.format = image_format;
             image_info.tiling = renderer.Device()->GetFormatTiling(image_format, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
@@ -137,6 +137,18 @@ namespace vpsk {
 
     vpr::Image * RenderTarget::GetImageMSAA(const size_t view_idx) {
         return renderTargetsMSAA[view_idx].get();
+    }
+
+    image_info_t RenderTarget::GetImageInfo() const {
+        image_info_t result;
+        auto& existing_info = renderTargets.front()->CreateInfo();
+        result.Format = existing_info.format;
+        result.ArrayLayers = existing_info.arrayLayers;
+        result.MipLevels = existing_info.mipLevels;
+        result.Samples = existing_info.samples;
+        result.SizeClass = image_info_t::size_class::SwapchainRelative;
+        result.Usage = existing_info.usage;
+        return result;
     }
 
 }
