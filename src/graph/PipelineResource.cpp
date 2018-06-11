@@ -47,12 +47,12 @@ namespace vpsk {
         intendedType = std::move(type);
     }
 
-    void PipelineResource::SetUsedPipelineStages(VkPipelineStageFlags stages) {
-        usedStages = std::move(stages);
+    void PipelineResource::SetUsedPipelineStages(const size_t& submission_idx, VkPipelineStageFlags stages) {
+        pipelineStagesPerSubmission[submission_idx] = stages;
     }
 
-    void PipelineResource::AddUsedPipelineStages(VkPipelineStageFlags stages) {
-        usedStages |= stages;
+    void PipelineResource::AddUsedPipelineStages(const size_t& submission_idx, VkPipelineStageFlags stages) {
+        pipelineStagesPerSubmission[submission_idx] |= stages;
     }
 
     void PipelineResource::SetInfo(resource_info_variant_t _info) {
@@ -71,27 +71,33 @@ namespace vpsk {
         return idx;
     }
 
-    const std::string& PipelineResource::GetParentSetName() const noexcept {
+    const std::string& PipelineResource::ParentSetName() const noexcept {
         return parentSetName;
     }
 
-    const VkDescriptorType& PipelineResource::GetDescriptorType() const noexcept {
+    const VkDescriptorType& PipelineResource::DescriptorType() const noexcept {
         return intendedType;
     }
 
-    const std::string& PipelineResource::GetName() const noexcept {
+    const std::string& PipelineResource::Name() const noexcept {
         return name;
     }
 
-    VkPipelineStageFlags PipelineResource::GetUsedPipelineStages() const noexcept {
-        return usedStages;
+    VkPipelineStageFlags PipelineResource::PipelineStages(const size_t& submission_idx) const noexcept {
+        auto iter = pipelineStagesPerSubmission.find(submission_idx);
+        if (iter != std::end(pipelineStagesPerSubmission)) {
+            return iter->second;
+        }
+        else {
+            return VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM;
+        }
     }
 
-    const std::unordered_set<size_t>& PipelineResource::GetPassesWrittenIn() const noexcept {
+    const std::unordered_set<size_t>& PipelineResource::SubmissionsWrittenIn() const noexcept {
         return writtenInPasses;
     }
 
-    const std::unordered_set<size_t>& PipelineResource::GetPassesReadIn() const noexcept {
+    const std::unordered_set<size_t>& PipelineResource::SubmissionsReadIn() const noexcept {
         return readInPasses;
     }
 
@@ -119,9 +125,17 @@ namespace vpsk {
 
     bool PipelineResource::operator==(const PipelineResource & other) const noexcept {
         return (info == other.info) && (readInPasses == other.readInPasses) && (writtenInPasses == other.writtenInPasses) &&
-            (usedStages == other.usedStages) && (name == other.name) && (intendedType == other.intendedType) &&
+            (pipelineStagesPerSubmission == other.pipelineStagesPerSubmission) && (name == other.name) && (intendedType == other.intendedType) &&
             (parentSetName == other.parentSetName) && (idx == other.idx) && (transient == other.transient) &&
             (storage == other.storage);
+    }
+
+    VkPipelineStageFlags PipelineResource::AllStagesUsedIn() const noexcept {
+        VkPipelineStageFlags result = 0;
+        for (auto& flags : pipelineStagesPerSubmission) {
+            result |= flags.second;
+        }
+        return result;
     }
 
     bool buffer_info_t::operator==(const buffer_info_t& other) const noexcept {

@@ -69,7 +69,7 @@ namespace vpsk {
         const size_t& GetIdx() const noexcept;
         const size_t& GetPhysicalPassIdx() const noexcept;
         const VkPipelineStageFlags& GetStages() const noexcept;
-        const std::string& GetName() const noexcept;
+        const std::string& Name() const noexcept;
 
         bool NeedRenderPass() const noexcept;
         bool GetClearColor(size_t idx, VkClearColorValue* value = nullptr) noexcept;

@@ -6,6 +6,7 @@
 #include <string>
 #include <variant>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace vpsk {
 
@@ -77,23 +78,23 @@ namespace vpsk {
         void SetParentSetName(std::string _name);
         void SetName(std::string _name);
         void SetDescriptorType(VkDescriptorType type);
-        void SetUsedPipelineStages(VkPipelineStageFlags stages);
-        void AddUsedPipelineStages(VkPipelineStageFlags stages);
+        void SetUsedPipelineStages(const size_t& submission_idx, VkPipelineStageFlags stages);
+        void AddUsedPipelineStages(const size_t& submission_idx, VkPipelineStageFlags stages);
         void SetInfo(resource_info_variant_t _info);
         void SetStorage(const bool& _storage);
         void SetTransient(const bool& _transient);
 
         const size_t& GetIdx() const noexcept;
-        const std::string& GetParentSetName() const noexcept;
-        const VkDescriptorType& GetDescriptorType() const noexcept;
-        const std::string& GetName() const noexcept;
-        VkPipelineStageFlags GetUsedPipelineStages() const noexcept;
-        const std::unordered_set<size_t>& GetPassesReadIn() const noexcept;
-        const std::unordered_set<size_t>& GetPassesWrittenIn() const noexcept;
+        const std::string& ParentSetName() const noexcept;
+        const VkDescriptorType& DescriptorType() const noexcept;
+        const std::string& Name() const noexcept;
+        VkPipelineStageFlags PipelineStages(const size_t& submission_idx) const noexcept;
+        const std::unordered_set<size_t>& SubmissionsReadIn() const noexcept;
+        const std::unordered_set<size_t>& SubmissionsWrittenIn() const noexcept;
         const resource_info_variant_t& GetInfo() const noexcept;
-        const image_info_t & GetImageInfo() const;
-        const buffer_info_t & GetBufferInfo() const;
-
+        const image_info_t& GetImageInfo() const;
+        const buffer_info_t& GetBufferInfo() const;
+        VkPipelineStageFlags AllStagesUsedIn() const noexcept;
         bool operator==(const PipelineResource& other) const noexcept;
 
     private:
@@ -106,14 +107,12 @@ namespace vpsk {
         std::string name{};
         // Extracted from the shader
         VkDescriptorType intendedType{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
-        // Stages of the pipeline this item is used in
-        VkPipelineStageFlags usedStages{ VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM };
         // Used to specify storage resources (unsurprisingly)
         bool storage{ false };
         // Resources that don't need to persist throughout the frame
         bool transient{ false };
         resource_info_variant_t info;
-
+        std::unordered_map<size_t, VkPipelineStageFlags> pipelineStagesPerSubmission;
         std::unordered_set<size_t> readInPasses;
         std::unordered_set<size_t> writtenInPasses;
     };

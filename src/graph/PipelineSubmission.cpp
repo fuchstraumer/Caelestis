@@ -13,7 +13,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::SetDepthStencilInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.ReadBySubmission(idx);
         depthStencilInput = &resource;
         return resource;
@@ -21,7 +21,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::SetDepthStencilOutput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.WrittenBySubmission(idx);
         if (!(info.Usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
             LOG(ERROR) << "Tried to add a depth stencil output, but image info structure has invalid usage flags!";
@@ -34,7 +34,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddInputAttachment(const std::string& name) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.ReadBySubmission(idx);
         attachmentInputs.emplace_back(&resource);
         return resource;
@@ -42,14 +42,14 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddHistoryInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         historyInputs.emplace_back(&resource);
         return resource;
     }
 
     PipelineResource& PipelineSubmission::AddColorOutput(const std::string& name, image_info_t info, const std::string& input) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.WrittenBySubmission(idx);
         if (!(info.Usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
             LOG(ERROR) << "Tried to add a color attachment input, but given image info object lacks requisite image usage flags!";
@@ -72,7 +72,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddResolveOutput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.WrittenBySubmission(idx);        
         if (info.Samples != VK_SAMPLE_COUNT_1_BIT) {
             LOG(ERROR) << "Image info for resolve output attachment has invalid sample count flags value!";
@@ -85,7 +85,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddTextureInput(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         if (!(info.Usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
             LOG(ERROR) << "Attempted to add a texture input, but image info structure lacks requisite image usage flags!";
             throw std::runtime_error("Tried to add texture input when image has invalid usage flags.");
@@ -98,7 +98,7 @@ namespace vpsk {
 
     PipelineResource & PipelineSubmission::AddStorageTextureInput(const std::string & name, image_info_t info, const std::string& output) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.WrittenBySubmission(idx);
         if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
 
@@ -119,7 +119,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddStorageTextureOutput(const std::string& name, image_info_t info, const std::string& input) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.WrittenBySubmission(idx);
         if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
 
@@ -140,7 +140,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddStorageTextureRW(const std::string& name, image_info_t info) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.ReadBySubmission(idx);
         resource.WrittenBySubmission(idx);
         resource.SetStorage(true);
@@ -151,7 +151,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddUniformInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.ReadBySubmission(idx);
         uniformInputs.emplace_back(&resource);
         return resource;
@@ -159,7 +159,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddStorageOutput(const std::string& name, buffer_info_t info, const std::string& input) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.WrittenBySubmission(idx);
         resource.SetInfo(info);
         resource.SetStorage(true);
@@ -177,7 +177,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddStorageRW(const std::string& name, buffer_info_t info) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.WrittenBySubmission(idx);
         resource.ReadBySubmission(idx);
         resource.SetInfo(info);
@@ -189,7 +189,7 @@ namespace vpsk {
 
     PipelineResource& PipelineSubmission::AddStorageReadOnlyInput(const std::string& name) {
         auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(stages);
+        resource.AddUsedPipelineStages(idx, stages);
         resource.ReadBySubmission(idx);
         storageReadOnlyInputs.emplace_back(&resource);
         return resource;
@@ -283,7 +283,7 @@ namespace vpsk {
         return stages;
     }
 
-    const std::string& PipelineSubmission::GetName() const noexcept {
+    const std::string& PipelineSubmission::Name() const noexcept {
         return name;
     }
 
@@ -390,7 +390,7 @@ namespace vpsk {
 
     void PipelineSubmission::traverseDependencies(size_t& stack_count) {
         if (depthStencilInput != nullptr) {
-            dependencyTraversalRecursion(depthStencilInput->GetPassesWrittenIn(), stack_count, IgnoreSelf);
+            dependencyTraversalRecursion(depthStencilInput->SubmissionsWrittenIn(), stack_count, IgnoreSelf);
         }
 
         for (auto* input : attachmentInputs) {
@@ -399,44 +399,38 @@ namespace vpsk {
                 depends_on_self = true;
             }
             if (!depends_on_self) {
-                dependencyTraversalRecursion(input->GetPassesWrittenIn(), stack_count, MergeDependency);
+                dependencyTraversalRecursion(input->SubmissionsWrittenIn(), stack_count, MergeDependency);
             }
         }
 
         for (auto* color_input : colorInputs) {
             if (color_input != nullptr) {
-                dependencyTraversalRecursion(color_input->GetPassesWrittenIn(), stack_count, MergeDependency);
+                dependencyTraversalRecursion(color_input->SubmissionsWrittenIn(), stack_count, MergeDependency);
             }
         }
 
         for (auto* texture_input : textureInputs) {
-            dependencyTraversalRecursion(texture_input->GetPassesWrittenIn(), stack_count, 0);
+            dependencyTraversalRecursion(texture_input->SubmissionsWrittenIn(), stack_count, 0);
         }
 
         for (auto* storage_input : storageInputs) {
             if (storage_input != nullptr) {
                 // might be no writers of this, if it's used in a feedback fashion (meaning what?)
-                dependencyTraversalRecursion(storage_input->GetPassesWrittenIn(), stack_count, NoCheck);
+                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
                 // check for write-after-read hazards, finding if this object is read in other submissions before this one writes to it
-                dependencyTraversalRecursion(storage_input->GetPassesReadIn(), stack_count, NoCheck | IgnoreSelf);
-            }
-        }
-
-        for (auto* storage_texture_input : storageTextureInputs) {
-            if (storage_texture_input != nullptr) {
-                dependencyTraversalRecursion(storage_texture_input->GetPassesWrittenIn(), stack_count, 0);
+                dependencyTraversalRecursion(storage_input->SubmissionsReadIn(), stack_count, NoCheck | IgnoreSelf);
             }
         }
 
         for (auto* uniform_input : uniformInputs) {
             if (uniform_input != nullptr) {
-                dependencyTraversalRecursion(uniform_input->GetPassesWrittenIn(), stack_count, NoCheck);
+                dependencyTraversalRecursion(uniform_input->SubmissionsWrittenIn(), stack_count, NoCheck);
             }
         }
 
         for (auto* storage_input : storageReadOnlyInputs) {
             if (storage_input != nullptr) {
-                dependencyTraversalRecursion(storage_input->GetPassesWrittenIn(), stack_count, NoCheck);
+                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
             }
         }
     }
