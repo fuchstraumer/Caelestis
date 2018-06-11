@@ -21,8 +21,6 @@ int main(int argc, char* argv[]) {
     RenderGraph graph(renderer.Device());
 
     graph.AddShaderPack(&pack);
-    graph.GetResource("BACKBUFFER");
-    graph.SetBackbufferSource("BACKBUFFER");
     graph.Bake();
 
 }
