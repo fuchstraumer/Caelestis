@@ -339,6 +339,17 @@ namespace vpsk {
         }
     }
 
+    bool is_depth_format(const VkFormat& fmt) noexcept {
+        const static std::set<VkFormat> depth_formats{
+            VK_FORMAT_D16_UNORM,
+            VK_FORMAT_D16_UNORM_S8_UINT,
+            VK_FORMAT_D24_UNORM_S8_UINT,
+            VK_FORMAT_D32_SFLOAT,
+            VK_FORMAT_D32_SFLOAT_S8_UINT
+        };
+        return depth_formats.count(fmt) != 0;
+    }
+
     void RenderGraph::addSingleGroup(const std::string & name, const st::ShaderGroup * group) {
         PipelineSubmission& submission = AddSubmission(name, ShaderStagesToPipelineStages(group->Stages()));
         
@@ -349,6 +360,35 @@ namespace vpsk {
             std::vector<st::ResourceUsage> usages(num_rsrcs);
             group->GetResourceUsages(i, &num_rsrcs, usages.data());
             addResourceUsagesToSubmission(submission, usages);
+        }
+
+        {
+            // Look for output attributes
+            size_t num_attrs = 0;
+            group->GetOutputAttributes(VK_SHADER_STAGE_FRAGMENT_BIT, &num_attrs, nullptr);
+            if (num_attrs != 0) {
+                std::vector<st::VertexAttributeInfo> attributes(num_attrs);
+                group->GetOutputAttributes(VK_SHADER_STAGE_FRAGMENT_BIT, &num_attrs, attributes.data());
+                for (auto& attrib : attributes) {
+                    const std::string attrib_name(attrib.Name());
+                    if (attrib_name == backbufferSource) {
+                        auto& backbuffer = renderTargets.at(backbufferSource);
+                        submission.AddColorOutput("backbuffer", backbuffer->GetImageInfo());
+                    }
+                    else if (attrib.GetAsFormat() != VK_FORMAT_UNDEFINED) {
+                        auto& resource = GetResource(attrib.Name());
+                        image_info_t info;
+                        info.Format = attrib.GetAsFormat();
+                        info.SizeClass = image_info_t::size_class::SwapchainRelative;
+                        if (!is_depth_format(info.Format)) {
+                            submission.AddColorOutput(resource.Name(), info);
+                        }
+                        else {
+                            submission.SetDepthStencilInput(resource.Name());
+                        }
+                    }
+                }
+            }
         }
         
     }
