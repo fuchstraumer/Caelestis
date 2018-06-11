@@ -7,9 +7,11 @@
 #include "core/ShaderPack.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ShaderGroup.hpp"
+#include "objects/RenderTarget.hpp"
+#include "render/Swapchain.hpp"
 #include "RendererCore.hpp"
 #include "easylogging++.h"
-
+#include <set>
 namespace vpsk {
 
     static constexpr VkPipelineStageFlags ShaderStagesToPipelineStages(const VkShaderStageFlags& flags) {
@@ -83,7 +85,16 @@ namespace vpsk {
         }
     }
 
+    std::unique_ptr<RenderTarget> CreateDefaultBackbuffer() {
+        std::unique_ptr<RenderTarget> result = std::make_unique<RenderTarget>();
+        auto& renderer = RendererCore::GetRenderer();
+        const vpr::Swapchain* swapchain = renderer.Swapchain();
+        result->Create(swapchain->Extent().width, swapchain->Extent().height, swapchain->ColorFormat(), true, 1, DefaultRendererConfig.MSAA_SampleCount, false);
+        return std::move(result);
+    }
+
     RenderGraph::RenderGraph(const vpr::Device* dvc) : device(dvc) {
+        renderTargets.emplace(backbufferSource, CreateDefaultBackbuffer());
         bufferResources = std::make_unique<vpsk::BufferResourceCache>(device);
         imageResources = std::make_unique<vpsk::ImageResourceCache>(device);
     }
@@ -175,12 +186,12 @@ namespace vpsk {
 
         auto& backbuffer_resource = *pipelineResources[backbuffer_iter->second];
 
-        if (backbuffer_resource.GetPassesWrittenIn().empty()) {
+        if (backbuffer_resource.SubmissionsWrittenIn().empty()) {
             LOG(ERROR) << "Backbuffer resource for current rendergraph is never written to!";
             throw std::logic_error("No writes occurred to the backbuffer!");
         }
 
-        for (auto& submission : backbuffer_resource.GetPassesWrittenIn()) {
+        for (auto& submission : backbuffer_resource.SubmissionsWrittenIn()) {
             submissionStack.push_back(submission);
         }
 
@@ -263,13 +274,13 @@ namespace vpsk {
         auto add_storage_image = [&](const PipelineResource* rsrc, const st::ResourceUsage& usage) {
             switch (usage.AccessModifier()) {
             case st::access_modifier::Read:
-                submission.AddStorageTextureInput(rsrc->GetName(), rsrc->GetImageInfo());
+                submission.AddStorageTextureInput(rsrc->Name(), rsrc->GetImageInfo());
                 break;
             case st::access_modifier::Write:
-                submission.AddStorageTextureOutput(rsrc->GetName(), rsrc->GetImageInfo());
+                submission.AddStorageTextureOutput(rsrc->Name(), rsrc->GetImageInfo());
                 break;
             case st::access_modifier::ReadWrite:
-                submission.AddStorageTextureRW(rsrc->GetName(), rsrc->GetImageInfo());
+                submission.AddStorageTextureRW(rsrc->Name(), rsrc->GetImageInfo());
                 break;
             default:
                 throw std::domain_error("Invalid access modifier for resource usage.");
@@ -279,13 +290,13 @@ namespace vpsk {
         auto add_storage_type = [&](const PipelineResource* rsrc, const st::ResourceUsage& usage) {
             switch (usage.AccessModifier()) {
             case st::access_modifier::Read:
-                submission.AddStorageReadOnlyInput(rsrc->GetName());
+                submission.AddStorageReadOnlyInput(rsrc->Name());
                 break;
             case st::access_modifier::Write:
-                submission.AddStorageOutput(rsrc->GetName(), rsrc->GetBufferInfo());
+                submission.AddStorageOutput(rsrc->Name(), rsrc->GetBufferInfo());
                 break;
             case st::access_modifier::ReadWrite:
-                submission.AddStorageRW(rsrc->GetName(), rsrc->GetBufferInfo());
+                submission.AddStorageRW(rsrc->Name(), rsrc->GetBufferInfo());
                 break;
             default:
                 throw std::domain_error("Invalid access modifier for resource usage.");
@@ -304,34 +315,34 @@ namespace vpsk {
                 // Don't need to do anything, these are immutable and don't need guarding
                 break;
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                submission.AddTextureInput(resource->GetName(), resource->GetImageInfo());
+                submission.AddTextureInput(resource->Name(), resource->GetImageInfo());
                 break;
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                submission.AddTextureInput(resource->GetName(), resource->GetImageInfo());
+                submission.AddTextureInput(resource->Name(), resource->GetImageInfo());
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
                 add_storage_image(resource.get(), usage);
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                submission.AddStorageReadOnlyInput(resource->GetName());
+                submission.AddStorageReadOnlyInput(resource->Name());
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                 add_storage_type(resource.get(), usage);
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                submission.AddUniformInput(resource->GetName());
+                submission.AddUniformInput(resource->Name());
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                 add_storage_type(resource.get(), usage);
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                submission.AddUniformInput(resource->GetName());
+                submission.AddUniformInput(resource->Name());
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                 add_storage_type(resource.get(), usage);
                 break;
             case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-                submission.AddInputAttachment(resource->GetName());
+                submission.AddInputAttachment(resource->Name());
                 break;
             default:
                 throw std::domain_error("Invalid VkDescriptorType for ResourceUsage object");

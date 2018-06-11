@@ -21,6 +21,7 @@ namespace vpsk {
     class PipelineSubmission;
     class BufferResourceCache;
     class ImageResourceCache;
+    class RenderTarget;
 
     class RenderGraph {
         friend class PipelineSubmission;
@@ -90,13 +91,14 @@ namespace vpsk {
         };
 
         std::string graphName;
-        std::string backbufferSource;
+        std::string backbufferSource{ "backbuffer" };
         std::unordered_map<std::string, pass_barriers_t> passBarriers;
         std::unordered_map<std::string, vpr::Buffer*> backingBuffers;
         std::unordered_map<std::string, vpr::Image*> backingImages;
         std::unordered_map<std::string, size_t> submissionNameMap;
         std::vector<std::unique_ptr<PipelineSubmission>> pipelineSubmissions;
         std::unordered_map<std::string, size_t> resourceNameMap;
+        std::unordered_map<std::string, std::unique_ptr<RenderTarget>> renderTargets;
         std::vector<std::unique_ptr<PipelineResource>> pipelineResources;
         // string "name" is for the pack the resources belong to.
         std::unique_ptr<vpsk::BufferResourceCache> bufferResources;
