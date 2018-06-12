@@ -69,13 +69,15 @@ Resources = {
             Type = "StorageTexelBuffer",
             Format = "rgba32f",
             Size = dimensions.NumLights,
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            Tags = { "HostGeneratedData" }
         },
         lightColors = {
             Type = "StorageTexelBuffer",
             Format = "rgba8",
             Size = dimensions.NumLights,
-            Qualifiers = "restrict readonly"
+            Qualifiers = "restrict readonly",
+            Tags = { "HostGeneratedData" }
         }
     },
     ObjMaterials = {
