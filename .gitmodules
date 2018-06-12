@@ -19,3 +19,6 @@
 [submodule "third_party/doctest"]
 	path = third_party/doctest
 	url = https://github.com/onqtam/doctest
+[submodule "third_party/sol2"]
+	path = third_party/sol2
+	url = https://github.com/ThePhD/sol2
