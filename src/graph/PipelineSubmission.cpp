@@ -409,14 +409,14 @@ namespace vpsk {
             }
         }
 
-        for (auto* texture_input : textureInputs) {
+        /*for (auto* texture_input : textureInputs) {
             dependencyTraversalRecursion(texture_input->SubmissionsWrittenIn(), stack_count, 0);
-        }
+        }*/
 
         for (auto* storage_input : storageInputs) {
             if (storage_input != nullptr) {
                 // might be no writers of this, if it's used in a feedback fashion (meaning what?)
-                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
+                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck | IgnoreSelf);
                 // check for write-after-read hazards, finding if this object is read in other submissions before this one writes to it
                 dependencyTraversalRecursion(storage_input->SubmissionsReadIn(), stack_count, NoCheck | IgnoreSelf);
             }

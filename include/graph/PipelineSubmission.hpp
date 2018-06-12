@@ -82,17 +82,17 @@ namespace vpsk {
 
         void traverseDependencies(size_t& stack_count);
         enum traversal_flags : uint32_t {
-            NoCheck = 1,
-            IgnoreSelf = 2,
-            MergeDependency = 3
+            NoCheck = 0x00000001,
+            IgnoreSelf = 0x00000002,
+            MergeDependency = 0x00000004
         };
         void dependencyTraversalRecursion(const std::unordered_set<size_t>& passes, size_t& stack_count, const uint32_t& flags);
-        
+
+        std::string name{};
         RenderGraph& graph;
         size_t idx{ std::numeric_limits<size_t>::max() };
         size_t physicalPassIdx{ std::numeric_limits<size_t>::max() };
         VkPipelineStageFlags stages{ VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM };
-        std::string name{};
 
         delegate_t<void(VkCommandBuffer)> recordSubmissionCb;
         delegate_t<bool()> needPassCb;
