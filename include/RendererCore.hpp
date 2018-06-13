@@ -6,6 +6,9 @@
 #include <atomic>
 #include <vulkan/vulkan.h>
 #include <string>
+
+struct lua_State;
+
 namespace vpsk {
 
     // The renderer is a singleton object that encompasses the base objects and systems required
@@ -50,9 +53,11 @@ namespace vpsk {
         const vpr::Swapchain* Swapchain() const noexcept;
         vpr::Swapchain* Swapchain() noexcept;
         ResourceTransferSystem* TransferSystem() noexcept;
+        static lua_State* LuaState() noexcept;
 
     protected:
-         
+        
+        std::unique_ptr<lua_State> state;
         std::unique_ptr<ResourceTransferSystem> transferSystem;
         std::unique_ptr<vpr::Instance> instance;
         std::unique_ptr<vpr::Device> device;
