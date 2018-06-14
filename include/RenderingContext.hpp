@@ -7,8 +7,6 @@
 #include <vulkan/vulkan.h>
 #include <string>
 
-struct lua_State;
-
 namespace vpsk {
 
     // The renderer is a singleton object that encompasses the base objects and systems required
@@ -20,7 +18,7 @@ namespace vpsk {
     class PlatformWindow;
     class ResourceTransferSystem;
 
-    struct RendererConfig {
+    struct context_configuration_t {
         int Width{ 1440 };
         int Height{ 900 };
         std::string ApplicationName{ "AppName" };
@@ -33,18 +31,18 @@ namespace vpsk {
         float SamplerAnisotropy{ 4.0f };
     };
 
-    inline static RendererConfig DefaultRendererConfig;
+    inline static context_configuration_t ContextConfiguration;
 
-    class RendererCore {
-        RendererCore();
-        ~RendererCore();
-        RendererCore(const RendererCore&) = delete;
-        RendererCore& operator=(const RendererCore&) = delete;
-        RendererCore(RendererCore&&) = delete;
-        RendererCore& operator=(RendererCore&&) = delete;
+    class RenderingContext {
+        RenderingContext();
+        ~RenderingContext();
+        RenderingContext(const RenderingContext&) = delete;
+        RenderingContext& operator=(const RenderingContext&) = delete;
+        RenderingContext(RenderingContext&&) = delete;
+        RenderingContext& operator=(RenderingContext&&) = delete;
     public:
 
-        static RendererCore& GetRenderer() noexcept;
+        static RenderingContext& GetRenderer() noexcept;
         static std::atomic<bool>& ShouldResize() noexcept;
         const vpr::Device* Device() const noexcept;
         vpr::Device* Device() noexcept;
@@ -53,11 +51,8 @@ namespace vpsk {
         const vpr::Swapchain* Swapchain() const noexcept;
         vpr::Swapchain* Swapchain() noexcept;
         ResourceTransferSystem* TransferSystem() noexcept;
-        static lua_State* LuaState() noexcept;
 
     protected:
-        
-        std::unique_ptr<lua_State> state;
         std::unique_ptr<ResourceTransferSystem> transferSystem;
         std::unique_ptr<vpr::Instance> instance;
         std::unique_ptr<vpr::Device> device;

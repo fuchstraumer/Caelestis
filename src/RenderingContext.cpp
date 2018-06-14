@@ -1,4 +1,4 @@
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "PlatformWindow.hpp"
 #include "imgui/imgui.h"
 #include "core/Instance.hpp"
@@ -10,17 +10,17 @@
 
 namespace vpsk {
 
-    RendererCore::RendererCore() {
+    RenderingContext::RenderingContext() {
         ImGui::CreateContext();
 
-        window = std::make_unique<PlatformWindow>(DefaultRendererConfig.Width, DefaultRendererConfig.Height, DefaultRendererConfig.ApplicationName.c_str(), false);
+        window = std::make_unique<PlatformWindow>(ContextConfiguration.Width, ContextConfiguration.Height, ContextConfiguration.ApplicationName.c_str(), false);
         const VkApplicationInfo application_info{
             VK_STRUCTURE_TYPE_APPLICATION_INFO,
             nullptr,
-            DefaultRendererConfig.ApplicationName.c_str(),
-            DefaultRendererConfig.ApplicationVersion,
-            DefaultRendererConfig.EngineName.c_str(),
-            DefaultRendererConfig.EngineVersion,
+            ContextConfiguration.ApplicationName.c_str(),
+            ContextConfiguration.ApplicationVersion,
+            ContextConfiguration.EngineName.c_str(),
+            ContextConfiguration.EngineVersion,
             VK_API_VERSION_1_1
         };
 
@@ -31,7 +31,7 @@ namespace vpsk {
         transferSystem = std::make_unique<ResourceTransferSystem>(device.get());
     }
 
-    RendererCore::~RendererCore() {
+    RenderingContext::~RenderingContext() {
         transferSystem.reset();
         swapchain.reset();
         window.reset();
@@ -39,41 +39,41 @@ namespace vpsk {
         instance.reset();
     }
 
-    RendererCore & RendererCore::GetRenderer() noexcept {
-        static RendererCore renderer;
+    RenderingContext & RenderingContext::GetRenderer() noexcept {
+        static RenderingContext renderer;
         return renderer;
     }
 
-    std::atomic<bool>& RendererCore::ShouldResize() noexcept {
+    std::atomic<bool>& RenderingContext::ShouldResize() noexcept {
         static std::atomic<bool> flag(false);
         return flag;
     }
 
-    const vpr::Device * RendererCore::Device() const noexcept {
+    const vpr::Device * RenderingContext::Device() const noexcept {
         return device.get();
     }
 
-    vpr::Device * RendererCore::Device() noexcept {
+    vpr::Device * RenderingContext::Device() noexcept {
         return device.get();
     }
 
-    const vpr::Instance * RendererCore::Instance() const noexcept {
+    const vpr::Instance * RenderingContext::Instance() const noexcept {
         return instance.get();
     }
 
-    vpr::Instance * RendererCore::Instance() noexcept {
+    vpr::Instance * RenderingContext::Instance() noexcept {
         return instance.get();
     }
 
-    const vpr::Swapchain * RendererCore::Swapchain() const noexcept {
+    const vpr::Swapchain * RenderingContext::Swapchain() const noexcept {
         return swapchain.get();
     }
 
-    vpr::Swapchain * RendererCore::Swapchain() noexcept {
+    vpr::Swapchain * RenderingContext::Swapchain() noexcept {
         return swapchain.get();
     }
 
-    ResourceTransferSystem * RendererCore::TransferSystem() noexcept {
+    ResourceTransferSystem * RenderingContext::TransferSystem() noexcept {
         return transferSystem.get();
     }
 
