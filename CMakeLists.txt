@@ -30,7 +30,9 @@ TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/th
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon/include")
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
-"$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest")
+"$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest"
+"${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/third_party/easyloggingpp/src" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/sol2"
+"${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/third_party/luajit/src")
 TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools easyloggingpp "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
 SET_TARGET_PROPERTIES(VulpesRender ShaderTools easyloggingpp tinyobjloader PROPERTIES FOLDER "VulpesSceneKit Dependencies")
 TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PRIVATE "DOCTEST_CONFIG_DISABLE")
