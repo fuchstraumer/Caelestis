@@ -6,7 +6,7 @@
 #include "graph/RenderGraph.hpp"
 #include "systems/BufferResourceCache.hpp"
 #include "systems/ImageResourceCache.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include "core/ShaderGroup.hpp"
@@ -58,7 +58,7 @@ namespace vpsk {
     }
 
     void ShaderResourcePack::createDescriptorPool() {
-        auto& renderer = RendererCore::GetRenderer();
+        auto& renderer = RenderingContext::GetRenderer();
         descriptorPool = std::make_unique<vpr::DescriptorPool>(renderer.Device(), rsrcGroupToIdxMap.size());
         const auto& rsrc_counts = shaderPack->GetTotalDescriptorTypeCounts();
         descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, rsrc_counts.UniformBuffers);

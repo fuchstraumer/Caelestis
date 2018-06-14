@@ -1,4 +1,4 @@
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "graph/RenderGraph.hpp"
 #include "systems/BufferResourceCache.hpp"
 #include "systems/ImageResourceCache.hpp"
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     ShaderGenerator::SetBasePath("../third_party/shadertools/fragments/");
     ShaderPack pack(std::string(working_dir_path + "shaders/Pack.lua").c_str());
 
-    RendererCore& renderer = RendererCore::GetRenderer();
+    RenderingContext& renderer = RenderingContext::GetRenderer();
     RenderGraph graph(renderer.Device());
 
     graph.AddShaderPack(&pack);

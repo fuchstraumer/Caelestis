@@ -1,5 +1,5 @@
 #include "objects/DepthTarget.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include <vulkan/vulkan.h>
 #include "resource/Image.hpp"
 #include "core/LogicalDevice.hpp"
@@ -22,7 +22,7 @@ namespace vpsk {
         image_info.extent.height = height;
         image_info.extent.depth = 1;
 
-        auto& renderer = RendererCore::GetRenderer();
+        auto& renderer = RenderingContext::GetRenderer();
 
         image_info.format = renderer.Device()->FindDepthFormat();
         image_info.samples = sample_count;
@@ -43,7 +43,7 @@ namespace vpsk {
 
     void DepthTarget::CreateAsCube(uint32_t size, bool independent_faces) {
         msaaUpToDate = false;
-        auto& renderer = RendererCore::GetRenderer();
+        auto& renderer = RenderingContext::GetRenderer();
         VkImageCreateInfo image_info = vpr::vk_image_create_info_base;
         image_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         image_info.extent.width = size;

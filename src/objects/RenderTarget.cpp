@@ -1,6 +1,6 @@
 #include "objects/RenderTarget.hpp"
 #include "objects/DepthTarget.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "core/LogicalDevice.hpp"
 #include "resource/Image.hpp"
 #include "doctest/doctest.h"
@@ -16,7 +16,7 @@ namespace vpsk {
 
     void RenderTarget::Create(uint32_t width, uint32_t height, const VkFormat image_format, const bool has_depth, const uint32_t mip_maps, const VkSampleCountFlags sample_count, bool depth_only) {
         Clear();
-        auto& renderer = RendererCore::GetRenderer();
+        auto& renderer = RenderingContext::GetRenderer();
         if (!depth_only) {
             VkImageCreateInfo image_info = vpr::vk_image_create_info_base;
             image_info.extent.width = width;
@@ -58,7 +58,7 @@ namespace vpsk {
 
     void RenderTarget::CreateAsCube(uint32_t size, const VkFormat image_format, const bool has_depth, const uint32_t mip_maps, bool depth_only) {
         Clear();
-        auto& renderer = RendererCore::GetRenderer();
+        auto& renderer = RenderingContext::GetRenderer();
         if (!depth_only) {
             VkImageCreateInfo image_info = vpr::vk_image_create_info_base;
             image_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -96,7 +96,7 @@ namespace vpsk {
         }
 
         ++numViews;
-        auto& renderer = RendererCore::GetRenderer();
+        auto& renderer = RenderingContext::GetRenderer();
         VkImageCreateInfo image_info = renderTargets.back()->CreateInfo();
         image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_info.format = new_format;

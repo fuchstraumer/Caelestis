@@ -9,7 +9,7 @@
 #include "core/ShaderGroup.hpp"
 #include "objects/RenderTarget.hpp"
 #include "render/Swapchain.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "easylogging++.h"
 #include <set>
 namespace vpsk {
@@ -87,9 +87,9 @@ namespace vpsk {
 
     std::unique_ptr<RenderTarget> CreateDefaultBackbuffer() {
         std::unique_ptr<RenderTarget> result = std::make_unique<RenderTarget>();
-        auto& renderer = RendererCore::GetRenderer();
+        auto& renderer = RenderingContext::GetRenderer();
         const vpr::Swapchain* swapchain = renderer.Swapchain();
-        result->Create(swapchain->Extent().width, swapchain->Extent().height, swapchain->ColorFormat(), true, 1, DefaultRendererConfig.MSAA_SampleCount, false);
+        result->Create(swapchain->Extent().width, swapchain->Extent().height, swapchain->ColorFormat(), true, 1, ContextConfiguration.MSAA_SampleCount, false);
         return std::move(result);
     }
 
@@ -224,7 +224,7 @@ namespace vpsk {
     }
 
     RenderGraph& RenderGraph::GetGlobalGraph() {
-        static RenderGraph graph(RendererCore::GetRenderer().Device());
+        static RenderGraph graph(RenderingContext::GetRenderer().Device());
         return graph;
     }
 

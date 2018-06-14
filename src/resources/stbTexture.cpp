@@ -1,7 +1,7 @@
 #include "resources/stbTexture.hpp"
 #include "resources/TextureLoadFunctions.hpp"
 #include "systems/ResourceLoader.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "doctest/doctest.h"
 namespace vpsk {
 
@@ -17,7 +17,7 @@ namespace vpsk {
 
     void stbTexture::createFromLoadedData(void* data_ptr) {
         backingData = data_ptr;
-        vpr::Device* device_ptr = RendererCore::GetRenderer().Device();
+        vpr::Device* device_ptr = RenderingContext::GetRenderer().Device();
         stbi_image_data_t* ptr = reinterpret_cast<stbi_image_data_t*>(backingData);
         stagingBuffer = std::make_unique<vpr::Buffer>(device_ptr);
         stagingBuffer->CreateBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, sizeof(uint8_t) * ptr->x * ptr->y * ptr->channels);

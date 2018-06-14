@@ -4,7 +4,7 @@
 #include "Texture.hpp"
 #include "gli/gli.hpp"
 #include "resources/TextureLoadFunctions.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "systems/ResourceLoader.hpp"
 #include "resource/Buffer.hpp"
 namespace vpsk {
@@ -54,7 +54,7 @@ namespace vpsk {
     inline void gliTexture<gli_texture_type>::createFromLoadedData(void* data) {
         backingData = data;
         gli::texture* ptr = reinterpret_cast<gli::texture*>(backingData);
-        stagingBuffer = std::make_unique<vpr::Buffer>(RendererCore::GetRenderer().Device());
+        stagingBuffer = std::make_unique<vpr::Buffer>(RenderingContext::GetRenderer().Device());
         stagingBuffer->CreateBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, static_cast<VkDeviceSize>(ptr->size()));
         stagingBuffer->CopyToMapped(ptr->data(), ptr->size(), 0);
         finishSetup();

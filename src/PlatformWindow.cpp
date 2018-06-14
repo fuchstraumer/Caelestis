@@ -1,6 +1,6 @@
 #include "PlatformWindow.hpp"
 #include "InputHandler.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "imgui/imgui.h"
 #if defined(_WIN32) 
 #undef APIENTRY
@@ -41,7 +41,7 @@ namespace vpsk {
             io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
         }
         // Flag receipt of resize event.
-        RendererCore::ShouldResize() = true;
+        RenderingContext::ShouldResize() = true;
     }
 
     InputHandler & PlatformWindow::GetInputHandler() noexcept {

@@ -1,6 +1,6 @@
 #include "resources/Texture.hpp"
 #include "systems/TransferSystem.hpp"
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 
 namespace vpsk {
 
@@ -104,7 +104,7 @@ namespace vpsk {
     void Texture::scheduleDeviceTransfer() {
         ResourceTransferSystem::TransferDelegate transfer_func = ResourceTransferSystem::TransferDelegate::create<Texture, &Texture::TransferToDevice>(this);
         ResourceTransferSystem::SignalDelegate signal_func = ResourceTransferSystem::SignalDelegate::create<Texture, &Texture::FreeStagingBuffer>(this);
-        auto* loader = RendererCore::GetRenderer().TransferSystem();
+        auto* loader = RenderingContext::GetRenderer().TransferSystem();
         loader->AddTransferRequest(transfer_func, signal_func);
     }
 

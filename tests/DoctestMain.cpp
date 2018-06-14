@@ -2,7 +2,7 @@
 #include "doctest/doctest.h"
 #include "easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
-#include "RendererCore.hpp"
+#include "RenderingContext.hpp"
 #include "objects/MeshPrimitives.hpp"
 #include "resources/MeshData.hpp"
 #include "components/graphics/DrawCommandComponents.hpp"
@@ -14,7 +14,7 @@ TEST_CASE("TestECS_DrawSystem") {
     using namespace vpsk;
     DefaultRegistryType registry;
     std::unique_ptr<MeshData> mesh = CreateBox();
-    auto& renderer = RendererCore::GetRenderer();
+    auto& renderer = RenderingContext::GetRenderer();
     SUBCASE("CreateMeshBuffers") {
         mesh->CreateBuffers(renderer.Device());
 
