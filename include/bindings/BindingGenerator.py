@@ -34,7 +34,7 @@ def getIncludePath(path, output_location):
     # return relative path to given path, from current output location
     return path
 
-def appendDefaultTemplate(header_parts):
+def appendDefaultTemplateLua(header_parts):
     header_parts.append('template<typename T>')
     header_parts.append('inline void BindTypeToLua(lua_State* state);')
 
@@ -67,15 +67,15 @@ def getConstructors(method_table):
             results.append(constructor_string)
     return results      
 
-def addSingleMethod(member):
+def addSingleMethodLua(member):
     method_string = '&{}::{}'.format(member["path"], member["name"])
     return '\"{}\", {}'.format(member["name"], method_string)
 
-def addSingleMember(member):
+def addSingleMemberLua(member):
     member_str = '&{}::{}'.format(member["property_of_class"], member["raw_type"])
     return '\"{}\", {}'.format(member["name"], member_str)
 
-def generateSingleObjectBindings(object_name, object_dict, header_parts):
+def generateSingleObjectBindingsLua(object_name, object_dict, header_parts):
     true_object_name = '{}::{}'.format(object_dict["namespace"],object_name)
     header_parts.append('template<>')
     header_parts.append('inline void BindTypeToLua<{}>(lua_State* state) {}'.format(true_object_name, '{'))
@@ -88,11 +88,11 @@ def generateSingleObjectBindings(object_name, object_dict, header_parts):
 
     for method in object_dict["methods"]:
         if not skipMember(method):
-            member_str = '        {},'.format(addSingleMethod(method))
+            member_str = '        {},'.format(addSingleMethodLua(method))
             header_parts.append(member_str)
     
     for member in object_dict["variables"]:
-        member_str = '        {},'.format(addSingleMember(member))
+        member_str = '        {},'.format(addSingleMemberLua(member))
         header_parts.append(member_str)
 
     # Check last line for excess commas
@@ -102,7 +102,7 @@ def generateSingleObjectBindings(object_name, object_dict, header_parts):
     header_parts.append('{}'.format('}'))
     header_parts.append('')
     
-def generateHeader(path, output_location):
+def generateLuaHeader(path, output_location):
     guard_name = getHeaderGuard(path)
     header_dict = extractAllFromHeader(path)
 
@@ -116,9 +116,9 @@ def generateHeader(path, output_location):
     header_parts.append('#include \"sol.hpp\"')
     header_parts.append('')
     header_parts.append('')
-    appendDefaultTemplate(header_parts)
+    appendDefaultTemplateLua(header_parts)
     for entry in header_dict:
-        generateSingleObjectBindings(entry, header_dict[entry], header_parts)
+        generateSingleObjectBindingsLua(entry, header_dict[entry], header_parts)
     header_parts.append('#endif //!{}'.format(guard))
     header_parts.append('')
 
@@ -132,8 +132,8 @@ def saveHeader(input_path, output_location, header):
         output_file.write(header)
 
 def main():
-    path = "third_party/vulpesrender/include/resource/Buffer.hpp"
-    header = generateHeader(path, "include/bindings")
+    path = "include/graph/PipelineResource.hpp"
+    header = generateLuaHeader(path, "include/bindings")
     saveHeader(path, "include/bindings", header)
 
 if __name__ == "__main__":
