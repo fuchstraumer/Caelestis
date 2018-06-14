@@ -1,0 +1,5 @@
+#pragma once
+#ifndef VPSK_SCRIPT_COMPONENT_HPP
+#define VPSK_SCRIPT_COMPONENT_HPP
+
+#endif // !VPSK_SCRIPT_COMPONENT_HPP
