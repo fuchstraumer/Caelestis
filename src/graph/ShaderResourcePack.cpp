@@ -9,7 +9,8 @@
 #include "RenderingContext.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
-#include "core/ShaderGroup.hpp"
+#include "core/ResourceGroup.hpp"
+#include "core/Shader.hpp"
 #include "resource/Buffer.hpp"
 
 namespace vpsk {
@@ -111,27 +112,13 @@ namespace vpsk {
         image_cache.AddResources(image_resources);
     }
 
-    void ShaderResourcePack::setupUsageInformation(const std::string& group_name) {
-        const st::ShaderGroup* group = shaderPack->GetShaderGroup(group_name.c_str());
-        size_t num_usages = 0;
-        /*group->GetResourceUsages(rsrcGroupToIdxMap.at(group_name), &num_usages, nullptr);
-        std::vector<st::ResourceUsage> usages(num_usages);
-        group->GetResourceUsages(rsrcGroupToIdxMap.at(group_name), &num_usages, usages.data());
-        for (const auto& rsrc : usages) {
-
-        }*/
-    }
-
-    void ShaderResourcePack::createSingleSet(const std::string & name) {
+    void ShaderResourcePack::createSingleSet(const std::string& name) {
         size_t num_resources = 0;
-        shaderPack->GetResourceGroupPointers(name.c_str(), &num_resources, nullptr);
+        const st::ResourceGroup* resource_group = shaderPack->GetResourceGroup(name.c_str());
+        resource_group->GetResourcePtrs(&num_resources, nullptr);
         std::vector<const st::ShaderResource*> resources(num_resources);
-        shaderPack->GetResourceGroupPointers(name.c_str(), &num_resources, resources.data());
+        resource_group->GetResourcePtrs(&num_resources, resources.data());
         createResources(resources);
-
-        
-        setupUsageInformation(name);
-
     }
 
     void ShaderResourcePack::createSets() {

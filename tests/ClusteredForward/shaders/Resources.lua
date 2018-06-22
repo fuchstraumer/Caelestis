@@ -62,7 +62,11 @@ Resources = {
             Format = "r32ui",
             Size = dimensions.TotalTileCount(),
             Qualifiers = "restrict"
-        }
+        },
+        -- Tags can be used by frontends to specify certain behavior.
+        -- Here, I'll use these tags to know that this group has resources that 
+        -- should be zero-initialized and cleared per pass/execution run
+        Tags = { "InitializeToZero", "ClearAtEndOfPass" }
     },
     Lights = {
         positionRanges = {

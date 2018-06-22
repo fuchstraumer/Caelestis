@@ -247,6 +247,10 @@ namespace vpsk {
         return storageInputs;
     }
 
+    const std::vector<std::string>& PipelineSubmission::GetTags() const noexcept {
+        return submissionTags;
+    }
+
     const PipelineResource * PipelineSubmission::GetDepthStencilInput() const noexcept {
         return depthStencilInput;
     }
@@ -269,6 +273,14 @@ namespace vpsk {
 
     void PipelineSubmission::SetName(std::string _name) {
         name = std::move(_name);
+    }
+
+    void PipelineSubmission::AddTag(std::string _tag) {
+        submissionTags.emplace_back(std::move(_tag));
+    }
+
+    void PipelineSubmission::SetTags(std::vector<std::string> _tags) {
+        submissionTags = std::move(_tags);
     }
 
     const size_t& PipelineSubmission::GetIdx() const noexcept {
@@ -416,7 +428,7 @@ namespace vpsk {
         for (auto* storage_input : storageInputs) {
             if (storage_input != nullptr) {
                 // might be no writers of this, if it's used in a feedback fashion (meaning what?)
-                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck | IgnoreSelf);
+                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
                 // check for write-after-read hazards, finding if this object is read in other submissions before this one writes to it
                 dependencyTraversalRecursion(storage_input->SubmissionsReadIn(), stack_count, NoCheck | IgnoreSelf);
             }

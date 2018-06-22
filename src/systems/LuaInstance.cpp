@@ -19,11 +19,11 @@ namespace vpsk {
 
     LuaInstance::LuaInstance(const LuaInstance& other) noexcept : LuaInstance() {
         // Don't explicitly copy the state: instead, create new state then copy environment from other.
-        sol::set_environment(sol::get_environment(*impl), *other.impl);
+        //sol::set_environment(sol::get_environment(*impl), *other.impl);
     }
 
     LuaInstance& LuaInstance::operator=(const LuaInstance& other) noexcept {
-        sol::set_environment(sol::get_environment(*impl), *other.impl);
+        //sol::set_environment(sol::get_environment(*impl), *other.impl);
         return *this;
     }
 

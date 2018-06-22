@@ -6,7 +6,8 @@
 #include "systems/ImageResourceCache.hpp"
 #include "core/ShaderPack.hpp"
 #include "core/ShaderResource.hpp"
-#include "core/ShaderGroup.hpp"
+#include "core/Shader.hpp"
+#include "core/ResourceGroup.hpp"
 #include "objects/RenderTarget.hpp"
 #include "render/Swapchain.hpp"
 #include "RenderingContext.hpp"
@@ -106,16 +107,19 @@ namespace vpsk {
         addSubmissionsFromPack(pack);
     }
 
-    PipelineSubmission& RenderGraph::AddSubmission(const std::string& name, VkPipelineStageFlags stages) {
+    PipelineSubmission& RenderGraph::AddPipelineSubmission(const std::string& name, VkPipelineStageFlags stages) {
         auto iter = submissionNameMap.find(name);
         if (iter != std::end(submissionNameMap)) {
-            return *pipelineSubmissions[iter->second];
+            if (!std::holds_alternative<std::unique_ptr<PipelineSubmission>>(submissions[iter->second])) {
+
+            }
+            return *std::get<std::unique_ptr<PipelineSubmission>>(submissions[iter->second]);
         }
         else {
-            size_t idx = pipelineSubmissions.size();
-            pipelineSubmissions.emplace_back(std::make_unique<PipelineSubmission>(*this, name, idx, stages));
+            size_t idx = submissions.size();
+            submissions.emplace_back(std::make_unique<PipelineSubmission>(*this, name, idx, stages));
             submissionNameMap[name] = idx;
-            return *pipelineSubmissions.back();
+            return *std::get<std::unique_ptr<PipelineSubmission>>(submissions.back());
         }
     }
 
@@ -147,9 +151,10 @@ namespace vpsk {
         
         for (auto& name : resource_group_names) {
             size_t num_rsrc = 0;
-            pack->GetResourceGroupPointers(name.c_str(), &num_rsrc, nullptr);
+            const st::ResourceGroup* resource_group = pack->GetResourceGroup(name.c_str());
+            resource_group->GetResourcePtrs(&num_rsrc, nullptr);
             std::vector<const st::ShaderResource*> group(num_rsrc);
-            pack->GetResourceGroupPointers(name.c_str(), &num_rsrc, group.data());
+            resource_group->GetResourcePtrs(&num_rsrc, group.data());
             resources.emplace(name.c_str(), group);
         }
 
@@ -216,7 +221,7 @@ namespace vpsk {
     }
 
     size_t RenderGraph::NumSubmissions() const noexcept {
-        return pipelineSubmissions.size();
+        return submissions.size();
     }
 
     const vpr::Device* RenderGraph::GetDevice() const noexcept {
@@ -361,9 +366,22 @@ namespace vpsk {
         return depth_formats.count(fmt) != 0;
     }
 
-    void RenderGraph::addSingleGroup(const std::string & name, const st::ShaderGroup * group) {
-        PipelineSubmission& submission = AddSubmission(name, ShaderStagesToPipelineStages(group->Stages()));
-        
+    static void PrePassSubmission(PipelineSubmission& submission) {
+
+    }
+
+    static void DepthOnlySubmission(PipelineSubmission& submission) {
+        submission.SetStages(VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+    }
+
+    std::unordered_map<std::string, std::function<void(PipelineSubmission&)>> tag_functions_map{
+        { "PrePass", PrePassSubmission },
+        { "DepthOnly", DepthOnlySubmission }
+    };
+
+    void RenderGraph::addSingleGroup(const std::string & name, const st::Shader* group) {
+        PipelineSubmission& submission = AddPipelineSubmission(name, ShaderStagesToPipelineStages(group->Stages()));
+
         const size_t num_sets_in_submissions = group->GetNumSetsRequired();
         for (size_t i = 0; i < num_sets_in_submissions; ++i) {
             size_t num_rsrcs = 0;
@@ -372,6 +390,25 @@ namespace vpsk {
             group->GetResourceUsages(i, &num_rsrcs, usages.data());
             addResourceUsagesToSubmission(submission, usages);
         }
+
+        std::vector<std::string> tags;
+        {
+            st::dll_retrieved_strings_t tag_strings = group->GetTags();
+            for (size_t i = 0; i < tag_strings.NumStrings; ++i) {
+                tags.emplace_back(tag_strings[i]);
+            }
+        }
+
+        if (!tags.empty()) {
+            // We now have some behavior defined by tags. What could it be?
+            submission.SetTags(tags);
+            for (auto& tag : tags) {
+                if (tag_functions_map.count(tag) != 0) {
+                    tag_functions_map.at(tag)(submission);
+                }
+            }
+        }
+
 
         {
             // Look for output attributes

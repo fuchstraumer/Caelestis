@@ -58,6 +58,7 @@ namespace vpsk {
         const std::vector<PipelineResource*>& GetStorageOutputs() const noexcept;
         const std::vector<PipelineResource*>& GetStorageReadOnlyInputs() const noexcept;
         const std::vector<PipelineResource*>& GetStorageInputs() const noexcept;
+        const std::vector<std::string>& GetTags() const noexcept;
         const PipelineResource* GetDepthStencilInput() const noexcept;
         const PipelineResource* GetDepthStencilOutput() const noexcept;
 
@@ -65,6 +66,8 @@ namespace vpsk {
         void SetPhysicalPassIdx(size_t idx);
         void SetStages(VkPipelineStageFlags _stages);
         void SetName(std::string name);
+        void AddTag(std::string _tag);
+        void SetTags(std::vector<std::string> _tags);
 
         const size_t& GetIdx() const noexcept;
         const size_t& GetPhysicalPassIdx() const noexcept;
@@ -117,6 +120,7 @@ namespace vpsk {
         PipelineResource* depthStencilOutput{ nullptr };
 
         std::vector<std::string> usedSetNames;
+        std::vector<std::string> submissionTags;
         std::unique_ptr<vpr::PipelineCache> cache;
         std::unique_ptr<vpr::PipelineLayout> layout;
         VkPipeline pipelineHandle = VK_NULL_HANDLE;

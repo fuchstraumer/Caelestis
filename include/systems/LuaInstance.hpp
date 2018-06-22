@@ -20,8 +20,8 @@ namespace vpsk {
 
         LuaInstance();
         ~LuaInstance();
-        LuaInstance(const LuaInstance&);
-        LuaInstance& operator=(const LuaInstance&);
+        LuaInstance(const LuaInstance&) noexcept;
+        LuaInstance& operator=(const LuaInstance&) noexcept;
         lua_State* State() noexcept;
         
     private:

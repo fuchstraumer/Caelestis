@@ -7,21 +7,27 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <stack>
+#include <variant>
 #include "core/ResourceUsage.hpp"
 #include "PipelineResource.hpp"
 
 namespace st {
     class ShaderPack;
     class ShaderResource;
-    class ShaderGroup;
+    class Shader;
 }
 
 namespace vpsk {
 
     class PipelineSubmission;
+    class HostSubmission;
     class BufferResourceCache;
     class ImageResourceCache;
     class RenderTarget;
+
+    using SubmissionPtr = std::variant<
+        std::unique_ptr<PipelineSubmission>, 
+        std::unique_ptr<HostSubmission>>;
 
     class RenderGraph {
         friend class PipelineSubmission;
@@ -32,7 +38,7 @@ namespace vpsk {
 
         void AddShaderPack(const st::ShaderPack* pack);
 
-        PipelineSubmission& AddSubmission(const std::string& name, VkPipelineStageFlags stages);
+        PipelineSubmission& AddPipelineSubmission(const std::string& name, VkPipelineStageFlags stages);
         PipelineResource& GetResource(const std::string& name);
         BufferResourceCache& GetBufferResourceCache();
         ImageResourceCache& GetImageResourceCache();
@@ -54,7 +60,7 @@ namespace vpsk {
         image_info_t createPipelineResourceImageInfo(const st::ShaderResource* resource) const;
         void createPipelineResourcesFromPack(const std::unordered_map<std::string, std::vector<const st::ShaderResource*>>& resources);
         void addResourceUsagesToSubmission(PipelineSubmission& submissions, const std::vector<st::ResourceUsage>& usages);
-        void addSingleGroup(const std::string& name, const st::ShaderGroup* group);
+        void addSingleGroup(const std::string& name, const st::Shader* group);
         void addSubmissionsFromPack(const st::ShaderPack* pack);
 
         struct pipeline_barrier_t {
@@ -96,7 +102,7 @@ namespace vpsk {
         std::unordered_map<std::string, vpr::Buffer*> backingBuffers;
         std::unordered_map<std::string, vpr::Image*> backingImages;
         std::unordered_map<std::string, size_t> submissionNameMap;
-        std::vector<std::unique_ptr<PipelineSubmission>> pipelineSubmissions;
+        std::vector<SubmissionPtr> submissions;
         std::unordered_map<std::string, size_t> resourceNameMap;
         std::unordered_map<std::string, std::unique_ptr<RenderTarget>> renderTargets;
         std::vector<std::unique_ptr<PipelineResource>> pipelineResources;

@@ -41,8 +41,6 @@ namespace vpsk {
         void createDescriptorPool();
         void createSingleSet(const std::string& name);
         void createSets();
-        
-        void setupUsageInformation(const std::string& group_name);
 
         void getGroupNames();
 
