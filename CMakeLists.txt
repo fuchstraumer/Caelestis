@@ -29,12 +29,12 @@ ADD_LIBRARY(VulpesSceneKit STATIC ${GRAPH} ${SYSTEMS} ${COMPONENTS} ${RESOURCES}
 TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/chrysocyon/include")
-TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
+TARGET_INCLUDE_DIRECTORIES(VulpesSceneKit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "ext/include/vpr"
 "$ENV{VULKAN_SDK}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest"
 "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/third_party/easyloggingpp/src" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/sol2"
 "${CMAKE_CURRENT_SOURCE_DIR}/third_party/shadertools/third_party/luajit/src")
-TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE VulpesRender chrysocyon liblua ShaderTools easyloggingpp "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
-SET_TARGET_PROPERTIES(VulpesRender ShaderTools easyloggingpp tinyobjloader PROPERTIES FOLDER "VulpesSceneKit Dependencies")
+TARGET_LINK_LIBRARIES(VulpesSceneKit INTERFACE vpr_core vpr_alloc vpr_resource chrysocyon liblua ShaderTools easyloggingpp "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
+SET_TARGET_PROPERTIES(vpr_core vpr_alloc vpr_resource vpr_command vpr_sync vpr_render ShaderTools easyloggingpp tinyobjloader PROPERTIES FOLDER "VulpesSceneKit Dependencies")
 TARGET_COMPILE_DEFINITIONS(VulpesSceneKit PRIVATE "DOCTEST_CONFIG_DISABLE")
 IF(MSVC)
     TARGET_COMPILE_OPTIONS(VulpesSceneKit PRIVATE "/std:c++17")
@@ -49,14 +49,14 @@ ADD_EXECUTABLE(VPSK_UNIT_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/DoctestMain.cp
 TARGET_COMPILE_DEFINITIONS(VPSK_UNIT_TESTS PRIVATE "-DVPSK_TESTING_ENABLED")
 TARGET_COMPILE_OPTIONS(VPSK_UNIT_TESTS PRIVATE "/std:c++17")
 TARGET_INCLUDE_DIRECTORIES(VPSK_UNIT_TESTS PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest" "${CMAKE_CURRENT_SOURCE_DIR}/include" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
+    "ext/include/vpr" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
 TARGET_INCLUDE_DIRECTORIES(VPSK_UNIT_TESTS PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest")
-TARGET_LINK_LIBRARIES(VPSK_UNIT_TESTS PRIVATE tinyobjloader VulpesRender glfw chrysocyon liblua ShaderTools easyloggingpp)
+TARGET_LINK_LIBRARIES(VPSK_UNIT_TESTS PRIVATE tinyobjloader vpr_core vpr_alloc vpr_resource chrysocyon liblua ShaderTools easyloggingpp)
 
 ADD_EXECUTABLE(VPSK_Tests "${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp")
 TARGET_COMPILE_OPTIONS(VPSK_Tests PRIVATE "/std:c++17")
-TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulpesrender/include"
+TARGET_INCLUDE_DIRECTORIES(VPSK_Tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "ext/include/vpr"
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "$ENV{VULKAN_SDK}/include")
-TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader VulpesRender glfw VulpesSceneKit chrysocyon liblua ShaderTools)
+TARGET_LINK_LIBRARIES(VPSK_Tests PRIVATE tinyobjloader vpr_core vpr_alloc vpr_resource VulpesSceneKit chrysocyon liblua ShaderTools)
 
 SET_TARGET_PROPERTIES(VPSK_Tests VPSK_UNIT_TESTS PROPERTIES FOLDER "VPSK Test Binaries")
