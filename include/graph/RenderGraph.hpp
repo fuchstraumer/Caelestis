@@ -99,8 +99,6 @@ namespace vpsk {
         std::string graphName;
         std::string backbufferSource{ "backbuffer" };
         std::unordered_map<std::string, pass_barriers_t> passBarriers;
-        std::unordered_map<std::string, vpr::Buffer*> backingBuffers;
-        std::unordered_map<std::string, vpr::Image*> backingImages;
         std::unordered_map<std::string, size_t> submissionNameMap;
         std::vector<SubmissionPtr> submissions;
         std::unordered_map<std::string, size_t> resourceNameMap;

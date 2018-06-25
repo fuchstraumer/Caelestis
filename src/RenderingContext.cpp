@@ -1,10 +1,10 @@
 #include "RenderingContext.hpp"
 #include "PlatformWindow.hpp"
 #include "imgui/imgui.h"
-#include "core/Instance.hpp"
-#include "core/PhysicalDevice.hpp"
-#include "core/LogicalDevice.hpp"
-#include "render/Swapchain.hpp"
+#include "Instance.hpp"
+#include "PhysicalDevice.hpp"
+#include "LogicalDevice.hpp"
+#include "Swapchain.hpp"
 #include "systems/TransferSystem.hpp"
 #include "doctest/doctest.h"
 
@@ -84,7 +84,7 @@ TEST_SUITE_BEGIN("RendererCore");
 
 TEST_CASE("RetrieveRenderer") {
     try {
-        auto& renderer = vpsk::RendererCore::GetRenderer();
+        auto& renderer = vpsk::RenderingContext::GetRenderer();
     }
     catch (...) {
         throw std::runtime_error("Failed to retrieve renderer.");
@@ -92,7 +92,7 @@ TEST_CASE("RetrieveRenderer") {
 }
 
 TEST_CASE("RendererRetrieveDevice") {
-    vpr::Device* dvc = vpsk::RendererCore::GetRenderer().Device();
+    vpr::Device* dvc = vpsk::RenderingContext::GetRenderer().Device();
     CHECK(dvc != nullptr);
 }
 
