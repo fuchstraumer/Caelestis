@@ -22,3 +22,6 @@
 [submodule "third_party/sol2"]
 	path = third_party/sol2
 	url = https://github.com/ThePhD/sol2
+[submodule "third_party/memory"]
+	path = third_party/memory
+	url = http://github.com/foonathan/memory
