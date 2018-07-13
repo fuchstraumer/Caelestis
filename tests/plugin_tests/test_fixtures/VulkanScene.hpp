@@ -21,26 +21,28 @@ struct RequiredVprObjects {
 };
 
 class VulkanScene {
+protected:
     VulkanScene();
     virtual ~VulkanScene();
     VulkanScene(const VulkanScene&) = delete;
     VulkanScene& operator=(const VulkanScene&) = delete;
 public:
 
-    static VulkanScene& GetScene();
+    virtual void Construct(RequiredVprObjects vpr_objects, void* user_data) = 0;
+    virtual void Destroy() = 0;
+    virtual void Render(void* user_data);
 
-    virtual void Construct(RequiredVprObjects vpr_objects, void* user_data);
-    virtual void Destroy();
-    virtual void Render(void* user_data) = 0;
+protected:
 
-private:
+    void createSemaphores();
 
     virtual void limitFrame();
-    virtual void update();
+    virtual void update() = 0;
     virtual void acquireImage();
-    virtual void recordCommands();
-    virtual void draw();
+    virtual void recordCommands() = 0;
+    virtual void draw() = 0;
     virtual void present();
+    virtual void endFrame();
 
     std::chrono::system_clock::time_point limiterA;
     std::chrono::system_clock::time_point limiterB;
