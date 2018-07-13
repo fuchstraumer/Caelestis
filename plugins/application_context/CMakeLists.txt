@@ -46,7 +46,6 @@ ADD_PLUGIN(application_context
 
 SOURCE_GROUP("memory" FILES ${MEMORY_ALLOCATOR_SOURCES})
 
-TARGET_LINK_LIBRARIES(application_context PRIVATE SimpleFileWatcher)
 TARGET_LINK_LIBRARIES(application_context PUBLIC foonathan_memory)
 TARGET_INCLUDE_DIRECTORIES(application_context PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "../../third_party/simplefilewatcher/include" "../../third_party/json/include")

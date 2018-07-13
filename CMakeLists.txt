@@ -3,3 +3,4 @@ PROJECT(VulpesSceneKit)
 
 ADD_SUBDIRECTORY(plugin_manager)
 ADD_SUBDIRECTORY(plugins)
+ADD_SUBDIRECTORY(tests/plugin_tests)

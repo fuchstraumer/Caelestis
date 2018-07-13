@@ -4,7 +4,6 @@
 #include <iostream>
 #include <experimental\filesystem>
 #include <functional>
-#include "../../application_context/include/AppContextAPI.hpp"
 
 constexpr static auto PATH_SEPARATOR = '\\';
 constexpr static auto PATH_SEPARATOR_INVALID = '/';

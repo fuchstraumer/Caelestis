@@ -1,7 +1,6 @@
 #include "AppContextAPI.hpp"
 #include "PluginAPI.hpp"
 #include "CoreAPIs.hpp"
-#include "FileWatcher.h"
 #include "filesystem/FileManipulation.hpp"
 #include "dialog/Dialog.hpp"
 #include "ApplicationConfigurationFile.hpp"
@@ -21,7 +20,7 @@ static void FindApplicationConfigFile() {
         stdfs::path starting_path = stdfs::current_path();
         const std::string starting_path_str = starting_path.string();
 
-        fs::FindFile(APPLICATION_CONTEXT_CFG_FILE_NAME, starting_path_str.c_str(), 3, &found_file);
+        fs::FindFile(APPLICATION_CONTEXT_CFG_FILE_NAME, starting_path_str.c_str(), 5, &found_file);
 
         if (!stdfs::exists(found_file)) {
             if (found_file) {
@@ -42,8 +41,6 @@ static void FindApplicationConfigFile() {
     }
 }
 
-static FW::FileWatcher fwatch;
-
 static const char* ContextName() {
     return "ApplicationContextAPI";
 }
@@ -62,19 +59,7 @@ static void Unload() {
 }
 
 static void Update() {
-    fwatch.update();
-}
-
-static uint32_t AddWatch(const char* dir_name, void* listener, bool recursive) {
-    return fwatch.addWatch(dir_name, reinterpret_cast<FW::FileWatchListener*>(listener), recursive);
-}
-
-static void RemoveDirWatch(const char* dir_name) {
-    fwatch.removeWatch(dir_name);
-}
-
-static void RemoveWatchID(uint32_t id) {
-    fwatch.removeWatch(id);
+    
 }
 
 static uint32_t ShowDialog(const char* message, const char* title, uint32_t dialog_type, uint32_t buttons) {
@@ -197,9 +182,6 @@ static void* CorePluginAPI() {
 
 static void* ApplicationContextAPI() {
     static ApplicationContext_API api{ nullptr };
-    api.AddDirectoryWatch = AddWatch;
-    api.RemoveDirectoryWatch = RemoveDirWatch;
-    api.RemoveWatchID = RemoveWatchID;
     api.ShowDialog = ShowDialog;
     api.TemporaryDirectoryPath = TemporaryDirectoryPath;
     api.CreateDirectory = CreateDir;
