@@ -1,0 +1,10 @@
+{
+    "RequiredModules" : [
+        "RendererContext",
+        "LuaPlugin"
+    ],
+    "ModuleConfigs" : {
+        "RendererContext" : "example_config.json",
+        "LuaPlugin" : "lua_config.json"
+    }
+}
