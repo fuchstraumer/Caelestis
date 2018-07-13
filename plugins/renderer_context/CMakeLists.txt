@@ -1,6 +1,6 @@
 ADD_SUBDIRECTORY("../../third_party/vulpesrender" "${CMAKE_CURRENT_BINARY_DIR}/vulpesrender")
 
-ADD_MODULE(renderer_context
+ADD_PLUGIN(renderer_context
     "include/RendererContextAPI.hpp"
     "include/core/RendererContext.hpp"
     "include/core/PlatformWindow.hpp"

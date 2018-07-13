@@ -9,7 +9,6 @@ SET(DIALOG_IMPL "src/dialog/DialogMac.cpp")
 SET(SECURE_MEMORY_IMPL "src/memory/impl/SecureMemoryUnix.hpp")
 ENDIF()
 
-ADD_SUBDIRECTORY("../../third_party/simplefilewatcher" "${CMAKE_CURRENT_BINARY_DIR}/simplefilewatcher")
 ADD_SUBDIRECTORY("../../third_party/memory" "${CMAKE_CURRENT_BINARY_DIR}/memory")
 
 SET(MEMORY_ALLOCATOR_SOURCES
@@ -28,7 +27,7 @@ SET(MEMORY_ALLOCATOR_SOURCES
     "src/memory/Allocator.cpp"
 )
 
-ADD_MODULE(application_context 
+ADD_PLUGIN(application_context 
     "include/AppContextAPI.hpp"
     "include/filesystem/FileManipulation.hpp"
     "include/ApplicationConfigurationFile.hpp"
