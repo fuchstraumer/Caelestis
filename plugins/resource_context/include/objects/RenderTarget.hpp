@@ -2,7 +2,6 @@
 #ifndef VPSK_RENDER_TARGET_HPP
 #define VPSK_RENDER_TARGET_HPP
 #include "ForwardDecl.hpp"
-#include "graph\PipelineResource.hpp"
 #include <vulkan/vulkan.h>
 #include <memory>
 #include <vector>
