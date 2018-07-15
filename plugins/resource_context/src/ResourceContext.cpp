@@ -9,6 +9,7 @@
 #include "UploadBuffer.hpp"
 #include <foonathan/memory/memory_stack.hpp>
 #include <vector>
+#include <algorithm>
 
 struct userDataCopies {
     foonathan::memory::memory_stack<> allocator;
@@ -76,12 +77,26 @@ static VkAccessFlags accessFlagsFromImageUsage(const VkImageUsageFlags usage_fla
     }
 }
 
+static VkImageLayout imageLayoutFromUsage(const VkImageUsageFlags usage_flags) {
+    if (usage_flags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    else if (usage_flags & VK_IMAGE_USAGE_SAMPLED_BIT) {
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    else if (usage_flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+    else {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+}
 
-vpr::Allocator::allocation_extensions getExtensionFlags(const vpr::Device* device) {
+static vpr::Allocator::allocation_extensions getExtensionFlags(const vpr::Device* device) {
     return device->DedicatedAllocationExtensionsEnabled() ? vpr::Allocator::allocation_extensions::DedicatedAllocations : vpr::Allocator::allocation_extensions::None;
 }
 
-ResourceContext::ResourceContext(vpr::Device * _device, vpr::PhysicalDevice * physical_device) : device(_device), allocator(std::make_unique<vpr::Allocator>(_device->vkHandle(), physical_device->vkHandle(), getExtensionFlags(_device))) {
+ResourceContext::ResourceContext(vpr::Device* _device, vpr::PhysicalDevice* physical_device) : device(_device), allocator(std::make_unique<vpr::Allocator>(_device->vkHandle(), physical_device->vkHandle(), getExtensionFlags(_device))) {
     auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
     transfer_system.Initialize(_device);
 }
@@ -185,10 +200,21 @@ VulkanResource* ResourceContext::CreateImage(const VkImageCreateInfo* info, cons
     allocator->AllocateForImage(reinterpret_cast<VkImage&>(resource->Handle), getAllocReqs(_memory_type), alloc_type, alloc);
 
     if (initial_data) {
-        
+        setImageInitialData(resource, initial_data, alloc);
     }
 
     return resource;
+}
+
+VulkanResource* ResourceContext::CreateNamedImage(const char* name, const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data) {
+    VulkanResource* resource = CreateImage(info, view_info, initial_data, _memory_type, user_data);
+    auto iter = resourceNames.emplace(resource, std::string(name));
+    resource->Name = iter.first->second.c_str();
+    return resource;
+}
+
+void ResourceContext::SetImageData(VulkanResource* image, const gpu_resource_data_t* data) {
+    setImageInitialData(image, data, resourceAllocations.at(image));
 }
 
 VulkanResource* ResourceContext::CreateSampler(const VkSamplerCreateInfo* info, void* user_data) {
@@ -209,7 +235,7 @@ VulkanResource* ResourceContext::CreateSampler(const VkSamplerCreateInfo* info, 
     return resource;
 }
 
-void* ResourceContext::MapResourceMemory(VulkanResource* resource, size_t size = 0, size_t offset = 0) {
+void* ResourceContext::MapResourceMemory(VulkanResource* resource, size_t size, size_t offset) {
     void* mapped_ptr = nullptr;
     auto& alloc = resourceAllocations.at(resource);
     if (resourceInfos.resourceMemoryType.at(resource) == memory_type::HOST_VISIBLE) {
@@ -221,7 +247,7 @@ void* ResourceContext::MapResourceMemory(VulkanResource* resource, size_t size =
     return mapped_ptr;
 }
 
-void ResourceContext::UnmapResourceMemory(VulkanResource * resource) {
+void ResourceContext::UnmapResourceMemory(VulkanResource* resource) {
     resourceAllocations.at(resource).Unmap();
     if (resourceInfos.resourceMemoryType.at(resource) == memory_type::HOST_VISIBLE) {
         VkResult result = vkFlushMappedMemoryRanges(device->vkHandle(), 1, &mappedRanges[resource]);
@@ -298,6 +324,65 @@ void ResourceContext::setBufferInitialDataUploadBuffer(VulkanResource* resource,
         };
         vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1, &memory_barrier1, 0, nullptr);
     }
+}
+
+void ResourceContext::setImageInitialData(VulkanResource* resource, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc) {
+    void* user_data_copy = userData.allocate(alloc.Size, 0);
+    std::vector<VkBufferImageCopy> buffer_image_copies;
+    size_t copy_offset = 0;
+
+    const VkImageCreateInfo* info = reinterpret_cast<VkImageCreateInfo*>(resource->Info);
+    uint32_t width = info->extent.width;
+    uint32_t height = info->extent.height;
+
+    for (uint32_t i = 0; i < info->mipLevels; ++i) {
+        size_t copy_size = initial_data[i].Pitch * height;
+        void* copy_addr = reinterpret_cast<size_t*>(user_data_copy) + copy_offset;
+        memcpy(copy_addr, initial_data[i].Data, copy_size);
+        copy_offset += copy_size;
+
+        buffer_image_copies.emplace_back(VkBufferImageCopy{ copy_offset, 0, 0, VkImageSubresourceLayers{ VK_IMAGE_ASPECT_COLOR_BIT, i, 0, 1 }, VkOffset3D{ 0, 0, 0 }, VkExtent3D{ width, height, 1 } });
+        width = std::max(uint32_t(1), width / uint32_t(2));
+        height = std::max(uint32_t(1), height / uint32_t(2));
+    }
+
+    uploadBuffers.emplace_back(std::make_unique<UploadBuffer>(device, allocator, alloc.Size));
+    auto& upload_buffer = uploadBuffers.back();
+    upload_buffer->SetData(user_data_copy, alloc.Size);
+
+    auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
+    {
+        auto& guard = transfer_system.AcquireSpinLock();
+        VkCommandBuffer cmd = transfer_system.TransferCmdBuffer();
+        const VkImageMemoryBarrier barrier0{
+            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            nullptr,
+            0,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            device->QueueFamilyIndices.Transfer,
+            device->QueueFamilyIndices.Transfer,
+            reinterpret_cast<VkImage>(resource->Handle),
+            VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers }
+        };
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier0);
+        vkCmdCopyBufferToImage(cmd, upload_buffer->Buffer, reinterpret_cast<VkImage>(resource->Handle), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(buffer_image_copies.size()), buffer_image_copies.data());
+        const VkImageMemoryBarrier barrier1{
+            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            nullptr,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            accessFlagsFromImageUsage(info->usage),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            imageLayoutFromUsage(info->usage),
+            device->QueueFamilyIndices.Transfer,
+            device->QueueFamilyIndices.Graphics,
+            reinterpret_cast<VkImage>(resource->Handle),
+            VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers }
+        };
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier1);
+    }
+
 }
 
 vpr::AllocationRequirements ResourceContext::getAllocReqs(memory_type _memory_type) const noexcept {

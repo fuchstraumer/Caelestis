@@ -24,8 +24,11 @@ public:
     VulkanResource* CreateNamedBuffer(const char* name, const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
     void SetBufferData(VulkanResource* dest_buffer, const gpu_resource_data_t* data);
     VulkanResource* CreateImage(const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
+    VulkanResource* CreateNamedImage(const char* name, const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
     void SetImageData(VulkanResource* image, const gpu_resource_data_t* data);
     VulkanResource* CreateSampler(const VkSamplerCreateInfo* info, void* user_data = nullptr);
+    VulkanResource* CreateResourceCopy(VulkanResource* src);
+    void CopyResource(VulkanResource* src, VulkanResource* dest);
     void DestroyResource(VulkanResource* resource);
 
     void* MapResourceMemory(VulkanResource* resource, size_t size = 0, size_t offset = 0);
@@ -40,6 +43,7 @@ private:
 
     void setBufferInitialDataHostOnly(VulkanResource * resource, const gpu_resource_data_t * initial_data, vpr::Allocation& alloc, memory_type _memory_type);
     void setBufferInitialDataUploadBuffer(VulkanResource* resource, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc);
+    void setImageInitialData(VulkanResource * resource, const gpu_resource_data_t * initial_data, vpr::Allocation & alloc);
     vpr::AllocationRequirements getAllocReqs(memory_type _memory_type) const noexcept;
     VkFormatFeatureFlags featureFlagsFromUsage(const VkImageUsageFlags flags) const noexcept;
 
