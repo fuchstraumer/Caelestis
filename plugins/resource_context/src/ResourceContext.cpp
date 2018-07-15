@@ -185,8 +185,26 @@ VulkanResource* ResourceContext::CreateImage(const VkImageCreateInfo* info, cons
     allocator->AllocateForImage(reinterpret_cast<VkImage&>(resource->Handle), getAllocReqs(_memory_type), alloc_type, alloc);
 
     if (initial_data) {
-
+        
     }
+
+    return resource;
+}
+
+VulkanResource* ResourceContext::CreateSampler(const VkSamplerCreateInfo* info, void* user_data) {
+    VulkanResource* resource = nullptr; 
+    {
+        auto iter = resources.emplace(std::make_unique<VulkanResource>());
+        resource = iter.first->get();
+    }
+
+    auto info_iter = resourceInfos.samplerInfos.emplace(resource, *info);
+    resource->Type = resource_type::SAMPLER;
+    resource->Info = &info_iter.first->second;
+    resource->UserData = user_data;
+
+    VkResult result = vkCreateSampler(device->vkHandle(), info, nullptr, reinterpret_cast<VkSampler*>(&resource->Handle));
+    VkAssert(result);
 
     return resource;
 }
