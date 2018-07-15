@@ -13,8 +13,6 @@
 #include <functional>
 #include "chrysocyon/signal/Delegate.hpp"
 
-namespace vpsk {
-
     using FactoryFunctor = delegate_t<void*(const char*)>;
     using SignalFunctor = delegate_t<void(void*)>;
 
@@ -61,6 +59,5 @@ namespace vpsk {
         std::array<std::thread, 2> workers;
     };
 
-} // vpsk
 
 #endif //!VPSK_RESOURCE_LOADER_HPP

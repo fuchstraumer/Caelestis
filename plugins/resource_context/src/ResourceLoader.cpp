@@ -1,6 +1,5 @@
-#include "systems/ResourceLoader.hpp"
+#include "ResourceLoader.hpp"
 #include <experimental/filesystem>
-namespace vpsk {
 
     ResourceLoader::ResourceLoader() {
         Start();
@@ -97,4 +96,3 @@ namespace vpsk {
         }
     }
 
-}
