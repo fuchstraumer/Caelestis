@@ -27,11 +27,11 @@ public:
     VulkanResource* CreateSampler(const VkSamplerCreateInfo* info, void* user_data = nullptr);
     void DestroyResource(VulkanResource* resource);
 
-    void* MapResourceMemory(VulkanResource* resource);
+    void* MapResourceMemory(VulkanResource* resource, size_t size = 0, size_t offset = 0);
     void UnmapResourceMemory(VulkanResource* resource);
 
     // Call at start of frame
-
+    void Update();
     // Call at end of frame
     void FlushStagingBuffers();
 
@@ -55,6 +55,7 @@ private:
 
     std::unordered_map<VulkanResource*, std::string> resourceNames;
     std::unordered_map<VulkanResource*, vpr::Allocation> resourceAllocations;
+    std::unordered_map<VulkanResource*, VkMappedMemoryRange> mappedRanges;
     std::unordered_set<std::unique_ptr<VulkanResource>> resources;
     std::unique_ptr<vpr::Allocator> allocator;
     const vpr::Device* device;

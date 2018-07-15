@@ -90,6 +90,7 @@ VulkanResource* ResourceContext::CreateBuffer(const VkBufferCreateInfo* info, co
         VkAssert(result);
     }
 
+    resourceInfos.resourceMemoryType.emplace(resource, _memory_type);
     vpr::AllocationRequirements alloc_reqs;
     switch (_memory_type) {
     case memory_type::HOST_VISIBLE:
@@ -144,7 +145,39 @@ VulkanResource* ResourceContext::CreateImage(const VkImageCreateInfo * info, con
     return nullptr;
 }
 
+void* ResourceContext::MapResourceMemory(VulkanResource * resource, size_t size = 0, size_t offset = 0) {
+    void* mapped_ptr = nullptr;
+    auto& alloc = resourceAllocations.at(resource);
+    if (resourceInfos.resourceMemoryType.at(resource) == memory_type::HOST_VISIBLE) {
+        mappedRanges[resource] = VkMappedMemoryRange{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), alloc.Offset() + offset, size == 0 ? alloc.Size : size }; 
+        VkResult result = vkInvalidateMappedMemoryRanges(device->vkHandle(), 1, &mappedRanges[resource]);
+        VkAssert(result);
+    }
+    alloc.Map(size == 0 ? alloc.Size : size, alloc.Offset() + offset, mapped_ptr);
+    return mapped_ptr;
+}
+
+void ResourceContext::UnmapResourceMemory(VulkanResource * resource) {
+    resourceAllocations.at(resource).Unmap();
+    if (resourceInfos.resourceMemoryType.at(resource) == memory_type::HOST_VISIBLE) {
+        VkResult result = vkFlushMappedMemoryRanges(device->vkHandle(), 1, &mappedRanges[resource]);
+        VkAssert(result);
+    }
+}
+
+void ResourceContext::Update() {
+    auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
+    transfer_system.CompleteTransfers();
+}
+
 void ResourceContext::FlushStagingBuffers() {
+    for (auto& buff : uploadBuffers) {
+        allocator->FreeMemory(&buff->alloc);
+        vkDestroyBuffer(device->vkHandle(), buff->Buffer, nullptr);
+        buff.reset();
+    }
+    uploadBuffers.clear(); uploadBuffers.shrink_to_fit();
+    userData.flush();
 }
 
 void ResourceContext::setBufferInitialDataHostOnly(VulkanResource* resource, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc, memory_type _memory_type) {
