@@ -19,9 +19,9 @@
     class ResourceLoader {
         ResourceLoader(const ResourceLoader&) = delete;
         ResourceLoader& operator=(const ResourceLoader&) = delete;
-    public:
-
         ResourceLoader();
+        ~ResourceLoader();
+    public:
 
         void Subscribe(const std::string& file_type, FactoryFunctor func);
         void Load(const std::string& file_type, const std::string& file_path, SignalFunctor signal);

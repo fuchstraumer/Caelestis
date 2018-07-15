@@ -5,6 +5,10 @@
         Start();
     }
 
+    ResourceLoader::~ResourceLoader() {
+        Stop();
+    }
+
     void ResourceLoader::Subscribe(const std::string& file_type, FactoryFunctor func) {
         factories[file_type] = func;
     }
