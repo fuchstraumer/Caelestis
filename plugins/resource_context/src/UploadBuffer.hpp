@@ -20,14 +20,18 @@ constexpr static VkBufferCreateInfo staging_buffer_create_info{
 };
 
 struct UploadBuffer {
+    UploadBuffer(const UploadBuffer&) = delete;
+    UploadBuffer& operator=(const UploadBuffer&) = delete;
     UploadBuffer(const vpr::Device* _device, vpr::Allocator* alloc, VkDeviceSize sz);
+    UploadBuffer(UploadBuffer&& other) noexcept;
+    UploadBuffer& operator=(UploadBuffer&& other) noexcept;
     void SetData(const void* data, size_t data_size);
     VkBuffer Buffer;
     vpr::Allocation alloc;
     const vpr::Device* device;
 };
 
-UploadBuffer::UploadBuffer(const vpr::Device * _device, vpr::Allocator * allocator, VkDeviceSize sz) : device(_device) {
+inline UploadBuffer::UploadBuffer(const vpr::Device * _device, vpr::Allocator * allocator, VkDeviceSize sz) : device(_device) {
     VkBufferCreateInfo create_info = staging_buffer_create_info;
     create_info.size = sz;
     VkResult result = vkCreateBuffer(device->vkHandle(), &create_info, nullptr, &Buffer);
@@ -37,10 +41,21 @@ UploadBuffer::UploadBuffer(const vpr::Device * _device, vpr::Allocator * allocat
     allocator->AllocateForBuffer(Buffer, alloc_reqs, vpr::AllocationType::Buffer, alloc);
 }
 
-void UploadBuffer::SetData(const void* data, size_t data_size) {
+inline UploadBuffer::UploadBuffer(UploadBuffer && other) noexcept : Buffer(std::move(other.Buffer)), alloc(other.alloc), device(other.device) {
+    other.Buffer = VK_NULL_HANDLE;
+}
+
+inline UploadBuffer & UploadBuffer::operator=(UploadBuffer && other) noexcept {
+    Buffer = std::move(other.Buffer);
+    alloc = other.alloc;
+    device = other.device;
+    other.Buffer = VK_NULL_HANDLE;
+}
+
+inline void UploadBuffer::SetData(const void* data, size_t data_size) {
     VkMappedMemoryRange mapped_memory{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), alloc.Offset(), alloc.Size };
     void* mapped_address = nullptr;
-    alloc.Map(alloc.Size, alloc.Offset, mapped_address);
+    alloc.Map(alloc.Size, alloc.Offset(), mapped_address);
     memcpy(mapped_address, data, data_size);
     alloc.Unmap();
     VkResult result = vkFlushMappedMemoryRanges(device->vkHandle(), 1, &mapped_memory);

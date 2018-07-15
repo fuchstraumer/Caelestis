@@ -4,15 +4,15 @@
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
-enum resource_type : uint32_t {
+enum class resource_type : uint32_t {
     INVALID = 0,
     BUFFER = 1,
     IMAGE = 2,
     SAMPLER = 3
 };
 
-enum memory_type : uint32_t {
-    INVALID = 0,
+enum class memory_type : uint32_t {
+    INVALID_MEMORY_TYPE = 0,
     HOST_VISIBLE = 1,
     HOST_VISIBLE_AND_COHERENT = 2,
     DEVICE_LOCAL = 3,
@@ -28,7 +28,7 @@ struct gpu_resource_data_t {
 };
 
 struct VulkanResource {
-    uint32_t Type{ resource_type::INVALID };
+    resource_type Type{ resource_type::INVALID };
     uint64_t Handle{ 0 };
     void* Info{ nullptr };
     uint64_t ViewHandle{ 0 };

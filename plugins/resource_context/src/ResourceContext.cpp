@@ -15,6 +15,9 @@ struct userDataCopies {
     foonathan::memory::memory_stack<> allocator;
     std::vector<void*> storedAddresses;
 
+    // blocks should be ~128mb in size. will fit tons of small allocations, and a few bigger ones
+    userDataCopies() : allocator(size_t(256e10)) {}
+
     void* allocate(size_t size, size_t alignment) {
         void* result = allocator.allocate(size, alignment);
         storedAddresses.emplace_back(result);
@@ -235,6 +238,32 @@ VulkanResource* ResourceContext::CreateSampler(const VkSamplerCreateInfo* info, 
     return resource;
 }
 
+VulkanResource * ResourceContext::CreateResourceCopy(VulkanResource * src) {
+    return nullptr;
+}
+
+void ResourceContext::CopyResource(VulkanResource * src, VulkanResource * dest) {
+    throw std::runtime_error("Currently not supported, sorry!");
+}
+
+void ResourceContext::DestroyResource(VulkanResource * resource) {
+    switch (resource->Type) {
+    case resource_type::BUFFER:
+        destroyBuffer(resource);
+        break;
+    case resource_type::IMAGE:
+        destroyImage(resource);
+        break;
+    case resource_type::SAMPLER:
+        destroySampler(resource);
+        break;
+    case resource_type::INVALID:
+        [[fallthrough]];
+    default:
+        throw std::runtime_error("Invalid resource type!");
+    }
+}
+
 void* ResourceContext::MapResourceMemory(VulkanResource* resource, size_t size, size_t offset) {
     void* mapped_ptr = nullptr;
     auto& alloc = resourceAllocations.at(resource);
@@ -287,7 +316,7 @@ void ResourceContext::setBufferInitialDataUploadBuffer(VulkanResource* resource,
     // need it to last until this submission completes. so lets take care of that ourself.
     void* user_data_copy = userData.allocate(initial_data->DataSize, initial_data->DataAlignment);
     memcpy(user_data_copy, initial_data->Data, initial_data->DataSize);
-    uploadBuffers.emplace_back(std::make_unique<UploadBuffer>(device, allocator, initial_data->DataSize));
+    uploadBuffers.emplace_back(std::make_unique<UploadBuffer>(device, allocator.get(), initial_data->DataSize));
     uploadBuffers.back()->SetData(user_data_copy, initial_data->DataSize);
     auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
     {
@@ -346,7 +375,7 @@ void ResourceContext::setImageInitialData(VulkanResource* resource, const gpu_re
         height = std::max(uint32_t(1), height / uint32_t(2));
     }
 
-    uploadBuffers.emplace_back(std::make_unique<UploadBuffer>(device, allocator, alloc.Size));
+    uploadBuffers.emplace_back(std::make_unique<UploadBuffer>(device, allocator.get(), alloc.Size));
     auto& upload_buffer = uploadBuffers.back();
     upload_buffer->SetData(user_data_copy, alloc.Size);
 
@@ -420,4 +449,15 @@ VkFormatFeatureFlags ResourceContext::featureFlagsFromUsage(const VkImageUsageFl
         result |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
     }
     return result;
+}
+
+void ResourceContext::destroyBuffer(VulkanResource * rsrc) {
+
+}
+
+void ResourceContext::destroyImage(VulkanResource * rsrc) {
+}
+
+void ResourceContext::destroySampler(VulkanResource * rsrc) {
+
 }

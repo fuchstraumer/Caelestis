@@ -34,9 +34,9 @@ void ResourceTransferSystem::Initialize(const vpr::Device * dvc) {
     }
 
     device = dvc;
-    transferPool = std::make_unique<vpr::CommandPool>(dvc, getCreateInfo(dvc));
+    transferPool = std::make_unique<vpr::CommandPool>(dvc->vkHandle(), getCreateInfo(dvc));
     transferPool->AllocateCmdBuffers(1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-    fence = std::make_unique<vpr::Fence>(dvc, fence_info); 
+    fence = std::make_unique<vpr::Fence>(dvc->vkHandle(), 0); 
     
     constexpr static VkCommandBufferBeginInfo begin_info{
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
