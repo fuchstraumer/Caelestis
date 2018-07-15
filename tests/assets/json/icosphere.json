@@ -1,0 +1,34 @@
+{
+    "icosphere-features" : {
+        "base-shaders" : [ "icosphere.vert", "icosphere.frag"],
+        "assembly-info" : {
+            "topology" : "TRIANGLES",
+            "primitive-restart" : false
+        },
+        "rasterization-info" : {
+            "depthClampEnable" : false,
+            "rasterizerDiscardEnable" : false,
+            "polygonMode" : "FILL",
+            "cullMode" : "NONE",
+            "frontFace" : "CLOCKWISE",
+            "depthBiasEnable" : false,
+            "depthBiasConstantFactor" : 0.0,
+            "depthBiasClamp" : 0.0,
+            "depthBiasSlopeFactor" : 0.0,
+            "lineWidth" : 1.0
+        },
+        "depth-stencil-info" : {
+            "depthTestEnable" : true,
+            "depthWriteEnable" : true,
+            "depthCompareOp" : "LESS_OR_EQUAL"
+        },
+        "multisample-info" : {
+            "rasterizationSamples" : 8,
+            "sampleShadingEnable" : true
+        },
+        "dynamic-state-info" : {
+            "dynamicStateCount" : 2,
+            "dynamicStates" : [ "VIEWPORT", "SCISSOR" ]
+        }
+    }
+}

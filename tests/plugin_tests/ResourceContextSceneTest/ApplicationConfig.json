@@ -1,0 +1,8 @@
+{
+    "RequiredModules" : [
+        "RendererContext"
+    ],
+    "ModuleConfigs" : {
+        "RendererContext" : "RendererContextCfg.json"
+    }
+}

@@ -9,3 +9,9 @@ include/vpsk_stdafx\.h
 ext/share/doc/tinyobjloader/LICENSE
 
 rsrc/crytekSponza/textures/
+
+ext/bin/
+
+ext/cmake/
+
+ext/

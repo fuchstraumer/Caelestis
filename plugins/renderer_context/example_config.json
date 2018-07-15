@@ -1,0 +1,25 @@
+{
+    "ApplicationName" : "ExampleApplication",
+    "ApplicationVersion" : 0.1,
+    "EngineName" : "ExampleEngine",
+    "EngineVersion" : 0.2,
+    "EnableValidation" : true,
+    "VulkanVersion" : 1.1,
+    "UseRecommendedExtensions" : true,
+    "RequiredExtensions" : [
+        "VK_KHR_Swapchain",
+        "VK_KHR_Surface"
+    ],
+    "RequestedExtensions" : [
+        "VK_KHR_DrawIndirectCount",
+        "VK_KHR_DeviceGroup",
+        "VK_KHR_DeviceGroupCreation",
+        "VK_EXT_ConservativeRasterization",
+        "VK_NVX_device_generated_commands"
+    ],
+    "InitialWindowWidth" : 1440,
+    "InitialWindowHeight" : 720,
+    "InitialMouseState" : "Free",
+    "InitialWindowMode" : "BorderlessWindowed",
+    "ApplicationIconPath" : "None"
+}
