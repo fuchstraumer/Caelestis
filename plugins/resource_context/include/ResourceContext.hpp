@@ -3,6 +3,7 @@
 #define RESOURCE_CONTEXT_HPP
 #include "vpr/ForwardDecl.hpp"
 #include "vpr/Allocation.hpp"
+#include "vpr/AllocationRequirements.hpp"
 #include "ResourceTypes.hpp"
 #include <unordered_set>
 #include <unordered_map>
@@ -39,6 +40,8 @@ private:
 
     void setBufferInitialDataHostOnly(VulkanResource * resource, const gpu_resource_data_t * initial_data, vpr::Allocation& alloc, memory_type _memory_type);
     void setBufferInitialDataUploadBuffer(VulkanResource* resource, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc);
+    vpr::AllocationRequirements getAllocReqs(memory_type _memory_type) const noexcept;
+    VkFormatFeatureFlags featureFlagsFromUsage(const VkImageUsageFlags flags) const noexcept;
 
     void destroyBuffer(VulkanResource* rsrc);
     void destroyImage(VulkanResource* rsrc);
