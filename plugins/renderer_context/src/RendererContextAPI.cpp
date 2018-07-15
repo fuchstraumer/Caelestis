@@ -10,6 +10,7 @@
 #include "vpr/PhysicalDevice.hpp"
 #include "vpr/Instance.hpp"
 #include "vpr/Swapchain.hpp"
+#include "vpr/SurfaceKHR.hpp"
 #include "GLFW/glfw3.h"
 #include <vector>
 #include <memory>
@@ -50,7 +51,8 @@ static void RecreateSwapchain() {
         fn((uint32_t)(Context->Swapchain->vkHandle()), width, height);
     }
 
-    vpr::RecreateSwapchainAndSurface(Context->LogicalDevice, Context->VulkanInstance, Context->Swapchain);
+    vpr::RecreateSwapchainAndSurface(Context->Swapchain, Context->WindowSurface);
+    Context->LogicalDevice->UpdateSurface(Context->WindowSurface->vkHandle());
 
     Context->Window->GetWindowSize(width, height);
     for (auto& fn : SwapchainCallbacks.CompleteResizeCallbacks) {

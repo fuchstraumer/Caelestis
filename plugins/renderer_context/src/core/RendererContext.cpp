@@ -139,10 +139,10 @@ void createInstanceAndWindow(const nlohmann::json& json_file, vpr::Instance** in
     };
 
     auto layers = using_validation ? vpr::Instance::instance_layers::Full : vpr::Instance::instance_layers::Disabled;
-    *instance = new vpr::Instance(layers, &application_info, (*window)->glfwWindow(), &pack);
+    *instance = new vpr::Instance(layers, &application_info, &pack);
 }
 
-void createLogicalDevice(const nlohmann::json& json_file, vpr::Device** device, vpr::Instance* instance, vpr::PhysicalDevice* physical_device) {
+void createLogicalDevice(const nlohmann::json& json_file, VkSurfaceKHR surface, vpr::Device** device, vpr::Instance* instance, vpr::PhysicalDevice* physical_device) {
     std::vector<std::string> required_extensions_strs;
     {
         nlohmann::json req_ext_json = json_file.at("RequiredDeviceExtensions");
@@ -175,7 +175,7 @@ void createLogicalDevice(const nlohmann::json& json_file, vpr::Device** device, 
     pack.OptionalExtensionCount = static_cast<uint32_t>(requested_extensions.size());
     pack.OptionalExtensionNames = requested_extensions.data();
 
-    *device = new vpr::Device(instance, physical_device, &pack, nullptr, 0);
+    *device = new vpr::Device(instance, physical_device, surface, &pack, nullptr, 0);
 }
 
 static std::atomic<bool>& GetShouldResizeFlag() {
@@ -219,7 +219,10 @@ RendererContext::RendererContext(const char* file_path, ApplicationContext_API* 
     // Physical devices to be redone for multi-GPU support if device group extension is supported.
     PhysicalDevices = new vpr::PhysicalDevice*[1];
     PhysicalDevices[0] = new vpr::PhysicalDevice(VulkanInstance->vkHandle());
-    createLogicalDevice(json_file, &LogicalDevice, VulkanInstance, PhysicalDevices[0]);
+
+    WindowSurface = new vpr::SurfaceKHR(VulkanInstance, PhysicalDevices[0]->vkHandle(), Window->glfwWindow());
+
+    createLogicalDevice(json_file, WindowSurface->vkHandle(), &LogicalDevice, VulkanInstance, PhysicalDevices[0]);
 
     static const std::unordered_map<std::string, uint32_t> present_mode_from_str_map{
         { "None", vpr::vertical_sync_mode::None },
@@ -238,9 +241,7 @@ RendererContext::RendererContext(const char* file_path, ApplicationContext_API* 
         }
     }
 
-    Swapchain = new vpr::Swapchain(VulkanInstance, LogicalDevice, desired_mode);
-    WindowSurface = new vpr::SurfaceKHR(VulkanInstance, Window->glfwWindow());
-
+    Swapchain = new vpr::Swapchain(LogicalDevice, Window->glfwWindow(), WindowSurface->vkHandle(), desired_mode);
 }
 
 RendererContext::~RendererContext() {

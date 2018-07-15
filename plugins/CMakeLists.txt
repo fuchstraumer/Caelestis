@@ -16,6 +16,6 @@ ENDFUNCTION()
 
 ADD_SUBDIRECTORY(application_context)
 ADD_SUBDIRECTORY(renderer_context)
-ADD_SUBDIRECTORY(rendergraph_plugin)
+#ADD_SUBDIRECTORY(rendergraph_plugin)
 ADD_SUBDIRECTORY(lua_plugin)
 ADD_SUBDIRECTORY(resource_context)

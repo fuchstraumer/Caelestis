@@ -11,6 +11,7 @@ constexpr static uint32_t SWAPCHAIN_CALLBACKS_API_ID = 0x73e0a080;
     swapchain events. Will be registered and added to an internal
     list of callbacks to traverse, in this plugin
 */
+
 struct SwapchainCallbacks_API {
     void (*SwapchainCreated)(uint32_t swapchain_handle, uint32_t width, uint32_t height);
     // Occurs upon first receipt of swapchain resize event. Signals that appropriate resources should be destroyed
