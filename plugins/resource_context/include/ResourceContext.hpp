@@ -11,6 +11,7 @@
 #include <string>
 #include <variant>
 #include <vulkan/vulkan.h>
+#include <mutex>
 
 class ResourceContext {
     ResourceContext(const ResourceContext&) = delete;
@@ -20,12 +21,12 @@ public:
     ResourceContext(vpr::Device* device, vpr::PhysicalDevice* physical_device);
     ~ResourceContext();
 
-    VulkanResource* CreateBuffer(const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
-    VulkanResource* CreateNamedBuffer(const char* name, const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
-    void SetBufferData(VulkanResource* dest_buffer, const gpu_resource_data_t* data);
-    VulkanResource* CreateImage(const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
-    VulkanResource* CreateNamedImage(const char* name, const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
-    void SetImageData(VulkanResource* image, const gpu_resource_data_t* data);
+    VulkanResource* CreateBuffer(const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
+    VulkanResource* CreateNamedBuffer(const char* name, const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
+    void SetBufferData(VulkanResource* dest_buffer, const size_t num_data, const gpu_resource_data_t* data);
+    VulkanResource* CreateImage(const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
+    VulkanResource* CreateNamedImage(const char* name, const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
+    void SetImageData(VulkanResource* image, const size_t num_data, const gpu_image_resource_data_t* data);
     VulkanResource* CreateSampler(const VkSamplerCreateInfo* info, void* user_data = nullptr);
     VulkanResource* CreateResourceCopy(VulkanResource* src);
     void CopyResource(VulkanResource* src, VulkanResource* dest);
@@ -41,15 +42,22 @@ public:
 
 private:
 
-    void setBufferInitialDataHostOnly(VulkanResource * resource, const gpu_resource_data_t * initial_data, vpr::Allocation& alloc, memory_type _memory_type);
-    void setBufferInitialDataUploadBuffer(VulkanResource* resource, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc);
-    void setImageInitialData(VulkanResource * resource, const gpu_resource_data_t * initial_data, vpr::Allocation & alloc);
+    void setBufferInitialDataHostOnly(VulkanResource * resource, const size_t num_data, const gpu_resource_data_t * initial_data, vpr::Allocation& alloc, memory_type _memory_type);
+    bool needToCopyData(const void * data_ptr) const;
+    void setBufferInitialDataUploadBuffer(VulkanResource* resource, const size_t num_data, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc);
+    void setImageInitialData(VulkanResource* resource, const size_t num_data, const gpu_image_resource_data_t* initial_data, vpr::Allocation & alloc);
     vpr::AllocationRequirements getAllocReqs(memory_type _memory_type) const noexcept;
     VkFormatFeatureFlags featureFlagsFromUsage(const VkImageUsageFlags flags) const noexcept;
 
-    void destroyBuffer(VulkanResource* rsrc);
-    void destroyImage(VulkanResource* rsrc);
-    void destroySampler(VulkanResource* rsrc);
+
+    std::unordered_set<std::unique_ptr<VulkanResource>> resources;
+    using resource_iter_t = decltype(resources)::iterator;
+
+    void destroyResource(resource_iter_t iter);
+    void destroyBuffer(resource_iter_t iter);
+    void destroyImage(resource_iter_t iter);
+    void destroySampler(resource_iter_t iter);
+
 
     struct infoStorage {
         std::unordered_map<VulkanResource*, memory_type> resourceMemoryType;
@@ -63,8 +71,9 @@ private:
     std::unordered_map<VulkanResource*, std::string> resourceNames;
     std::unordered_map<VulkanResource*, vpr::Allocation> resourceAllocations;
     std::unordered_map<VulkanResource*, VkMappedMemoryRange> mappedRanges;
-    std::unordered_set<std::unique_ptr<VulkanResource>> resources;
+    std::unordered_map<VulkanResource*, const void*> referencedLoaderAddresses;
     std::unique_ptr<vpr::Allocator> allocator;
+    std::mutex containerMutex;
     const vpr::Device* device;
 
 };

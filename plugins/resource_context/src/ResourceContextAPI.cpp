@@ -76,28 +76,28 @@ inline memory_type convertToMemoryType(const uint32_t input) {
     }
 }
 
-VulkanResource* CreateBuffer(const struct VkBufferCreateInfo* info, const struct VkBufferViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
-    return resourceContext->CreateBuffer(info, view_info, initial_data, convertToMemoryType(_memory_type), user_data);
+VulkanResource* CreateBuffer(const struct VkBufferCreateInfo* info, const struct VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
+    return resourceContext->CreateBuffer(info, view_info, num_data, initial_data, convertToMemoryType(_memory_type), user_data);
 }
 
-VulkanResource* CreateNamedBuffer(const char* name, const struct VkBufferCreateInfo* info, const struct VkBufferViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
-    return resourceContext->CreateNamedBuffer(name, info, view_info, initial_data, convertToMemoryType(_memory_type), user_data);
+VulkanResource* CreateNamedBuffer(const char* name, const struct VkBufferCreateInfo* info, const struct VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
+    return resourceContext->CreateNamedBuffer(name, info, view_info, num_data, initial_data, convertToMemoryType(_memory_type), user_data);
 }
 
-void SetBufferData(VulkanResource* dest_buffer, const gpu_resource_data_t* data) {
-    resourceContext->SetBufferData(dest_buffer, data);
+void SetBufferData(VulkanResource* dest_buffer, const size_t num_data, const gpu_resource_data_t* data) {
+    resourceContext->SetBufferData(dest_buffer, num_data, data);
 }
 
-VulkanResource* CreateImage(const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
-    return resourceContext->CreateImage(info, view_info, initial_data, convertToMemoryType(_memory_type), user_data);
+VulkanResource* CreateImage(const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
+    return resourceContext->CreateImage(info, view_info, num_data, initial_data, convertToMemoryType(_memory_type), user_data);
 }
 
-VulkanResource* CreateNamedImage(const char* name, const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
-    return resourceContext->CreateNamedImage(name, info, view_info, initial_data, convertToMemoryType(_memory_type), user_data);
+VulkanResource* CreateNamedImage(const char* name, const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
+    return resourceContext->CreateNamedImage(name, info, view_info, num_data, initial_data, convertToMemoryType(_memory_type), user_data);
 }
 
-void SetImageData(VulkanResource* image, const gpu_resource_data_t* data) {
-    resourceContext->SetImageData(image, data);
+void SetImageData(VulkanResource* image, const size_t num_data, const gpu_image_resource_data_t* data) {
+    resourceContext->SetImageData(image, num_data, data);
 }
 
 VulkanResource* CreateSampler(const struct VkSamplerCreateInfo* info, void* user_data) {
@@ -126,19 +126,12 @@ void FlushStagingBuffers() {
 
 void RegisterFileTypeFactory(const char* file_type, ResourceContext_API::factory_function_t load_fn) {
     auto& loader = ResourceLoader::GetResourceLoader();
-    auto fn = [load_fn](const char* fname) {
-        return load_fn(fname);
-    };
-    loader.Subscribe(file_type, FactoryFunctor::create<>(fn));
+    loader.Subscribe(file_type, load_fn);
 }
 
-void LoadFile(const char* file_type, const char* file_name, ResourceContext_API::signal_function_t signal_fn) {
+void LoadFile(const char* file_type, const char* file_name, void* requester, ResourceContext_API::signal_function_t signal_fn) {
     auto& loader = ResourceLoader::GetResourceLoader();
-    auto fn = [&](void* ptr) {
-        signal_fn(ptr);
-    };
-
-    loader.Load(file_type, file_name, SignalFunctor::create<>(fn));
+    loader.Load(file_type, file_name, requester, signal_fn);
 }
 
 void UnloadFile(const char* file_type, const char* fname) {

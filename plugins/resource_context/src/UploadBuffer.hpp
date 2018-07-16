@@ -25,7 +25,7 @@ struct UploadBuffer {
     UploadBuffer(const vpr::Device* _device, vpr::Allocator* alloc, VkDeviceSize sz);
     UploadBuffer(UploadBuffer&& other) noexcept;
     UploadBuffer& operator=(UploadBuffer&& other) noexcept;
-    void SetData(const void* data, size_t data_size);
+    void SetData(const void* data, size_t data_size, size_t offset);
     VkBuffer Buffer;
     vpr::Allocation alloc;
     const vpr::Device* device;
@@ -37,7 +37,7 @@ inline UploadBuffer::UploadBuffer(const vpr::Device * _device, vpr::Allocator * 
     VkResult result = vkCreateBuffer(device->vkHandle(), &create_info, nullptr, &Buffer);
     VkAssert(result);
     vpr::AllocationRequirements alloc_reqs;
-    alloc_reqs.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    alloc_reqs.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     allocator->AllocateForBuffer(Buffer, alloc_reqs, vpr::AllocationType::Buffer, alloc);
 }
 
@@ -52,14 +52,12 @@ inline UploadBuffer & UploadBuffer::operator=(UploadBuffer && other) noexcept {
     other.Buffer = VK_NULL_HANDLE;
 }
 
-inline void UploadBuffer::SetData(const void* data, size_t data_size) {
-    VkMappedMemoryRange mapped_memory{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), alloc.Offset(), alloc.Size };
+inline void UploadBuffer::SetData(const void* data, size_t data_size, size_t offset) {
+    VkMappedMemoryRange mapped_memory{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), alloc.Offset(), data_size };
     void* mapped_address = nullptr;
-    alloc.Map(alloc.Size, alloc.Offset(), mapped_address);
+    alloc.Map(data_size, offset, &mapped_address);
     memcpy(mapped_address, data, data_size);
     alloc.Unmap();
-    VkResult result = vkFlushMappedMemoryRanges(device->vkHandle(), 1, &mapped_memory);
-    VkAssert(result);
 }
 
 #endif //!RESOURCE_CONTEXT_UPLOAD_BUFFER_HPP

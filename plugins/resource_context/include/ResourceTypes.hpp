@@ -27,11 +27,21 @@ struct gpu_resource_data_t {
     uint32_t SlicePitch;
 };
 
+struct gpu_image_resource_data_t {
+    const void* Data = nullptr;
+    size_t DataSize{ 0 };
+    uint32_t Width{ 0 };
+    uint32_t Height{ 0 };
+    uint32_t ArrayLayer{ 0 };
+    uint32_t NumLayers{ 1 };
+    uint32_t MipLevel{ 0 };
+};
+
 struct VulkanResource {
     resource_type Type{ resource_type::INVALID };
-    uint64_t Handle{ 0 };
+    uint64_t Handle{ VK_NULL_HANDLE };
     void* Info{ nullptr };
-    uint64_t ViewHandle{ 0 };
+    uint64_t ViewHandle{ VK_NULL_HANDLE };
     void* ViewInfo{ nullptr };
     const char* Name{ nullptr };
     void* UserData;

@@ -1,5 +1,8 @@
 #include "ResourceLoader.hpp"
 #include <experimental/filesystem>
+#ifdef _MSC_VER
+#include <execution>
+#endif // _MSC_VER
 
     ResourceLoader::ResourceLoader() {
         Start();
@@ -13,7 +16,7 @@
         factories[file_type] = func;
     }
 
-    void ResourceLoader::Load(const std::string& file_type, const std::string& file_path, SignalFunctor signal) {
+    void ResourceLoader::Load(const std::string& file_type, const std::string& file_path, void* _requester, SignalFunctor signal) {
         namespace fs = std::experimental::filesystem;
         fs::path fs_file_path = fs::absolute(fs::path(file_path));
         const std::string absolute_path = fs_file_path.string();
@@ -21,7 +24,8 @@
         if (resources.count(absolute_path) != 0) {
             // Call the signal saying this resource is already loaded
             ++resources.at(absolute_path).RefCount;
-            signal(resources.at(absolute_path).Data);
+            signal(_requester, resources.at(absolute_path).Data);
+            return;
         }
         
         if (!fs::exists(fs_file_path)) {
@@ -32,13 +36,14 @@
             throw std::domain_error("Tried to load resource type for which there is no factory!");
         }
 
-        ResourceData data;
+        ResourceData data;      
         data.FileType = file_type;
         data.AbsoluteFilePath = absolute_path;
         data.RefCount = 1;
         auto iter = resources.emplace(absolute_path, data);
 
         loadRequest req(iter.first->second);
+        req.requester = _requester;
         req.signal = signal;
         req.factory = factories.at(file_type);
         {
@@ -85,6 +90,36 @@
         }    
     }
 
+    void* ResourceLoader::findAddress(const void * data_ptr) {
+        void* result = nullptr;
+        auto find_fn = [data_ptr, &result](decltype(resources)::value_type& data) {
+            if (data.second.Data == data_ptr) {
+                result = data.second.Data;
+                data.second.RefCount++;
+            }
+        };
+#ifdef _MSC_VER
+        std::for_each(std::execution::par_unseq, std::begin(resources), std::end(resources), find_fn);
+#else
+        std::for_each(std::begin(resources), std::end(resources), find_fn);
+#endif        
+        return result;
+    }
+
+    void ResourceLoader::unloadAddress(const void * data_ptr) {
+        auto find_fn = [data_ptr](const decltype(resources)::value_type& data) {
+            return (data_ptr == data.second.Data);
+        };
+#ifdef _MSC_VER
+        auto iter = std::find_if(std::execution::par_unseq, std::begin(resources), std::end(resources), find_fn);
+#else
+        auto iter = std::find_if(std::begin(resources), std::end(resources), find_fn);
+#endif   
+        if (iter != std::end(resources)) {
+            Unload(iter->second.FileType, iter->second.AbsoluteFilePath);
+        }
+    }
+
     void ResourceLoader::workerFunction() {
         while (!shutdown) {
             std::unique_lock<std::mutex> lock{queueMutex};
@@ -96,7 +131,8 @@
             lock.unlock();
             // proceed to load.
             request.destinationData.Data = request.factory(request.destinationData.AbsoluteFilePath.c_str());
-            request.signal(request.destinationData.Data);
+            request.signal(request.requester, request.destinationData.Data);
+            Unload(request.destinationData.FileType, request.destinationData.AbsoluteFilePath);
         }
     }
 

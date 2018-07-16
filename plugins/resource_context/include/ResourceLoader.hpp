@@ -11,10 +11,9 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
-#include "chrysocyon/signal/Delegate.hpp"
 
-    using FactoryFunctor = delegate_t<void*(const char*)>;
-    using SignalFunctor = delegate_t<void(void*)>;
+    using FactoryFunctor = void*(*)(const char* fname);
+    using SignalFunctor = void(*)(void* state, void* data);
 
     class ResourceLoader {
         ResourceLoader(const ResourceLoader&) = delete;
@@ -24,7 +23,7 @@
     public:
 
         void Subscribe(const std::string& file_type, FactoryFunctor func);
-        void Load(const std::string& file_type, const std::string& file_path, SignalFunctor signal);
+        void Load(const std::string& file_type, const std::string& file_path, void* requester, SignalFunctor signal);
         void Unload(const std::string& file_type, const std::string& path);
 
         void Start();
@@ -41,9 +40,18 @@
 
     private:
 
+        // Used by ResourceContext: if a user uses the address of data we have already stored in here in the initial
+        // data structure, re-use this systems address instead of copying it into our per-frame memory arena
+        void* findAddress(const void* data_ptr);
+        // unload or update the refcount of the given address
+        void unloadAddress(const void* data_ptr);
+
+        friend class ResourceContext;
+
         struct loadRequest {
-            loadRequest(ResourceData& dest) : destinationData(dest) {}
+            loadRequest(ResourceData& dest) : destinationData(dest), requester(nullptr) {}
             ResourceData& destinationData;
+            void* requester; // state pointer of requesting object, if given
             SignalFunctor signal;
             FactoryFunctor factory;
         };
