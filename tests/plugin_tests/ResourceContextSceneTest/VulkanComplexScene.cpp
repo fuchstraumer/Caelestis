@@ -266,3 +266,57 @@ void VulkanComplexScene::draw() {
 
 void VulkanComplexScene::endFrame() {
 }
+
+void VulkanComplexScene::createSampler() {
+    constexpr static VkSamplerCreateInfo sampler_info{
+        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        nullptr,
+        0,
+        VK_FILTER_LINEAR,
+        VK_FILTER_LINEAR,
+        VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        1.0f,
+        VK_TRUE,
+        4.0f,
+        VK_FALSE,
+        VK_COMPARE_OP_BEGIN_RANGE,
+        0.0f,
+        3.0f,
+        VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK,
+        VK_FALSE
+    };
+    sampler = resourceContext->CreateSampler(&sampler_info, nullptr);
+}
+
+void VulkanComplexScene::createUBO() {
+    constexpr static VkBufferCreateInfo ubo_info{
+        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        nullptr,
+        0,
+        sizeof(ubo_data_t),
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0,
+        nullptr
+    };
+    sharedUBO = resourceContext->CreateBuffer(&ubo_info, nullptr, 0, nullptr, uint32_t(memory_type::HOST_VISIBLE_AND_COHERENT), nullptr);
+}
+
+void VulkanComplexScene::createDescriptorPool() {
+    descriptorPool = std::make_unique<vpr::DescriptorPool>(vprObjects.device->vkHandle(), 3);
+    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2);
+    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 2);
+    descriptorPool->AddResourceType(VK_DESCRIPTOR_TYPE_SAMPLER, 1);
+    descriptorPool->Create();
+}
+
+void VulkanComplexScene::createDescriptorSetLayouts()
+{
+}
+
+void VulkanComplexScene::createPipelineLayouts()
+{
+}

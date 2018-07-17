@@ -54,6 +54,21 @@ protected:
     void draw() final;
     void endFrame() final;
 
+    void createSampler();
+    void createUBO();
+
+    void createDescriptorPool();
+    void createDescriptorSetLayouts();
+    void createPipelineLayouts();
+    void createShaders();
+    void createFramebuffers();
+    void createRenderpass();
+    void createHousePipeline();
+    void createSkyboxPipeline();
+
+    // has to wait for loading to complete
+    void createDescriptorSets();
+
     const ResourceContext_API* resourceContext;
     VulkanResource* sampler;
     VulkanResource* houseVBO;
