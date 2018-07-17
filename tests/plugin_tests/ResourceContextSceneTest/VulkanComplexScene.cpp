@@ -313,10 +313,46 @@ void VulkanComplexScene::createDescriptorPool() {
     descriptorPool->Create();
 }
 
-void VulkanComplexScene::createDescriptorSetLayouts()
-{
+void VulkanComplexScene::createDescriptorSetLayouts() {
+
+    constexpr static VkDescriptorSetLayoutBinding base_set_bindings[2] {
+        VkDescriptorSetLayoutBinding{
+            0,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            1,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            nullptr
+        },
+        VkDescriptorSetLayoutBinding{
+            1,
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+            1,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            nullptr
+        }
+    };
+
+    baseSetLayout = std::make_unique<vpr::DescriptorSetLayout>(vprObjects.device->vkHandle());
+    baseSetLayout->AddDescriptorBindings(2, base_set_bindings);
+
+    constexpr static VkDescriptorSetLayoutBinding texture_binding{
+        0,
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        1,
+        VK_SHADER_STAGE_FRAGMENT_BIT,
+        nullptr
+    };
+
+    textureSetLayout = std::make_unique<vpr::DescriptorSetLayout>(vprObjects.device->vkHandle());
+    textureSetLayout->AddDescriptorBinding(texture_binding);
+
 }
 
-void VulkanComplexScene::createPipelineLayouts()
-{
+void VulkanComplexScene::createPipelineLayouts() {
+    
+    const VkDescriptorSetLayout set_layouts[2]{ baseSetLayout->vkHandle(), textureSetLayout->vkHandle() };
+
+    pipelineLayout = std::make_unique<vpr::PipelineLayout>(vprObjects.device->vkHandle());
+    pipelineLayout->Create(set_layouts, 2);
+
 }

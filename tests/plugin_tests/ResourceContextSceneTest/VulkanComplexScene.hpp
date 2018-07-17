@@ -81,9 +81,9 @@ protected:
     DepthStencil depthStencil;
     std::unique_ptr<vpr::ShaderModule> houseVert, houseFrag;
     std::unique_ptr<vpr::ShaderModule> skyboxVert, skyboxFrag;
-    std::unique_ptr<vpr::PipelineLayout> housePipelineLayout, skyboxPipelineLayout;
+    std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
     std::unique_ptr<vpr::DescriptorPool> descriptorPool;
-    std::unique_ptr<vpr::DescriptorSetLayout> houseSetLayout, skyboxSetLayout;
+    std::unique_ptr<vpr::DescriptorSetLayout> baseSetLayout, textureSetLayout;
     std::unique_ptr<vpr::DescriptorSet> houseSet, skyboxSet, samplerSet;
     std::unique_ptr<vpr::PipelineCache> pipelineCacheMaster;
     VkPipelineCache houseCache, skyboxCache;
