@@ -15,6 +15,7 @@
 #include "stb/stb_image.h"
 #include "gli/gli.hpp"
 #include <iostream>
+#include "vpr/vkAssert.hpp"
 
 struct stb_image_data_t {
     stb_image_data_t(const char* fname) {
@@ -355,4 +356,36 @@ void VulkanComplexScene::createPipelineLayouts() {
     pipelineLayout = std::make_unique<vpr::PipelineLayout>(vprObjects.device->vkHandle());
     pipelineLayout->Create(set_layouts, 2);
 
+}
+
+void VulkanComplexScene::createShaders() {
+    houseVert = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tests/ResourceContextSceneTest/House.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    houseFrag = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tests/ResourceContextSceneTest/House.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    skyboxVert = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tests/ResourceContextSceneTest/Skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    skyboxFrag = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tets/ResourceContextSceneTest/Skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+}
+
+void VulkanComplexScene::createFramebuffers() {
+    framebuffers.resize(vprObjects.swapchain->ImageCount());
+    for (size_t i = 0; i < framebuffers.size(); ++i) {
+        std::array<VkImageView, 2> views{
+            vprObjects.swapchain->ImageView(i),
+            depthStencil.View
+        };
+
+        const VkFramebufferCreateInfo create_info{
+            VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            nullptr,
+            0,
+            renderPass,
+            static_cast<uint32_t>(views.size()),
+            views.data(),
+            vprObjects.swapchain->Extent().width,
+            vprObjects.swapchain->Extent().height,
+            1
+        };
+
+        VkResult result = vkCreateFramebuffer(vprObjects.device->vkHandle(), &create_info, nullptr, &framebuffers[i]);
+        VkAssert(result);
+    }
 }
