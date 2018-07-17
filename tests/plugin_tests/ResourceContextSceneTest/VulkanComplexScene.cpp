@@ -86,12 +86,11 @@ void VulkanComplexScene::DestroyCompressedTextureData(void * compressed_texture)
 void VulkanComplexScene::CreateHouseMesh(void * obj_data) {
     LoadedObjModel* obj_model = reinterpret_cast<LoadedObjModel*>(obj_data);
 
-    const VkBufferCreateInfo vbo0_info {
+    VkBufferCreateInfo vbo_info {
         VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         nullptr,
         0,
-        static_cast<VkDeviceSize>(sizeof(glm::vec3) * obj_model->Vertices.positions.size()) +
-        static_cast<VkDeviceSize>(sizeof(glm::vec2) * obj_model->Vertices.uvs.size()),
+        static_cast<VkDeviceSize>(sizeof(glm::vec3) * obj_model->Vertices.positions.size()),
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_SHARING_MODE_EXCLUSIVE,
         0,
@@ -136,7 +135,9 @@ void VulkanComplexScene::CreateHouseMesh(void * obj_data) {
         0
     };
 
-    houseVBO = resourceContext->CreateBuffer(&vbo0_info, nullptr, 2, vbo_data, uint32_t(memory_type::DEVICE_LOCAL), nullptr);
+    houseVBO0 = resourceContext->CreateBuffer(&vbo_info, nullptr, 1, vbo_data, uint32_t(memory_type::DEVICE_LOCAL), nullptr);
+    vbo_info.size = sizeof(glm::vec2) * obj_model->Vertices.uvs.size();
+    houseVBO1 = resourceContext->CreateBuffer(&vbo_info, nullptr, 1, &vbo_data[1], uint32_t(memory_type::DEVICE_LOCAL), nullptr);
     houseEBO = resourceContext->CreateBuffer(&ebo_info, nullptr, 1, &ebo_data, uint32_t(memory_type::DEVICE_LOCAL), nullptr);
 
     obj_model->Vertices.positions.shrink_to_fit();
@@ -349,6 +350,14 @@ void VulkanComplexScene::createDescriptorSetLayouts() {
 
 }
 
+void VulkanComplexScene::createBaseDescriptorSet() {
+    baseSet = std::make_unique<vpr::DescriptorSet>(vprObjects.device->vkHandle());
+    const VkDescriptorBufferInfo ubo_info{
+
+    };
+
+}
+
 void VulkanComplexScene::createPipelineLayouts() {
     
     const VkDescriptorSetLayout set_layouts[2]{ baseSetLayout->vkHandle(), textureSetLayout->vkHandle() };
@@ -389,3 +398,13 @@ void VulkanComplexScene::createFramebuffers() {
         VkAssert(result);
     }
 }
+
+void VulkanComplexScene::createRenderpass() {
+    renderPass = CreateBasicRenderpass(vprObjects.device, vprObjects.swapchain, depthStencil.Format);
+}
+
+void VulkanComplexScene::createHousePipeline() {
+
+}
+
+

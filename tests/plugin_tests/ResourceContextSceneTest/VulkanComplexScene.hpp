@@ -59,6 +59,7 @@ protected:
 
     void createDescriptorPool();
     void createDescriptorSetLayouts();
+    void createBaseDescriptorSet();
     void createPipelineLayouts();
     void createShaders();
     void createFramebuffers();
@@ -67,11 +68,12 @@ protected:
     void createSkyboxPipeline();
 
     // has to wait for loading to complete
-    void createDescriptorSets();
+    void createTextureDescriptorSets();
 
     const ResourceContext_API* resourceContext;
     VulkanResource* sampler;
-    VulkanResource* houseVBO;
+    VulkanResource* houseVBO0;
+    VulkanResource* houseVBO1;
     VulkanResource* houseEBO;
     VulkanResource* houseTexture;
     VulkanResource* skyboxVBO;
@@ -84,7 +86,7 @@ protected:
     std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
     std::unique_ptr<vpr::DescriptorPool> descriptorPool;
     std::unique_ptr<vpr::DescriptorSetLayout> baseSetLayout, textureSetLayout;
-    std::unique_ptr<vpr::DescriptorSet> houseSet, skyboxSet, samplerSet;
+    std::unique_ptr<vpr::DescriptorSet> houseSet, skyboxSet, baseSet;
     std::unique_ptr<vpr::PipelineCache> pipelineCacheMaster;
     VkPipelineCache houseCache, skyboxCache;
     VkPipeline housePipeline, skyboxPipeline;
