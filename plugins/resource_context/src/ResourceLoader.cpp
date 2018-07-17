@@ -92,7 +92,12 @@
         
         if (workers[1].joinable()) {
             workers[1].join();
-        }    
+        }
+
+        for (auto& rsrc : resources) {
+            deleters.at(rsrc.first)(rsrc.second.Data);
+        }
+
     }
 
     void* ResourceLoader::findAddress(const void * data_ptr) {
