@@ -29,8 +29,11 @@ public:
     void Destroy() final;
 
     static void* LoadObjFile(const char* fname);
+    static void DestroyObjFileData(void* obj_file);
     static void* LoadJpegImage(const char* fname);
+    static void DestroyJpegFileData(void* jpeg_file);
     static void* LoadCompressedTexture(const char* fname);
+    static void DestroyCompressedTextureData(void* compressed_texture);
 
     void CreateHouseMesh(void* obj_data);
     void CreateHouseTexture(void* texture_data);

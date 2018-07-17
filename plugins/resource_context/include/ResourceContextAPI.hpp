@@ -26,8 +26,9 @@ struct ResourceContext_API {
     void (*FlushStagingBuffers)(void);
     // Resource loader API
     using factory_function_t = void*(*)(const char* fname);
+    using deleter_function_t = void(*)(void* object_instance);
     using signal_function_t = void(*)(void* object_or_state, void* data);
-    void (*RegisterFileTypeFactory)(const char* file_type, factory_function_t fn);
+    void (*RegisterFileTypeFactory)(const char* file_type, factory_function_t fn, deleter_function_t del_fn);
     // Load a file of a type previously registered with RegisterFileFactory(). file_name is the objects path (can be relative, will be made canonical/absolute). 
     // requesting_object_ptr is a potential state/class pointer that can be used by signal_fn, to allow for calling class/struct member functions on signal receipt.
     void (*LoadFile)(const char* file_type, const char* file_name, void* requesting_object_ptr, signal_function_t signal_fn);

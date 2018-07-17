@@ -59,12 +59,27 @@ void* VulkanComplexScene::LoadObjFile(const char* fname) {
     return new LoadedObjModel(fname);
 }
 
+void VulkanComplexScene::DestroyObjFileData(void * obj_file) {
+    LoadedObjModel* model = reinterpret_cast<LoadedObjModel*>(obj_file);
+    delete model;
+}
+
 void* VulkanComplexScene::LoadJpegImage(const char* fname) {
     return new stb_image_data_t(fname);
 }
 
+void VulkanComplexScene::DestroyJpegFileData(void * jpeg_file) {
+    stb_image_data_t* image = reinterpret_cast<stb_image_data_t*>(jpeg_file);
+    delete image;
+}
+
 void* VulkanComplexScene::LoadCompressedTexture(const char* fname) {
     return new gli::texture_cube(gli::load(fname));
+}
+
+void VulkanComplexScene::DestroyCompressedTextureData(void * compressed_texture) {
+    gli::texture_cube* texture = reinterpret_cast<gli::texture_cube*>(compressed_texture);
+    delete texture;
 }
 
 void VulkanComplexScene::CreateHouseMesh(void * obj_data) {

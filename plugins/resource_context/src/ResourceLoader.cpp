@@ -12,8 +12,9 @@
         Stop();
     }
 
-    void ResourceLoader::Subscribe(const std::string& file_type, FactoryFunctor func) {
+    void ResourceLoader::Subscribe(const std::string& file_type, FactoryFunctor func, DeleteFunctor del_fn) {
         factories[file_type] = func;
+        deleters[file_type] = del_fn;
     }
 
     void ResourceLoader::Load(const std::string& file_type, const std::string& file_path, void* _requester, SignalFunctor signal) {
@@ -34,6 +35,10 @@
 
         if (factories.count(file_type) == 0) {
             throw std::domain_error("Tried to load resource type for which there is no factory!");
+        }
+
+        if (deleters.count(file_type) == 0) {
+            throw std::domain_error("No deleter function for current file type!");
         }
 
         ResourceData data;      
@@ -60,7 +65,7 @@
             auto iter = resources.find(path);
             --iter->second.RefCount;
             if (iter->second.RefCount == 0) {
-                delete iter->second.Data;
+                deleters.at(iter->first)(iter->second.Data);
             }
             resources.erase(iter);
         }
@@ -132,7 +137,6 @@
             // proceed to load.
             request.destinationData.Data = request.factory(request.destinationData.AbsoluteFilePath.c_str());
             request.signal(request.requester, request.destinationData.Data);
-            Unload(request.destinationData.FileType, request.destinationData.AbsoluteFilePath);
         }
     }
 

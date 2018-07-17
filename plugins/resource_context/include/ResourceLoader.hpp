@@ -13,6 +13,7 @@
 #include <functional>
 
     using FactoryFunctor = void*(*)(const char* fname);
+    using DeleteFunctor = void(*)(void* obj_instance);
     using SignalFunctor = void(*)(void* state, void* data);
 
     class ResourceLoader {
@@ -22,7 +23,7 @@
         ~ResourceLoader();
     public:
 
-        void Subscribe(const std::string& file_type, FactoryFunctor func);
+        void Subscribe(const std::string& file_type, FactoryFunctor func, DeleteFunctor del_fn);
         void Load(const std::string& file_type, const std::string& file_path, void* requester, SignalFunctor signal);
         void Unload(const std::string& file_type, const std::string& path);
 
@@ -59,6 +60,7 @@
         void workerFunction();
 
         std::unordered_map<std::string, FactoryFunctor> factories;
+        std::unordered_map<std::string, DeleteFunctor> deleters;
         std::unordered_map<std::string, ResourceData> resources;
         std::queue<loadRequest> requests;
         std::mutex queueMutex;

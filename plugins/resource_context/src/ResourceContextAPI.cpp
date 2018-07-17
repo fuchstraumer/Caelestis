@@ -124,9 +124,9 @@ void FlushStagingBuffers() {
     resourceContext->FlushStagingBuffers();
 }
 
-void RegisterFileTypeFactory(const char* file_type, ResourceContext_API::factory_function_t load_fn) {
+void RegisterFileTypeFactory(const char* file_type, ResourceContext_API::factory_function_t load_fn, ResourceContext_API::deleter_function_t del_fn) {
     auto& loader = ResourceLoader::GetResourceLoader();
-    loader.Subscribe(file_type, load_fn);
+    loader.Subscribe(file_type, load_fn, del_fn);
 }
 
 void LoadFile(const char* file_type, const char* file_name, void* requester, ResourceContext_API::signal_function_t signal_fn) {

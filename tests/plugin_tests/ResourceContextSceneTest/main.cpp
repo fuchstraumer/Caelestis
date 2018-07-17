@@ -29,9 +29,9 @@ int main(int argc, char* argv[]) {
     RendererContext_API* renderer_api = reinterpret_cast<RendererContext_API*>(manager.RetrieveAPI(RENDERER_CONTEXT_API_ID));
     context = renderer_api->GetContext();
     resource_api = reinterpret_cast<ResourceContext_API*>(manager.RetrieveAPI(RESOURCE_CONTEXT_API_ID));
-    resource_api->RegisterFileTypeFactory("OBJ", &VulkanComplexScene::LoadObjFile);
-    resource_api->RegisterFileTypeFactory("JPEG", &VulkanComplexScene::LoadJpegImage);
-    resource_api->RegisterFileTypeFactory("DDS", &VulkanComplexScene::LoadCompressedTexture);
+    resource_api->RegisterFileTypeFactory("OBJ", &VulkanComplexScene::LoadObjFile, &VulkanComplexScene::DestroyObjFileData);
+    resource_api->RegisterFileTypeFactory("JPEG", &VulkanComplexScene::LoadJpegImage, &VulkanComplexScene::DestroyJpegFileData);
+    resource_api->RegisterFileTypeFactory("DDS", &VulkanComplexScene::LoadCompressedTexture, &VulkanComplexScene::DestroyCompressedTextureData);
 
     auto& scene = VulkanComplexScene::GetScene();
     scene.Construct(RequiredVprObjects{ context->LogicalDevice, context->PhysicalDevices[0], context->VulkanInstance, context->Swapchain }, resource_api);
@@ -40,4 +40,7 @@ int main(int argc, char* argv[]) {
     resource_api->LoadFile("DDS", "StarboxMips.dds", &scene, skyboxLoadedCallback);
 
     scene.WaitForAllLoaded();
+    resource_api->UnloadFile("OBJ", "House.obj");
+    resource_api->UnloadFile("JPEG", "House.jpg");
+    resource_api->UnloadFile("DDS", "StarboxMips.dds");
 }
