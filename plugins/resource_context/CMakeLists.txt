@@ -12,10 +12,11 @@ ADD_PLUGIN(resource_context
     "${CMAKE_CURRENT_SOURCE_DIR}/src/UploadBuffer.hpp"
 )
 
-TARGET_LINK_LIBRARIES(resource_context PRIVATE vpr_alloc vpr_core vpr_command vpr_sync ${Vulkan_LIBRARY} foonathan_memory)
+TARGET_LINK_LIBRARIES(resource_context PRIVATE vpr_alloc vpr_core vpr_command vpr_sync ${Vulkan_LIBRARY} easyloggingpp)
 TARGET_INCLUDE_DIRECTORIES(resource_context PRIVATE
     "${Vulkan_INCLUDE_DIR}"
     "../../ext/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "../../plugins"
+    "../../third_party/easyloggingpp/src"
 )
