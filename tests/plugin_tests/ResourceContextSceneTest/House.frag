@@ -4,9 +4,8 @@
 layout (location = 0) in vec2 vUV;
 layout (location = 0) out vec4 backbuffer;
 
-layout (set = 0, binding = 1) uniform sampler texSampler;
-layout (set = 1, binding = 0) uniform texture2D diffuse;
+layout (set = 0, binding = 1) uniform sampler2D diffuse;
 
 void main() {
-    backbuffer = texture(sampler2D(diffuse, texSampler), vUV);
+    backbuffer = texture(diffuse, vUV);
 }

@@ -355,7 +355,7 @@ void VulkanTriangle::setupPipeline()  {
         vertex_attributes
     };
 
-    pipeline = CreateBasicPipeline(vprObjects.device, 2, shader_stages, &vertex_info, pipelineLayout, renderpass);
+    pipeline = CreateBasicPipeline(vprObjects.device, 2, shader_stages, &vertex_info, pipelineLayout, renderpass, VK_COMPARE_OP_LESS);
     
 }
 

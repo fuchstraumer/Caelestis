@@ -46,20 +46,26 @@ public:
         glm::mat4 view;
         glm::mat4 projection;
     };
+    ubo_data_t houseUboData;
+    ubo_data_t skyboxUboData;
 
 protected:
 
     void update() final;
     void recordCommands() final;
+    void renderHouse(VkCommandBuffer cmd);
+    void renderSkybox(VkCommandBuffer cmd);
     void draw() final;
     void endFrame() final;
 
     void createSampler();
-    void createUBO();
-
+    void createUBOs();
+    void createSkyboxMesh();
+    void createFences();
+    void createCommandPool();
     void createDescriptorPool();
     void createDescriptorSetLayouts();
-    void createBaseDescriptorSet();
+    void createDescriptorSets();
     void createPipelineLayouts();
     void createShaders();
     void createFramebuffers();
@@ -67,33 +73,40 @@ protected:
     void createHousePipeline();
     void createSkyboxPipeline();
 
+    void destroyFences();
+    void destroyFramebuffers();
+
     // has to wait for loading to complete
-    void createTextureDescriptorSets();
+    void updateHouseDescriptorSet();
+    void updateSkyboxDescriptorSet();
 
     const ResourceContext_API* resourceContext;
     VulkanResource* sampler;
-    VulkanResource* houseVBO0;
-    VulkanResource* houseVBO1;
+    VulkanResource* houseVBO;
     VulkanResource* houseEBO;
     VulkanResource* houseTexture;
+    VulkanResource* skyboxEBO;
     VulkanResource* skyboxVBO;
     VulkanResource* skyboxTexture;
-    VulkanResource* sharedUBO;
+    VulkanResource* houseUBO;
+    VulkanResource* skyboxUBO;
 
     DepthStencil depthStencil;
+    std::unique_ptr<vpr::CommandPool> cmdPool;
     std::unique_ptr<vpr::ShaderModule> houseVert, houseFrag;
     std::unique_ptr<vpr::ShaderModule> skyboxVert, skyboxFrag;
     std::unique_ptr<vpr::PipelineLayout> pipelineLayout;
     std::unique_ptr<vpr::DescriptorPool> descriptorPool;
-    std::unique_ptr<vpr::DescriptorSetLayout> baseSetLayout, textureSetLayout;
+    std::unique_ptr<vpr::DescriptorSetLayout> setLayout;
     std::unique_ptr<vpr::DescriptorSet> houseSet, skyboxSet, baseSet;
-    std::unique_ptr<vpr::PipelineCache> pipelineCacheMaster;
-    VkPipelineCache houseCache, skyboxCache;
+    std::unique_ptr<vpr::PipelineCache> houseCache, skyboxCache;
     VkPipeline housePipeline, skyboxPipeline;
     VkRenderPass renderPass;
     std::vector<VkFence> fences;
     std::vector<VkFramebuffer> framebuffers;
 
+    uint32_t houseIndexCount;
+    uint32_t skyboxIndexCount;
     std::atomic<bool> houseTextureReady;
     std::atomic<bool> houseMeshReady;
     std::atomic<bool> skyboxTextureReady;

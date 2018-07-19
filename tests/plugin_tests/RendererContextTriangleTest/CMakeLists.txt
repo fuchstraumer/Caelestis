@@ -17,4 +17,4 @@ TARGET_INCLUDE_DIRECTORIES(RendererContextTriangleTest PRIVATE
     "../test_fixtures/"
 )
 
-TARGET_LINK_LIBRARIES(RendererContextTriangleTest PRIVATE vpr_core vpr_sync ${Vulkan_LIBRARY} glfw)
+TARGET_LINK_LIBRARIES(RendererContextTriangleTest PRIVATE vpr_core vpr_sync ${Vulkan_LIBRARY})

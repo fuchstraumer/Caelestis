@@ -9,6 +9,10 @@ ADD_PLUGIN_TEST(ResourceContextSceneTest
     "../test_fixtures/CommonCreationFunctions.cpp"
     "ObjModel.hpp"
     "ObjModel.cpp"
+    "House.vert"
+    "House.frag"
+    "Skybox.vert"
+    "Skybox.frag"
 )
 
 ADD_SUBDIRECTORY("../../../third_party/tinyobjloader" "${CMAKE_CURRENT_BINARY_DIR}/tinyobjloader")
@@ -21,7 +25,8 @@ TARGET_INCLUDE_DIRECTORIES(ResourceContextSceneTest PRIVATE
     "../../../third_party"
     "../../../ext/include"
     "../../../third_party/gli"
+    "../../../third_party/tinyobjloader/experimental"
 )
 
-TARGET_LINK_LIBRARIES(ResourceContextSceneTest PRIVATE foonathan_memory vpr_core tinyobjloader vpr_resource
-    vpr_sync vpr_alloc vpr_command ${Vulkan_LIBRARY} glfw)
+TARGET_LINK_LIBRARIES(ResourceContextSceneTest PRIVATE foonathan_memory vpr_core vpr_resource
+    vpr_sync vpr_alloc vpr_command ${Vulkan_LIBRARY} easyloggingpp)

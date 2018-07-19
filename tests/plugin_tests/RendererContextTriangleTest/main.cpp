@@ -3,7 +3,6 @@
 #include "../../../plugins//renderer_context/include/core/RendererContext.hpp"
 #include "../../../plugin_manager/include/PluginManager.hpp"
 #include "../../..//plugin_manager/include/CoreAPIs.hpp"
-#include "GLFW/glfw3.h"
 
 static RendererContext* context = nullptr;
 
@@ -39,9 +38,8 @@ int main(int argc, char* argv[]) {
     triangle.Construct(objects, nullptr);
 
     Plugin_API* core_api = reinterpret_cast<Plugin_API*>(manager.RetrieveBaseAPI(RENDERER_CONTEXT_API_ID));
-    GLFWwindow* window = reinterpret_cast<GLFWwindow*>(renderer_api->GetGLFWwindow());
 
-    while (!glfwWindowShouldClose(window)) {
+    while (!renderer_api->WindowShouldClose()) {
         core_api->LogicalUpdate();
         triangle.Render(nullptr);
     }
