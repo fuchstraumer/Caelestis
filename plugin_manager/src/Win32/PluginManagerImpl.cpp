@@ -4,6 +4,7 @@
 #include <iostream>
 #include <experimental\filesystem>
 #include <functional>
+#include "../../plugins/application_context/include/AppContextAPI.hpp"
 
 constexpr static auto PATH_SEPARATOR = '\\';
 constexpr static auto PATH_SEPARATOR_INVALID = '/';
@@ -59,15 +60,14 @@ void PluginManagerImpl::LoadPlugin(const char * fname) {
         std::cerr << "Given path to plugin does not exist";
     }
 
-    const std::string absolute_path = fs::absolute(plugin_path).string();
-
 #ifdef _MSC_VER
-    const std::string new_pdb = ReplaceExtension(absolute_path, ".pdb");
-    if (!ProcessPDB(absolute_path, new_pdb)) {
-        std::cerr << "Couldn't process/find PDB for loaded library - debugging may be affected!\n";
+    const std::string new_pdb = ReplaceExtension(plugin_path.string(), ".pdb");
+    if (!ProcessPDB(plugin_path.string(), new_pdb)) {
+        //std::cerr << "Couldn't process/find PDB for loaded library - debugging may be affected!\n";
     }
 #endif
 
+    const std::string absolute_path = fs::absolute(plugin_path).string();
     HMODULE new_handle = LoadLibrary(absolute_path.c_str());
 
     if (!new_handle) {
@@ -123,7 +123,7 @@ void* PluginManagerImpl::GetEngineAPI(uint32_t api_id) {
     }
 }
 
-void PluginManagerImpl::LoadedPlugins(uint32_t * num_plugins, uint32_t * plugin_ids) const {
+void PluginManagerImpl::LoadedPlugins(uint32_t* num_plugins, uint32_t* plugin_ids) const {
     *num_plugins = static_cast<uint32_t>(coreApiPointers.size());
     if (plugin_ids != nullptr) {
         std::vector<uint32_t> results;
@@ -134,7 +134,7 @@ void PluginManagerImpl::LoadedPlugins(uint32_t * num_plugins, uint32_t * plugin_
     }
 }
 
-Plugin_API * PluginManagerImpl::GetCoreAPI(uint32_t api_id) {
+Plugin_API* PluginManagerImpl::GetCoreAPI(uint32_t api_id) {
     auto iter = coreApiPointers.find(api_id);
     if (iter == std::end(coreApiPointers)) {
         return nullptr;
