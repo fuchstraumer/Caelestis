@@ -11,11 +11,14 @@
 #include "vpr/Instance.hpp"
 #include "vpr/Swapchain.hpp"
 #include "vpr/SurfaceKHR.hpp"
+#include "vpr/PipelineCache.hpp"
 #include "GLFW/glfw3.h"
 #include <vector>
 #include <memory>
 #include <list>
+#include <forward_list>
 #include <functional>
+#include <string>
 
 static ApplicationContext_API* AppContextAPI = nullptr;
 static RendererContext* Context = nullptr;
@@ -71,10 +74,35 @@ static const char* GetName() {
     return "RendererContext";
 }
 
+static void WriteLoadedInfoLog() {
+    AppContextAPI->InfoLog("Loaded RendererContext");
+    int w = 0; int h = 0;
+    Context->Window->GetWindowSize(w, h);
+    std::string window_info_str = "Created window with dimensions " + std::to_string(w) + " , " + std::to_string(h) + " in window mode " + Context->WindowMode;
+    AppContextAPI->InfoLog(window_info_str.c_str());
+    if (Context->NumInstanceExtensions != 0) {
+        AppContextAPI->InfoLog("Enabled Instance Extensions: ");
+        for (size_t i = 0; i < Context->NumInstanceExtensions; ++i) {
+            std::string extension_str("    " + std::string(Context->EnabledInstanceExtensions[i]));
+            AppContextAPI->InfoLog(extension_str.c_str());
+        }
+    }
+    if (Context->NumDeviceExtensions != 0) {
+        AppContextAPI->InfoLog("Enabled Device Extensions: ");
+        for (size_t i = 0; i < Context->NumDeviceExtensions; ++i) {
+            std::string extension_str("    " + std::string(Context->EnabledDeviceExtensions[i]));
+            AppContextAPI->InfoLog(extension_str.c_str());
+        }
+    }
+}
+
 static void Load(GetEngineAPI_Fn fn) {
     AppContextAPI = reinterpret_cast<ApplicationContext_API*>(fn(APPLICATION_CONTEXT_API_ID));
-    const char* cfg_file = AppContextAPI->GetModuleConfigFile(GetName());
+    void* logging_storage_ptr = AppContextAPI->GetLoggingStoragePointer();
+    vpr::SetLoggingRepository_VprCore(logging_storage_ptr);
+    const char* cfg_file = AppContextAPI->GetPluginConfigFile(GetName());
     Context = new RendererContext(cfg_file, AppContextAPI);
+    WriteLoadedInfoLog();
 }
 
 static void Unload() {
@@ -84,7 +112,7 @@ static void Unload() {
 }
 
 static void LogicalUpdate() {
-    Context->Window->GetWindowInput()->Update();
+    Context->Window->Update();
     if (RendererContext::ShouldResizeExchange(false)) {
         RecreateSwapchain();
     }
@@ -113,10 +141,6 @@ static void AddSwapchainCallbacks(SwapchainCallbacks_API* api) {
     }
 }
 
-static void SetWindowUserPointer(void* user_ptr) {
-    Context->Window->SetWindowUserPointer(user_ptr);
-}
-
 static void* getGlfwWindow() {
     return Context->Window->glfwWindow();
 }
@@ -125,34 +149,54 @@ static void GetWindowSize(int& width, int& height) {
     Context->Window->GetWindowSize(width, height);
 }
 
-static WindowInput* GetWindowInput() {
-    return GetContext()->Window->GetWindowInput();
+static const char* GetClipboardText() {
+    return glfwGetClipboardString(Context->Window->glfwWindow());
 }
 
-static void AddMonitoredScancode(int code) {
-    GetWindowInput()->AddMonitoredScancode(code);
+static bool MouseLockingEnabled() {
+    int mode = glfwGetInputMode(Context->Window->glfwWindow(), GLFW_CURSOR);
+    return mode == GLFW_CURSOR_DISABLED;
 }
 
-static void RemoveMonitoredScancode(int code) {
-    GetWindowInput()->RemoveMonitoredScancode(code);
+static void SetInputMode(int mode) {
+    Context->Window->SetCursorInputMode(mode);
 }
 
-static void GetScancodeActions(int code, int* actions, int* modifiers) {
-    GetWindowInput()->GetScancodeActions(code, actions, modifiers);
+static void GetCursorPosition(double& x, double& y) {
+    glfwGetCursorPos(Context->Window->glfwWindow(), &x, &y);
 }
 
-static void ConsumeScancodeActions(int code, int* actions, int* modifiers) {
-    GetWindowInput()->ConsumeMouseAction(code, actions, modifiers);
+static bool ShouldWindowClose() {
+    return Context->Window->WindowShouldClose();
 }
 
-static void FlushScancodeActions() {
-    GetWindowInput()->FlushScancodeActions();
+static void RegisterCursorPos(cursor_pos_callback_t pos_fn) {
+    Context->Window->AddCursorPosCallbackFn(pos_fn);
 }
 
-static VkDevice GetDeviceHandle() {
-    return Context->LogicalDevice->vkHandle();
+static void RegisterCursorEnter(cursor_enter_callback_t fn) {
+    Context->Window->AddCursorEnterCallbackFn(fn);
 }
 
+static void RegisterScrollFn(scroll_callback_t fn) {
+    Context->Window->AddScrollCallbackFn(fn);
+}
+
+static void RegisterCharFn(char_callback_t fn) {
+    Context->Window->AddCharCallbackFn(fn);
+}
+
+static void RegisterPathDropFn(path_drop_callback_t fn) {
+    Context->Window->AddPathDropCallbackFn(fn);
+}
+
+static void RegisterMouseButtonFn(mouse_button_callback_t fn) {
+    Context->Window->AddMouseButtonCallbackFn(fn);
+}
+
+static void RegisterKeyboardFn(keyboard_key_callback_t fn) {
+    Context->Window->AddKeyboardKeyCallbackFn(fn);
+}
 
 static Plugin_API* CoreAPI() {
     static Plugin_API api{ nullptr };
@@ -169,14 +213,19 @@ static RendererContext_API* RendererContextAPI() {
     static RendererContext_API api{ nullptr };
     api.GetContext = GetContext;
     api.RegisterSwapchainCallbacks = AddSwapchainCallbacks;
-    api.SetWindowUserPointer = SetWindowUserPointer;
-    api.GetGLFWwindow = getGlfwWindow;
     api.GetWindowSize = GetWindowSize;
-    api.AddMonitoredScancode = AddMonitoredScancode;
-    api.RemoveMonitoredScancode = RemoveMonitoredScancode;
-    api.GetScancodeActions = GetScancodeActions;
-    api.ConsumeScancodeActions = ConsumeScancodeActions;
-    api.FlushScancodeActions = FlushScancodeActions;
+    api.GetClipboardText = GetClipboardText;
+    api.MouseLockingEnabled = MouseLockingEnabled;
+    api.SetInputMode = SetInputMode;
+    api.GetCursorPosition = GetCursorPosition;
+    api.WindowShouldClose = ShouldWindowClose;
+    api.RegisterCursorPosCallback = RegisterCursorPos;
+    api.RegisterCursorEnterCallback = RegisterCursorEnter;
+    api.RegisterScrollCallback = RegisterScrollFn;
+    api.RegisterCharCallback = RegisterCharFn;
+    api.RegisterPathDropCallback = RegisterPathDropFn;
+    api.RegisterMouseButtonCallback = RegisterMouseButtonFn;
+    api.RegisterKeyboardKeyCallback = RegisterKeyboardFn;
     return &api;
 }
 

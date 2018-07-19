@@ -25,10 +25,13 @@ struct RendererContext {
     vpr::Swapchain** VirtualSwapchains;
     PlatformWindow* Window;
     vpr::SurfaceKHR* WindowSurface;
-    char** Extensions;
-    size_t NumExtensions;
+    char** EnabledInstanceExtensions;
+    size_t NumInstanceExtensions;
+    char** EnabledDeviceExtensions;
+    size_t NumDeviceExtensions;
     char** EnabledDeviceFeatures;
     size_t NumFeatures;
+    const char* WindowMode;
 private:
     RendererContext(const RendererContext&) = delete;
     RendererContext& operator=(const RendererContext&) = delete;

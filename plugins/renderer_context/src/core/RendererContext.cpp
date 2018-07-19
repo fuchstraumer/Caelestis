@@ -11,6 +11,9 @@
 #include <fstream>
 #include <atomic>
 
+static std::vector<std::string> extensionsBuffer;
+static std::string windowingModeBuffer;
+
 static void SplitVersionString(std::string version_string, uint32_t& major_version, uint32_t& minor_version, uint32_t& patch_version) {
     const size_t minor_dot_pos = version_string.find('.');
     const size_t patch_dot_pos = version_string.rfind('.');
@@ -75,12 +78,14 @@ static const std::unordered_map<std::string, uint32_t> windowing_mode_str_to_fla
     { "Fullscreen", windowing_modes::Fullscreen }
 };
 
-void createInstanceAndWindow(const nlohmann::json& json_file, vpr::Instance** instance, PlatformWindow** window) {
+void createInstanceAndWindow(const nlohmann::json& json_file, vpr::Instance** instance, PlatformWindow** window, const char** _window_mode) {
 
     int window_width = json_file.at("InitialWindowWidth");
     int window_height = json_file.at("InitialWindowHeight");
     const std::string app_name = json_file.at("ApplicationName");
     const std::string windowing_mode = json_file.at("InitialWindowMode");
+    windowingModeBuffer = windowing_mode;
+    *_window_mode = windowingModeBuffer.c_str();
     auto iter = windowing_mode_str_to_flag.find(windowing_mode);
     uint32_t window_mode = windowing_modes::Windowed;
     if (iter != std::cend(windowing_mode_str_to_flag)) {
@@ -176,6 +181,7 @@ void createLogicalDevice(const nlohmann::json& json_file, VkSurfaceKHR surface, 
     pack.OptionalExtensionNames = requested_extensions.data();
 
     *device = new vpr::Device(instance, physical_device, surface, &pack, nullptr, 0);
+
 }
 
 static std::atomic<bool>& GetShouldResizeFlag() {
@@ -215,14 +221,34 @@ RendererContext::RendererContext(const char* file_path, ApplicationContext_API* 
     nlohmann::json json_file;
     input_file >> json_file;
 
-    createInstanceAndWindow(json_file, &VulkanInstance, &Window);
+    createInstanceAndWindow(json_file, &VulkanInstance, &Window, &WindowMode);
     // Physical devices to be redone for multi-GPU support if device group extension is supported.
     PhysicalDevices = new vpr::PhysicalDevice*[1];
     PhysicalDevices[0] = new vpr::PhysicalDevice(VulkanInstance->vkHandle());
 
+    {
+        size_t num_instance_extensions = 0;
+        VulkanInstance->GetEnabledExtensions(&num_instance_extensions, nullptr);
+        if (num_instance_extensions != 0) {
+            NumInstanceExtensions = num_instance_extensions;
+            EnabledInstanceExtensions = new char*[NumInstanceExtensions];
+            VulkanInstance->GetEnabledExtensions(&NumInstanceExtensions, EnabledInstanceExtensions);
+        }
+    }
+
     WindowSurface = new vpr::SurfaceKHR(VulkanInstance, PhysicalDevices[0]->vkHandle(), Window->glfwWindow());
 
     createLogicalDevice(json_file, WindowSurface->vkHandle(), &LogicalDevice, VulkanInstance, PhysicalDevices[0]);
+
+    {
+        size_t num_device_extensions = 0;
+        LogicalDevice->GetEnabledExtensions(&num_device_extensions, nullptr);
+        if (num_device_extensions != 0) {
+            NumDeviceExtensions = num_device_extensions;
+            EnabledDeviceExtensions = new char*[NumDeviceExtensions];
+            LogicalDevice->GetEnabledExtensions(&NumDeviceExtensions, EnabledDeviceExtensions);
+        }
+    }
 
     static const std::unordered_map<std::string, uint32_t> present_mode_from_str_map{
         { "None", vpr::vertical_sync_mode::None },
@@ -245,6 +271,14 @@ RendererContext::RendererContext(const char* file_path, ApplicationContext_API* 
 }
 
 RendererContext::~RendererContext() {
+    for (size_t i = 0; i < NumInstanceExtensions; ++i) {
+        free(EnabledInstanceExtensions[i]);
+    }
+    delete[] EnabledInstanceExtensions;
+    for (size_t i = 0; i < NumDeviceExtensions; ++i) {
+        free(EnabledDeviceExtensions[i]);
+    }
+    delete[] EnabledDeviceExtensions;
     delete WindowSurface;
     delete Swapchain;
     delete LogicalDevice;

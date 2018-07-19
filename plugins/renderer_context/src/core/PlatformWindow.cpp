@@ -1,5 +1,6 @@
 #include "core/PlatformWindow.hpp"
 #include "core/WindowInput.hpp"
+#include <forward_list>
 #define GLFW_INCLUDE_VULKAN
 #if defined(_WIN32) 
 #undef APIENTRY
@@ -10,6 +11,72 @@
 #endif
 #include "core/RendererContext.hpp"
 
+struct WindowCallbackLists {
+    std::forward_list<cursor_pos_callback_t> cursorPosCallbacks;
+    std::forward_list<cursor_enter_callback_t> cursorEnterCallbacks;
+    std::forward_list<scroll_callback_t> scrollCallbacks;
+    std::forward_list<char_callback_t> charCallbacks;
+    std::forward_list<path_drop_callback_t> pathDropCallbacks;
+    std::forward_list<mouse_button_callback_t> mouseButtonCallbacks;
+    std::forward_list<keyboard_key_callback_t> keyboardKeyCallbacks;
+};
+
+static void CursorPosCallback(GLFWwindow* window, double pos_x, double pos_y) {
+    PlatformWindow* user_ptr = reinterpret_cast<PlatformWindow*>(glfwGetWindowUserPointer(window));
+    auto& callbacks = user_ptr->GetCallbacks();
+    for (auto& pos_fn : callbacks.cursorPosCallbacks) {
+        pos_fn(pos_x, pos_y);
+    }
+}
+
+static void CursorEnterCallback(GLFWwindow* window, int enter) {
+    PlatformWindow* user_ptr = reinterpret_cast<PlatformWindow*>(glfwGetWindowUserPointer(window));
+    auto& callbacks = user_ptr->GetCallbacks();
+    for (auto& enter_fn : callbacks.cursorEnterCallbacks) {
+        enter_fn(enter);
+    }
+}
+
+static void ScrollCallback(GLFWwindow* window, double x_offset, double y_offset) {
+    PlatformWindow* user_ptr = reinterpret_cast<PlatformWindow*>(glfwGetWindowUserPointer(window));
+    auto& callbacks = user_ptr->GetCallbacks();
+    for (auto& scroll_fn : callbacks.scrollCallbacks) {
+        scroll_fn(x_offset, y_offset);
+    }
+}
+
+static void CharCallback(GLFWwindow* window, unsigned int code) {
+    PlatformWindow* user_ptr = reinterpret_cast<PlatformWindow*>(glfwGetWindowUserPointer(window));
+    auto& callbacks = user_ptr->GetCallbacks();
+    for (auto& char_fn : callbacks.charCallbacks) {
+        char_fn(code);
+    }
+}
+
+static void PathDropCallback(GLFWwindow* window, int count, const char** paths) {
+    PlatformWindow* user_ptr = reinterpret_cast<PlatformWindow*>(glfwGetWindowUserPointer(window));
+    auto& callbacks = user_ptr->GetCallbacks();
+    for (auto& drop_fn : callbacks.pathDropCallbacks) {
+        drop_fn(count, paths);
+    }
+}
+
+static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    PlatformWindow* user_ptr = reinterpret_cast<PlatformWindow*>(glfwGetWindowUserPointer(window));
+    auto& callbacks = user_ptr->GetCallbacks();
+    for (auto& mouse_fn : callbacks.mouseButtonCallbacks) {
+        mouse_fn(button, action, mods);
+    }
+}
+
+static void KeyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    PlatformWindow* user_ptr = reinterpret_cast<PlatformWindow*>(glfwGetWindowUserPointer(window));
+    auto& callbacks = user_ptr->GetCallbacks();
+    for (auto& key_fn : callbacks.keyboardKeyCallbacks) {
+        key_fn(key, scancode, action, mods);
+    }
+}
+
 static void ResizeCallback(GLFWwindow* window, int width, int height) {
     RendererContext::SetShouldResize(true);
 }
@@ -17,13 +84,11 @@ static void ResizeCallback(GLFWwindow* window, int width, int height) {
 PlatformWindow::PlatformWindow(int w, int h, const char* app_name, uint32_t window_mode) : width(w), height(h), windowMode(window_mode) {
     createWindow(app_name);
     glfwSetWindowSizeCallback(window, ResizeCallback);
-    inputManager = new WindowInput(window);
+    callbacks = new WindowCallbackLists();
 }
 
 PlatformWindow::~PlatformWindow() {
-    if (inputManager) {
-        delete inputManager;
-    }
+    delete callbacks;
     glfwDestroyWindow(window);
     glfwTerminate();
 }
@@ -42,8 +107,52 @@ void PlatformWindow::GetWindowSize(int& w, int& h) noexcept {
     h = height;
 }
 
-WindowInput* PlatformWindow::GetWindowInput() noexcept {
-    return inputManager;
+void PlatformWindow::Update() {
+    glfwPollEvents();
+}
+
+void PlatformWindow::WaitForEvents() {
+    glfwWaitEvents();
+}
+
+bool PlatformWindow::WindowShouldClose() {
+    return glfwWindowShouldClose(window);
+}
+
+void PlatformWindow::AddCursorPosCallbackFn(cursor_pos_callback_t fn) {
+    callbacks->cursorPosCallbacks.push_front(fn);
+}
+
+void PlatformWindow::AddCursorEnterCallbackFn(cursor_enter_callback_t fn) {
+    callbacks->cursorEnterCallbacks.push_front(fn);
+}
+
+void PlatformWindow::AddScrollCallbackFn(scroll_callback_t fn) {
+    callbacks->scrollCallbacks.push_front(fn);
+}
+
+void PlatformWindow::AddCharCallbackFn(char_callback_t fn) {
+    callbacks->charCallbacks.push_front(fn);
+}
+
+void PlatformWindow::AddPathDropCallbackFn(path_drop_callback_t fn) {
+    callbacks->pathDropCallbacks.push_front(fn);
+}
+
+void PlatformWindow::AddMouseButtonCallbackFn(mouse_button_callback_t fn) {
+    callbacks->mouseButtonCallbacks.push_front(fn);
+}
+
+void PlatformWindow::AddKeyboardKeyCallbackFn(keyboard_key_callback_t fn) {
+    callbacks->keyboardKeyCallbacks.push_front(fn);
+}
+
+void PlatformWindow::SetCursorInputMode(int mode) {
+    glfwSetInputMode(window, GLFW_CURSOR, mode);
+}
+
+WindowCallbackLists& PlatformWindow::GetCallbacks() {
+    return *callbacks;
 }
 
 void PlatformWindow::createWindow(const char* name) {
@@ -68,4 +177,15 @@ void PlatformWindow::createWindow(const char* name) {
     else {
         window = glfwCreateWindow(width, height, name, nullptr, nullptr);
     }
+    glfwSetWindowUserPointer(window, this);
+}
+
+void PlatformWindow::setCallbacks() {
+    glfwSetCursorPosCallback(window, CursorPosCallback);
+    glfwSetCursorEnterCallback(window, CursorEnterCallback);
+    glfwSetScrollCallback(window, ScrollCallback);
+    glfwSetCharCallback(window, CharCallback);
+    glfwSetDropCallback(window, PathDropCallback);
+    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    glfwSetKeyCallback(window, KeyboardKeyCallback);
 }
