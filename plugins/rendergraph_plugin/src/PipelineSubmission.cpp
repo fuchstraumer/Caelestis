@@ -1,502 +1,496 @@
-#include "graph/PipelineSubmission.hpp"
-#include "graph/RenderGraph.hpp"
-#include "resource/PipelineLayout.hpp"
-#include "resource/PipelineCache.hpp"
+#include "PipelineSubmission.hpp"
+#include "RenderGraph.hpp"
 #include "easylogging++.h"
-#include "doctest/doctest.h"
-namespace vpsk {
 
-    PipelineSubmission::PipelineSubmission(RenderGraph& rgraph, std::string _name, size_t _idx, VkPipelineStageFlags _stages) 
-        : graph(rgraph), name(std::move(_name)), idx(std::move(_idx)), stages(std::move(_stages)) {}
+PipelineSubmission::PipelineSubmission(RenderGraph& rgraph, std::string _name, size_t _idx, VkPipelineStageFlags _stages) 
+    : graph(rgraph), name(std::move(_name)), idx(std::move(_idx)), stages(std::move(_stages)) {}
 
-    PipelineSubmission::~PipelineSubmission() {}
+PipelineSubmission::~PipelineSubmission() {}
 
-    PipelineResource& PipelineSubmission::SetDepthStencilInput(const std::string& name) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.ReadBySubmission(idx);
-        depthStencilInput = &resource;
-        return resource;
+PipelineResource& PipelineSubmission::SetDepthStencilInput(const std::string& name) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.ReadBySubmission(idx);
+    depthStencilInput = &resource;
+    return resource;
+}
+
+PipelineResource& PipelineSubmission::SetDepthStencilOutput(const std::string& name, image_info_t info) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.WrittenBySubmission(idx);
+    if (!(info.Usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+        LOG(ERROR) << "Tried to add a depth stencil output, but image info structure has invalid usage flags!";
+        throw std::runtime_error("Invalid image usage flags.");
     }
+    resource.SetInfo(info);
+    depthStencilOutput = &resource;
+    return resource;
+}
 
-    PipelineResource& PipelineSubmission::SetDepthStencilOutput(const std::string& name, image_info_t info) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.WrittenBySubmission(idx);
-        if (!(info.Usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-            LOG(ERROR) << "Tried to add a depth stencil output, but image info structure has invalid usage flags!";
-            throw std::runtime_error("Invalid image usage flags.");
-        }
-        resource.SetInfo(info);
-        depthStencilOutput = &resource;
-        return resource;
+PipelineResource& PipelineSubmission::AddInputAttachment(const std::string& name) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.ReadBySubmission(idx);
+    attachmentInputs.emplace_back(&resource);
+    return resource;
+}
+
+PipelineResource& PipelineSubmission::AddHistoryInput(const std::string& name) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    historyInputs.emplace_back(&resource);
+    return resource;
+}
+
+PipelineResource& PipelineSubmission::AddColorOutput(const std::string& name, image_info_t info, const std::string& input) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.WrittenBySubmission(idx);
+    if (!(info.Usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
+        LOG(ERROR) << "Tried to add a color attachment input, but given image info object lacks requisite image usage flags!";
+        throw std::runtime_error("Invalid image usage flags.");
     }
-
-    PipelineResource& PipelineSubmission::AddInputAttachment(const std::string& name) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.ReadBySubmission(idx);
-        attachmentInputs.emplace_back(&resource);
-        return resource;
+    resource.SetInfo(info);
+    colorOutputs.emplace_back(&resource);
+    if (!input.empty()) {
+        auto& input_resource = graph.GetResource(input);
+        input_resource.ReadBySubmission(idx);
+        colorInputs.emplace_back(&input_resource);
+        colorScaleInputs.emplace_back(&input_resource);
     }
-
-    PipelineResource& PipelineSubmission::AddHistoryInput(const std::string& name) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        historyInputs.emplace_back(&resource);
-        return resource;
+    else {
+        colorInputs.emplace_back(nullptr);
+        colorScaleInputs.emplace_back(nullptr);
     }
+    return resource;
+}
 
-    PipelineResource& PipelineSubmission::AddColorOutput(const std::string& name, image_info_t info, const std::string& input) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.WrittenBySubmission(idx);
-        if (!(info.Usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
-            LOG(ERROR) << "Tried to add a color attachment input, but given image info object lacks requisite image usage flags!";
-            throw std::runtime_error("Invalid image usage flags.");
-        }
-        resource.SetInfo(info);
-        colorOutputs.emplace_back(&resource);
-        if (!input.empty()) {
-            auto& input_resource = graph.GetResource(input);
-            input_resource.ReadBySubmission(idx);
-            colorInputs.emplace_back(&input_resource);
-            colorScaleInputs.emplace_back(&input_resource);
-        }
-        else {
-            colorInputs.emplace_back(nullptr);
-            colorScaleInputs.emplace_back(nullptr);
-        }
-        return resource;
+PipelineResource& PipelineSubmission::AddResolveOutput(const std::string& name, image_info_t info) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.WrittenBySubmission(idx);        
+    if (info.Samples != VK_SAMPLE_COUNT_1_BIT) {
+        LOG(ERROR) << "Image info for resolve output attachment has invalid sample count flags value!";
+        throw std::runtime_error("Invalid sample count flags.");
     }
+    resource.SetInfo(info);
+    resolveOutputs.emplace_back(&resource);
+    return resource;
+}
 
-    PipelineResource& PipelineSubmission::AddResolveOutput(const std::string& name, image_info_t info) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.WrittenBySubmission(idx);        
-        if (info.Samples != VK_SAMPLE_COUNT_1_BIT) {
-            LOG(ERROR) << "Image info for resolve output attachment has invalid sample count flags value!";
-            throw std::runtime_error("Invalid sample count flags.");
-        }
-        resource.SetInfo(info);
-        resolveOutputs.emplace_back(&resource);
-        return resource;
+PipelineResource& PipelineSubmission::AddTextureInput(const std::string& name, image_info_t info) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    if (!(info.Usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+        LOG(ERROR) << "Attempted to add a texture input, but image info structure lacks requisite image usage flags!";
+        throw std::runtime_error("Tried to add texture input when image has invalid usage flags.");
     }
+    resource.SetInfo(info);
+    resource.ReadBySubmission(idx);
+    textureInputs.emplace_back(&resource);
+    return resource;
+}
 
-    PipelineResource& PipelineSubmission::AddTextureInput(const std::string& name, image_info_t info) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        if (!(info.Usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
-            LOG(ERROR) << "Attempted to add a texture input, but image info structure lacks requisite image usage flags!";
-            throw std::runtime_error("Tried to add texture input when image has invalid usage flags.");
-        }
-        resource.SetInfo(info);
-        resource.ReadBySubmission(idx);
-        textureInputs.emplace_back(&resource);
-        return resource;
+PipelineResource & PipelineSubmission::AddStorageTextureInput(const std::string & name, image_info_t info, const std::string& output) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.WrittenBySubmission(idx);
+    if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+
     }
-
-    PipelineResource & PipelineSubmission::AddStorageTextureInput(const std::string & name, image_info_t info, const std::string& output) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.WrittenBySubmission(idx);
-        if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
-
-        }
-        resource.SetInfo(info);
-        resource.SetStorage(true);
-        storageTextureInputs.emplace_back(&resource);
-        if (!output.empty()) {
-            auto& output_resource = graph.GetResource(output);
-            output_resource.WrittenBySubmission(idx);
-            storageTextureOutputs.emplace_back(&output_resource);
-        }
-        else {
-            storageTextureOutputs.emplace_back(nullptr);
-        }
-        return resource;
+    resource.SetInfo(info);
+    resource.SetStorage(true);
+    storageTextureInputs.emplace_back(&resource);
+    if (!output.empty()) {
+        auto& output_resource = graph.GetResource(output);
+        output_resource.WrittenBySubmission(idx);
+        storageTextureOutputs.emplace_back(&output_resource);
     }
-
-    PipelineResource& PipelineSubmission::AddStorageTextureOutput(const std::string& name, image_info_t info, const std::string& input) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.WrittenBySubmission(idx);
-        if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
-
-        }
-        resource.SetInfo(info);
-        resource.SetStorage(true);
-        storageTextureOutputs.emplace_back(&resource);
-        if (!input.empty()) {
-            auto& input_resource = graph.GetResource(input);
-            input_resource.ReadBySubmission(idx);
-            storageTextureInputs.emplace_back(&input_resource);
-        }
-        else {
-            storageTextureInputs.emplace_back(nullptr);
-        }
-        return resource;
+    else {
+        storageTextureOutputs.emplace_back(nullptr);
     }
+    return resource;
+}
 
-    PipelineResource& PipelineSubmission::AddStorageTextureRW(const std::string& name, image_info_t info) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.ReadBySubmission(idx);
-        resource.WrittenBySubmission(idx);
-        resource.SetStorage(true);
-        storageTextureOutputs.emplace_back(&resource);
-        storageTextureInputs.emplace_back(&resource);
-        return resource;
+PipelineResource& PipelineSubmission::AddStorageTextureOutput(const std::string& name, image_info_t info, const std::string& input) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.WrittenBySubmission(idx);
+    if (!(info.Usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+
     }
-
-    PipelineResource& PipelineSubmission::AddUniformInput(const std::string& name) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.ReadBySubmission(idx);
-        uniformInputs.emplace_back(&resource);
-        return resource;
+    resource.SetInfo(info);
+    resource.SetStorage(true);
+    storageTextureOutputs.emplace_back(&resource);
+    if (!input.empty()) {
+        auto& input_resource = graph.GetResource(input);
+        input_resource.ReadBySubmission(idx);
+        storageTextureInputs.emplace_back(&input_resource);
     }
-
-    PipelineResource& PipelineSubmission::AddStorageOutput(const std::string& name, buffer_info_t info, const std::string& input) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.WrittenBySubmission(idx);
-        resource.SetInfo(info);
-        resource.SetStorage(true);
-        storageOutputs.emplace_back(&resource);
-        if (!input.empty()) {
-            auto& input_resource = graph.GetResource(input);
-            input_resource.ReadBySubmission(idx);
-            storageInputs.emplace_back(&input_resource);
-        }
-        else {
-            storageInputs.emplace_back(nullptr);
-        }
-        return resource;
+    else {
+        storageTextureInputs.emplace_back(nullptr);
     }
+    return resource;
+}
 
-    PipelineResource& PipelineSubmission::AddStorageRW(const std::string& name, buffer_info_t info) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.WrittenBySubmission(idx);
-        resource.ReadBySubmission(idx);
-        resource.SetInfo(info);
-        resource.SetStorage(true);
-        storageInputs.emplace_back(&resource);
-        storageOutputs.emplace_back(&resource);
-        return resource;
+PipelineResource& PipelineSubmission::AddStorageTextureRW(const std::string& name, image_info_t info) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.ReadBySubmission(idx);
+    resource.WrittenBySubmission(idx);
+    resource.SetStorage(true);
+    storageTextureOutputs.emplace_back(&resource);
+    storageTextureInputs.emplace_back(&resource);
+    return resource;
+}
+
+PipelineResource& PipelineSubmission::AddUniformInput(const std::string& name) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.ReadBySubmission(idx);
+    uniformInputs.emplace_back(&resource);
+    return resource;
+}
+
+PipelineResource& PipelineSubmission::AddStorageOutput(const std::string& name, buffer_info_t info, const std::string& input) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.WrittenBySubmission(idx);
+    resource.SetInfo(info);
+    resource.SetStorage(true);
+    storageOutputs.emplace_back(&resource);
+    if (!input.empty()) {
+        auto& input_resource = graph.GetResource(input);
+        input_resource.ReadBySubmission(idx);
+        storageInputs.emplace_back(&input_resource);
     }
-
-    PipelineResource& PipelineSubmission::AddStorageReadOnlyInput(const std::string& name) {
-        auto& resource = graph.GetResource(name);
-        resource.AddUsedPipelineStages(idx, stages);
-        resource.ReadBySubmission(idx);
-        storageReadOnlyInputs.emplace_back(&resource);
-        return resource;
+    else {
+        storageInputs.emplace_back(nullptr);
     }
+    return resource;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetColorOutputs() const noexcept {
-        return colorOutputs;
-    }
+PipelineResource& PipelineSubmission::AddStorageRW(const std::string& name, buffer_info_t info) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.WrittenBySubmission(idx);
+    resource.ReadBySubmission(idx);
+    resource.SetInfo(info);
+    resource.SetStorage(true);
+    storageInputs.emplace_back(&resource);
+    storageOutputs.emplace_back(&resource);
+    return resource;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetResolveOutputs() const noexcept {
-        return resolveOutputs;
-    }
+PipelineResource& PipelineSubmission::AddStorageReadOnlyInput(const std::string& name) {
+    auto& resource = graph.GetResource(name);
+    resource.AddUsedPipelineStages(idx, stages);
+    resource.ReadBySubmission(idx);
+    storageReadOnlyInputs.emplace_back(&resource);
+    return resource;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetColorInputs() const noexcept {
-        return colorInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetColorOutputs() const noexcept {
+    return colorOutputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetColorScaleInputs() const noexcept {
-        return colorScaleInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetResolveOutputs() const noexcept {
+    return resolveOutputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetTextureInputs() const noexcept {
-        return textureInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetColorInputs() const noexcept {
+    return colorInputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetStorageTextureInputs() const noexcept {
-        return storageTextureInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetColorScaleInputs() const noexcept {
+    return colorScaleInputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetStorageTextureOutputs() const noexcept {
-        return storageTextureOutputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetTextureInputs() const noexcept {
+    return textureInputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetAttachmentInputs() const noexcept {
-        return attachmentInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetStorageTextureInputs() const noexcept {
+    return storageTextureInputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetHistoryInputs() const noexcept {
-        return historyInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetStorageTextureOutputs() const noexcept {
+    return storageTextureOutputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetUniformInputs() const noexcept {
-        return uniformInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetAttachmentInputs() const noexcept {
+    return attachmentInputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetStorageOutputs() const noexcept {
-        return storageOutputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetHistoryInputs() const noexcept {
+    return historyInputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetStorageReadOnlyInputs() const noexcept {
-        return storageReadOnlyInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetUniformInputs() const noexcept {
+    return uniformInputs;
+}
 
-    const std::vector<PipelineResource*>& PipelineSubmission::GetStorageInputs() const noexcept {
-        return storageInputs;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetStorageOutputs() const noexcept {
+    return storageOutputs;
+}
 
-    const std::vector<std::string>& PipelineSubmission::GetTags() const noexcept {
-        return submissionTags;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetStorageReadOnlyInputs() const noexcept {
+    return storageReadOnlyInputs;
+}
 
-    const PipelineResource * PipelineSubmission::GetDepthStencilInput() const noexcept {
-        return depthStencilInput;
-    }
+const std::vector<PipelineResource*>& PipelineSubmission::GetStorageInputs() const noexcept {
+    return storageInputs;
+}
 
-    const PipelineResource * PipelineSubmission::GetDepthStencilOutput() const noexcept {
-        return depthStencilOutput;
-    }
+const std::vector<std::string>& PipelineSubmission::GetTags() const noexcept {
+    return submissionTags;
+}
 
-    void PipelineSubmission::SetIdx(size_t _idx) {
-        idx = std::move(_idx);
-    }
+const PipelineResource * PipelineSubmission::GetDepthStencilInput() const noexcept {
+    return depthStencilInput;
+}
 
-    void PipelineSubmission::SetPhysicalPassIdx(size_t idx) {
-        physicalPassIdx = std::move(idx);
-    }
+const PipelineResource * PipelineSubmission::GetDepthStencilOutput() const noexcept {
+    return depthStencilOutput;
+}
 
-    void PipelineSubmission::SetStages(VkPipelineStageFlags _stages) {
-        stages = std::move(_stages);
-    }
+void PipelineSubmission::SetIdx(size_t _idx) {
+    idx = std::move(_idx);
+}
 
-    void PipelineSubmission::SetName(std::string _name) {
-        name = std::move(_name);
-    }
+void PipelineSubmission::SetPhysicalPassIdx(size_t idx) {
+    physicalPassIdx = std::move(idx);
+}
 
-    void PipelineSubmission::AddTag(std::string _tag) {
-        submissionTags.emplace_back(std::move(_tag));
-    }
+void PipelineSubmission::SetStages(VkPipelineStageFlags _stages) {
+    stages = std::move(_stages);
+}
 
-    void PipelineSubmission::SetTags(std::vector<std::string> _tags) {
-        submissionTags = std::move(_tags);
-    }
+void PipelineSubmission::SetName(std::string _name) {
+    name = std::move(_name);
+}
 
-    const size_t& PipelineSubmission::GetIdx() const noexcept {
-        return idx;
-    }
+void PipelineSubmission::AddTag(std::string _tag) {
+    submissionTags.emplace_back(std::move(_tag));
+}
 
-    const size_t& PipelineSubmission::GetPhysicalPassIdx() const noexcept {
-        return physicalPassIdx;
-    }
+void PipelineSubmission::SetTags(std::vector<std::string> _tags) {
+    submissionTags = std::move(_tags);
+}
 
-    const VkPipelineStageFlags& PipelineSubmission::GetStages() const noexcept {
-        return stages;
-    }
+const size_t& PipelineSubmission::GetIdx() const noexcept {
+    return idx;
+}
 
-    const std::string& PipelineSubmission::Name() const noexcept {
-        return name;
-    }
+const size_t& PipelineSubmission::GetPhysicalPassIdx() const noexcept {
+    return physicalPassIdx;
+}
 
-    bool PipelineSubmission::NeedRenderPass() const noexcept {
-        if (!needPassCb) {
-            return true;
-        }
-        else {
-            return needPassCb();
-        }
-    }
+const VkPipelineStageFlags& PipelineSubmission::GetStages() const noexcept {
+    return stages;
+}
 
-    bool PipelineSubmission::GetClearColor(size_t idx, VkClearColorValue* value) noexcept {
-        if (!getClearColorValueCb) {
-            return false;
-        }
-        else {
-            return getClearColorValueCb(idx, value);
-        }
-    }
+const std::string& PipelineSubmission::Name() const noexcept {
+    return name;
+}
 
-    bool PipelineSubmission::GetClearDepth(VkClearDepthStencilValue* value) const noexcept {
-        if (!getClearDepthValueCb) {
-            return false;
-        }
-        else {
-            return getClearDepthValueCb(value);
-        }
-    }
-
-    bool PipelineSubmission::ValidateSubmission() {
-
-        auto attachment_count_err = [&](const std::string& attachment_type) {
-            LOG(ERROR) << "Pipeline submission " << name << " has a mismatched quantity of " << attachment_type << " inputs and outputs!";
-            throw std::logic_error(std::string("Invalid " + attachment_type + " counts"));
-        };
-
-        if (colorInputs.size() != colorOutputs.size()) {
-            attachment_count_err("color attachment");
-        }
-        if (storageInputs.size() != storageOutputs.size()) {
-            attachment_count_err("storage buffer");
-        }
-        if (storageTextureInputs.size() != storageTextureOutputs.size()) {
-            attachment_count_err("storage texture");
-        }
-        if (!resolveOutputs.empty()) {
-            if (resolveOutputs.size() != colorOutputs.size()) {
-                attachment_count_err("resolve attachment");
-            }
-        }
-
-        for (size_t i = 0; i < colorInputs.size(); ++i) {
-            if (colorInputs[i] == nullptr) {
-                continue;
-            }
-
-            if (graph.GetResourceDimensions(*colorInputs[i]) != graph.GetResourceDimensions(*colorOutputs[i])) {
-                // Need to scale/modify color input before it becomes the output
-                MakeColorInputScaled(i);
-            }
-
-        }
-
-        if (!storageOutputs.empty()) {
-            for (size_t i = 0; i < storageOutputs.size(); ++i) {
-                if (storageInputs[i] == nullptr) {
-                    continue;
-                }
-
-                if (storageOutputs[i]->GetInfo() != storageInputs[i]->GetInfo()) {
-                    LOG(ERROR) << "Mismatch between paired storage input-outputs, when comparing their buffer info objects!";
-                    throw std::logic_error("Mismatched storage buffer input-output info!");
-                }
-            }
-        }
-
-        if (!storageTextureOutputs.empty()) {
-            for (size_t i = 0; i < storageTextureOutputs.size(); ++i) {
-                if (storageTextureInputs[i] == nullptr) {
-                    continue;
-                }
-
-                if (storageTextureOutputs[i]->GetInfo() != storageTextureInputs[i]->GetInfo()) {
-                    LOG(ERROR) << "Mismatch between storage texture input-outputs, when comparing their image info objects!";
-                    throw std::logic_error("Mismatched storage texture input-output infos!");
-                }
-            }
-        }
-
-        if ((depthStencilInput != nullptr) && (depthStencilOutput != nullptr)) {
-            if (depthStencilInput->GetInfo() != depthStencilOutput->GetInfo()) {
-                LOG(ERROR) << "Depth stencil input and output are mismatched in submission " << name << "!";
-                throw std::logic_error("Mismatched depth stencil input-output!");
-            }
-        }
-
+bool PipelineSubmission::NeedRenderPass() const noexcept {
+    if (!needPassCb) {
         return true;
     }
-
-    void PipelineSubmission::MakeColorInputScaled(const size_t & idx) {
-        std::swap(colorInputs[idx], colorScaleInputs[idx]);
+    else {
+        return needPassCb();
     }
+}
 
-    void PipelineSubmission::traverseDependencies(size_t& stack_count) {
-        if (depthStencilInput != nullptr) {
-            dependencyTraversalRecursion(depthStencilInput->SubmissionsWrittenIn(), stack_count, IgnoreSelf);
-        }
+bool PipelineSubmission::GetClearColor(size_t idx, VkClearColorValue* value) noexcept {
+    if (!getClearColorValueCb) {
+        return false;
+    }
+    else {
+        return getClearColorValueCb(idx, value);
+    }
+}
 
-        for (auto* input : attachmentInputs) {
-            bool depends_on_self = (depthStencilOutput != nullptr ? depthStencilInput == input : false);
-            if (std::find(std::begin(colorOutputs), std::end(colorOutputs), input) != std::end(colorOutputs)) {
-                depends_on_self = true;
-            }
-            if (!depends_on_self) {
-                dependencyTraversalRecursion(input->SubmissionsWrittenIn(), stack_count, MergeDependency);
-            }
-        }
+bool PipelineSubmission::GetClearDepth(VkClearDepthStencilValue* value) const noexcept {
+    if (!getClearDepthValueCb) {
+        return false;
+    }
+    else {
+        return getClearDepthValueCb(value);
+    }
+}
 
-        for (auto* color_input : colorInputs) {
-            if (color_input != nullptr) {
-                dependencyTraversalRecursion(color_input->SubmissionsWrittenIn(), stack_count, MergeDependency);
-            }
-        }
+bool PipelineSubmission::ValidateSubmission() {
 
-        /*for (auto* texture_input : textureInputs) {
-            dependencyTraversalRecursion(texture_input->SubmissionsWrittenIn(), stack_count, 0);
-        }*/
+    auto attachment_count_err = [&](const std::string& attachment_type) {
+        LOG(ERROR) << "Pipeline submission " << name << " has a mismatched quantity of " << attachment_type << " inputs and outputs!";
+        throw std::logic_error(std::string("Invalid " + attachment_type + " counts"));
+    };
 
-        for (auto* storage_input : storageInputs) {
-            if (storage_input != nullptr) {
-                // might be no writers of this, if it's used in a feedback fashion (meaning what?)
-                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
-                // check for write-after-read hazards, finding if this object is read in other submissions before this one writes to it
-                dependencyTraversalRecursion(storage_input->SubmissionsReadIn(), stack_count, NoCheck | IgnoreSelf);
-            }
-        }
-
-        for (auto* uniform_input : uniformInputs) {
-            if (uniform_input != nullptr) {
-                dependencyTraversalRecursion(uniform_input->SubmissionsWrittenIn(), stack_count, NoCheck);
-            }
-        }
-
-        for (auto* storage_input : storageReadOnlyInputs) {
-            if (storage_input != nullptr) {
-                dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
-            }
+    if (colorInputs.size() != colorOutputs.size()) {
+        attachment_count_err("color attachment");
+    }
+    if (storageInputs.size() != storageOutputs.size()) {
+        attachment_count_err("storage buffer");
+    }
+    if (storageTextureInputs.size() != storageTextureOutputs.size()) {
+        attachment_count_err("storage texture");
+    }
+    if (!resolveOutputs.empty()) {
+        if (resolveOutputs.size() != colorOutputs.size()) {
+            attachment_count_err("resolve attachment");
         }
     }
 
-    void PipelineSubmission::dependencyTraversalRecursion(const std::unordered_set<size_t>& submissions, size_t& stack_count, const uint32_t& flags) {
-        auto no_check = [&]() { return flags & NoCheck; };
-        auto merge_dependency = [&]() { return flags & MergeDependency; };
-        auto ignore_self = [&]() { return flags & IgnoreSelf; };
-
-        if (!no_check() && submissions.empty()) {
-            LOG(ERROR) << "Requested checking of a resource during dependency traversal, but current resource is not written to in any passes!";
-            throw std::logic_error("Resource is not written to by any passes.");
+    for (size_t i = 0; i < colorInputs.size(); ++i) {
+        if (colorInputs[i] == nullptr) {
+            continue;
         }
 
-        if (stack_count > graph.NumSubmissions()) {
-            LOG(ERROR) << "Stuck in dependency traversal recursion loop.";
-            throw std::runtime_error("Stuck in a recursive loop.");
+        if (graph.GetResourceDimensions(*colorInputs[i]) != graph.GetResourceDimensions(*colorOutputs[i])) {
+            // Need to scale/modify color input before it becomes the output
+            MakeColorInputScaled(i);
         }
 
-        for (auto& submission : submissions) {
-            if (submission != idx) {
-                graph.submissionDependencies[idx].insert(submission);
-            }
-        }
+    }
 
-        if (merge_dependency()) {
-            for (auto& submission : submissions) {
-                if (submission != idx) {
-                    graph.submissionMergeDependencies[idx].insert(submission);
-                }
-            }
-        }
-
-        ++stack_count;
-
-        for (auto& pushed_submission : submissions) {
-            if (ignore_self() && (pushed_submission == idx)) {
+    if (!storageOutputs.empty()) {
+        for (size_t i = 0; i < storageOutputs.size(); ++i) {
+            if (storageInputs[i] == nullptr) {
                 continue;
             }
-            else if (pushed_submission == idx) {
-                LOG(ERROR) << "Found a submission resource with a cyclic dependency on itself during dependency traversal recursion step.";
-                throw std::logic_error("Submission resource has a self-dependency loop.");
+
+            if (storageOutputs[i]->GetInfo() != storageInputs[i]->GetInfo()) {
+                LOG(ERROR) << "Mismatch between paired storage input-outputs, when comparing their buffer info objects!";
+                throw std::logic_error("Mismatched storage buffer input-output info!");
+            }
+        }
+    }
+
+    if (!storageTextureOutputs.empty()) {
+        for (size_t i = 0; i < storageTextureOutputs.size(); ++i) {
+            if (storageTextureInputs[i] == nullptr) {
+                continue;
             }
 
-            graph.submissionStack.push_back(pushed_submission);
-            graph.pipelineSubmissions[pushed_submission]->traverseDependencies(stack_count);
+            if (storageTextureOutputs[i]->GetInfo() != storageTextureInputs[i]->GetInfo()) {
+                LOG(ERROR) << "Mismatch between storage texture input-outputs, when comparing their image info objects!";
+                throw std::logic_error("Mismatched storage texture input-output infos!");
+            }
+        }
+    }
+
+    if ((depthStencilInput != nullptr) && (depthStencilOutput != nullptr)) {
+        if (depthStencilInput->GetInfo() != depthStencilOutput->GetInfo()) {
+            LOG(ERROR) << "Depth stencil input and output are mismatched in submission " << name << "!";
+            throw std::logic_error("Mismatched depth stencil input-output!");
+        }
+    }
+
+    return true;
+}
+
+void PipelineSubmission::MakeColorInputScaled(const size_t & idx) {
+    std::swap(colorInputs[idx], colorScaleInputs[idx]);
+}
+
+void PipelineSubmission::traverseDependencies(size_t& stack_count) {
+    if (depthStencilInput != nullptr) {
+        dependencyTraversalRecursion(depthStencilInput->SubmissionsWrittenIn(), stack_count, IgnoreSelf);
+    }
+
+    for (auto* input : attachmentInputs) {
+        bool depends_on_self = (depthStencilOutput != nullptr ? depthStencilInput == input : false);
+        if (std::find(std::begin(colorOutputs), std::end(colorOutputs), input) != std::end(colorOutputs)) {
+            depends_on_self = true;
+        }
+        if (!depends_on_self) {
+            dependencyTraversalRecursion(input->SubmissionsWrittenIn(), stack_count, MergeDependency);
+        }
+    }
+
+    for (auto* color_input : colorInputs) {
+        if (color_input != nullptr) {
+            dependencyTraversalRecursion(color_input->SubmissionsWrittenIn(), stack_count, MergeDependency);
+        }
+    }
+
+    /*for (auto* texture_input : textureInputs) {
+        dependencyTraversalRecursion(texture_input->SubmissionsWrittenIn(), stack_count, 0);
+    }*/
+
+    for (auto* storage_input : storageInputs) {
+        if (storage_input != nullptr) {
+            // might be no writers of this, if it's used in a feedback fashion (meaning what?)
+            dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
+            // check for write-after-read hazards, finding if this object is read in other submissions before this one writes to it
+            dependencyTraversalRecursion(storage_input->SubmissionsReadIn(), stack_count, NoCheck | IgnoreSelf);
+        }
+    }
+
+    for (auto* uniform_input : uniformInputs) {
+        if (uniform_input != nullptr) {
+            dependencyTraversalRecursion(uniform_input->SubmissionsWrittenIn(), stack_count, NoCheck);
+        }
+    }
+
+    for (auto* storage_input : storageReadOnlyInputs) {
+        if (storage_input != nullptr) {
+            dependencyTraversalRecursion(storage_input->SubmissionsWrittenIn(), stack_count, NoCheck);
+        }
+    }
+}
+
+void PipelineSubmission::dependencyTraversalRecursion(const std::unordered_set<size_t>& submissions, size_t& stack_count, const uint32_t& flags) {
+    auto no_check = [&]() { return flags & NoCheck; };
+    auto merge_dependency = [&]() { return flags & MergeDependency; };
+    auto ignore_self = [&]() { return flags & IgnoreSelf; };
+
+    if (!no_check() && submissions.empty()) {
+        LOG(ERROR) << "Requested checking of a resource during dependency traversal, but current resource is not written to in any passes!";
+        throw std::logic_error("Resource is not written to by any passes.");
+    }
+
+    if (stack_count > graph.NumSubmissions()) {
+        LOG(ERROR) << "Stuck in dependency traversal recursion loop.";
+        throw std::runtime_error("Stuck in a recursive loop.");
+    }
+
+    for (auto& submission : submissions) {
+        if (submission != idx) {
+            graph.submissionDependencies[idx].insert(submission);
+        }
+    }
+
+    if (merge_dependency()) {
+        for (auto& submission : submissions) {
+            if (submission != idx) {
+                graph.submissionMergeDependencies[idx].insert(submission);
+            }
+        }
+    }
+
+    ++stack_count;
+
+    for (auto& pushed_submission : submissions) {
+        if (ignore_self() && (pushed_submission == idx)) {
+            continue;
+        }
+        else if (pushed_submission == idx) {
+            LOG(ERROR) << "Found a submission resource with a cyclic dependency on itself during dependency traversal recursion step.";
+            throw std::logic_error("Submission resource has a self-dependency loop.");
         }
 
+        graph.submissionStack.push_back(pushed_submission);
+        graph.pipelineSubmissions[pushed_submission]->traverseDependencies(stack_count);
     }
 
-    void PipelineSubmission::RecordCommands(VkCommandBuffer cmd) {
-        recordSubmissionCb(cmd);
-    }
+}
 
+void PipelineSubmission::RecordCommands(VkCommandBuffer cmd) {
+    recordSubmissionCb(cmd);
 }
 
 #ifdef VPSK_TESTING_ENABLED

@@ -14,3 +14,7 @@ ADD_PLUGIN(rendergraph_plugin
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderResourcePack.cpp"
 )
 
+TARGET_LINK_LIBRARIES(rendergraph_plugin PRIVATE shadertools)
+TARGET_INCLUDE_DIRECTORIES(rendergraph_plugin PRIVATE
+    "../../ext/include/" "${Vulkan_INCLUDE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
