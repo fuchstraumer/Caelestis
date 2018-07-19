@@ -26,7 +26,7 @@ private:
 
 SecureAllocation::SecureAllocation(size_t len) {
     static AllocationContext context;
-    size_t page_size = ProcessInfo::PageSize();
+    size_t page_size = ProcessInfo::GetPageSize();
     size_t remainder = len & page_size;
     remaining = remainder ? (len + page_size - remainder) : len;
     size = remaining;

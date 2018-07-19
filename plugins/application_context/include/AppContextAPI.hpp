@@ -114,15 +114,34 @@ struct ApplicationContext_API {
         - Fetch config file name given a plugin name. Done by plugin manager as well.
     */
     void (*GetRequiredModules)(size_t* num_modules, const char** modules);
-    const char* (*GetModuleConfigFile)(const char* module_name);
+    const char* (*GetPluginConfigFile)(const char* module_name);
     /*
         Construction and retrieval of allocator objects.
         Flags are composed to create policy/trait-defined allocators.
         Tracked allocation is going to add overhead, but is great for debugging.
     */
-    struct Allocator* (*GetHeapAllocator)(void);
-    struct Allocator* (*CreateNewAllocator)(const struct AllocatorCreateInfo* create_info);
-    struct Allocator* (*CreateNewTrackedAllocator)(const struct AllocatorCreateInfo* create_info, struct TrackedAllocatorCallbacks* callbacks);
+    class Allocator* (*GetHeapAllocator)(void);
+    class Allocator* (*CreateNewAllocator)(const struct AllocatorCreateInfo* create_info);
+    class Allocator* (*CreateNewTrackedAllocator)(const struct AllocatorCreateInfo* create_info, struct TrackedAllocatorCallbacks* callbacks);
+    /*
+        Use this to publish logging functions through a single interface, guaranteeing they use a singular logging repository when called through
+        here. One may also retrieve the logging repository through this interface, and use it to set a shared repository in other modules.
+    */
+    void*(*GetLoggingStoragePointer)(void);
+    void (*InfoLog)(const char* message);
+    void (*WarningLog)(const char* message);
+    void (*ErrorLog)(const char* message);
+    /*
+        Gets memory status info for current process. Shouldn't have more than one process attached or running to anything
+        using the plugin manager system, however.
+    */
+    size_t (*VirtualMemorySize)(void);
+    size_t (*ResidentSize)(void);
+    double (*MemoryPressure)(void);
+    size_t (*TotalPhysicalMemory)(void);
+    size_t (*AvailPhysicalMemory)(void);
+    size_t (*CommittedPhysicalMemory)(void);
+    size_t (*PageSize)(void);
 };
 
 #endif //!APPLICATION_CONTEXT_API_HPP

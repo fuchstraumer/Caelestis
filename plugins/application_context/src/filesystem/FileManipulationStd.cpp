@@ -1,7 +1,10 @@
 #include "filesystem/FileManipulation.hpp"
 #include <experimental/filesystem>
+#include <unordered_map>
 
 namespace stdfs = std::experimental::filesystem;
+static std::unordered_map<stdfs::path, std::string> pathStrings;
+
 namespace fs {
 
 const char* TempDirPath() {
@@ -41,8 +44,8 @@ bool PathExists(const char* _path) {
 const char* GetAbsolutePath(const char* input) { 
     stdfs::path path(input);
     if (stdfs::exists(path)) {
-        const std::string result = stdfs::absolute(path).string();
-        return result.c_str();
+        auto iter = pathStrings.emplace(stdfs::absolute(path), stdfs::absolute(path).string());
+        return iter.first->second.c_str();
     }
     else {
         return nullptr;
@@ -52,8 +55,8 @@ const char* GetAbsolutePath(const char* input) {
 const char* GetCanonicalPath(const char* input) {
     stdfs::path path(input);
     if (stdfs::exists(path)) {
-        const std::string result = stdfs::canonical(path).string();
-        return result.c_str();
+        auto iter = pathStrings.emplace(stdfs::canonical(path), stdfs::canonical(path).string());
+        return iter.first->second.c_str();
     }
     else {
         return nullptr;

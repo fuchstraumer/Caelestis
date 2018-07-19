@@ -8,9 +8,21 @@
 #include <unordered_map>
 #include <string>
 #include <experimental/filesystem>
+#ifdef _WIN32
+#include "platform/GameModeWin32.hpp"
+#endif
+#include "process/ProcessID.hpp"
+#include "process/ProcessInfo.hpp"
+#include "easylogging++.h"
+INITIALIZE_EASYLOGGINGPP
+#undef CreateDirectory
+#undef MoveFile
+#undef CopyFile
+#undef CreateFile
 
 constexpr const char* const APPLICATION_CONTEXT_CFG_FILE_NAME = "ApplicationConfig.json";
 static ApplicationConfigurationFile CfgFile;
+static ProcessInfo* processInfo = nullptr;
 
 static void FindApplicationConfigFile() {
     namespace stdfs = std::experimental::filesystem;
@@ -49,9 +61,42 @@ static uint32_t PluginID() {
     return APPLICATION_CONTEXT_API_ID;
 }
 
+static void WriteLoadedLog() {
+    namespace fs = std::experimental::filesystem;
+    LOG(INFO) << "Application context loaded.";
+    LOG(INFO) << "Temporary data path: " << fs::temp_directory_path().string();
+    LOG(INFO) << "Current canonical working directory: " << fs::canonical(fs::current_path()).string();
+    LOG(INFO) << "Registered modules and config files: ";
+    const auto& module_names = CfgFile.GetRequiredModules();
+    for (auto& plugin : module_names) {
+        LOG(INFO) << "    " << plugin.c_str() << " : " << CfgFile.GetModuleConfigFile(plugin.c_str());
+    }
+    LOG(INFO) << "System Memory available: " << processInfo->GetAvailPhysicalMemory();
+    LOG(INFO) << "System Virtual memory available: " << processInfo->VirtualMemorySize();
+    LOG(INFO) << "Current memory committed: " << processInfo->GetCommittedPhysicalMemory();
+#ifdef _WIN32
+    LOG(INFO) << "Game mode supported: " << ExclusiveCapable();
+    LOG_IF(ExclusiveCapable(), INFO) << "    ExclusiveModeCoreCount: " << ExclusiveCoreCount();
+#endif // _WIN32
+}
+
 static void Load(GetEngineAPI_Fn fn) {
-    // Ignoring both input arguments. We're the core API: we are what ends u p helping supply these arguments to everyone else!
+    processInfo = new ProcessInfo(ProcessID::GetCurrent());
+    el::Configurations conf;
+    conf.setToDefault();
+    conf.setGlobally(el::ConfigurationType::Format, "%level :: %datetime :: %msg");
+    conf.setGlobally(el::ConfigurationType::Filename, "application_log.log");
+    conf.setGlobally(el::ConfigurationType::SubsecondPrecision, "4");
+    conf.set(el::Level::Warning, el::ConfigurationType::Format, "%level :: %datetime :: %func :: %msg");
+    conf.set(el::Level::Error, el::ConfigurationType::Format, "%level :: %datetime :: %file :: %func :: %line :: %msg");
+    conf.set(el::Level::Debug, el::ConfigurationType::Format, "%level :: %datetime :: %file :: %func :: %line :: %msg");
+    el::Loggers::reconfigureAllLoggers(conf);
+    // Ignoring both input arguments. We're the core API: we are what ends up helping supply these arguments to everyone else!
     FindApplicationConfigFile();
+#ifdef _WIN32
+    QueryGameModeCapabilities();
+#endif // _WIN32
+    WriteLoadedLog();
 }
 
 static void Unload() {
@@ -59,7 +104,9 @@ static void Unload() {
 }
 
 static void Update() {
-    
+#ifdef _WIN32
+    GameModeFrameFn();
+#endif
 }
 
 static uint32_t ShowDialog(const char* message, const char* title, uint32_t dialog_type, uint32_t buttons) {
@@ -170,6 +217,51 @@ static const char* GetModuleCfgFile(const char* module_name) {
     return CfgFile.GetModuleConfigFile(module_name);
 }
 
+static void* GetLoggingStoragePointer() {
+    static auto storage = el::Helpers::storage();
+    return &storage;
+}
+
+static void InfoLog(const char* msg) {
+    LOG(INFO) << msg;
+}
+
+static void WarningLog(const char* msg) {
+    LOG(WARNING) << msg;
+}
+
+static void ErrorLog(const char* msg) {
+    LOG(ERROR) << msg;
+}
+
+static size_t VirtualMemorySize() {
+    return processInfo->VirtualMemorySize();
+}
+
+static size_t ResidentSize() {
+    return processInfo->ResidentSize();
+}
+
+static double GetMemoryPressure() {
+    return processInfo->GetMemoryPressure();
+}
+
+static size_t GetTotalPhysicalMemory() {
+    return processInfo->GetTotalPhysicalMemory();
+}
+
+static size_t GetAvailPhysicalMemory() {
+    return processInfo->GetAvailPhysicalMemory();
+}
+
+static size_t GetCommittedPhysicalMemory() {
+    return processInfo->GetCommittedPhysicalMemory();
+}
+
+static size_t GetPageSize() {
+    return ProcessInfo::GetPageSize();
+}
+
 static void* CorePluginAPI() {
     static Plugin_API api{ nullptr };
     api.PluginName = ContextName;
@@ -201,9 +293,20 @@ static void* ApplicationContextAPI() {
     api.RenameFile = RenameFile;
     api.MoveFile = MoveFile;
     api.GetRequiredModules = GetRequiredModules;
-    api.GetModuleConfigFile = GetModuleCfgFile;
+    api.GetPluginConfigFile = GetModuleCfgFile;
     api.GetHeapAllocator = GetHeapAllocator;
     api.CreateNewAllocator = CreateNewAllocator;
+    api.GetLoggingStoragePointer = GetLoggingStoragePointer;
+    api.InfoLog = InfoLog;
+    api.WarningLog = WarningLog;
+    api.ErrorLog = ErrorLog;
+    api.VirtualMemorySize = VirtualMemorySize;
+    api.ResidentSize = ResidentSize;
+    api.MemoryPressure = GetMemoryPressure;
+    api.TotalPhysicalMemory = GetTotalPhysicalMemory;
+    api.AvailPhysicalMemory = GetAvailPhysicalMemory;
+    api.CommittedPhysicalMemory = GetCommittedPhysicalMemory;
+    api.PageSize = GetPageSize;
     return &api;
 }
 
