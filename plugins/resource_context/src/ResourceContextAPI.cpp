@@ -107,6 +107,10 @@ void SetBufferData(VulkanResource* dest_buffer, const size_t num_data, const gpu
     resourceContext->SetBufferData(dest_buffer, num_data, data);
 }
 
+void FillBuffer(VulkanResource* rsrc, const uint32_t value) {
+    resourceContext->FillBuffer(rsrc, value);
+}
+
 VulkanResource* CreateImage(const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
     return resourceContext->CreateImage(info, view_info, num_data, initial_data, convertToMemoryType(_memory_type), user_data);
 }
@@ -117,6 +121,14 @@ VulkanResource* CreateNamedImage(const char* name, const struct VkImageCreateInf
 
 void SetImageData(VulkanResource* image, const size_t num_data, const gpu_image_resource_data_t* data) {
     resourceContext->SetImageData(image, num_data, data);
+}
+
+void ClearColorImage(VulkanResource* image, const struct VkClearColorValue* clear_value, const size_t num_ranges, const struct VkImageSubresourceRange* ranges) {
+    resourceContext->ClearColorImage(image, clear_value, num_ranges, ranges);
+}
+
+void ClearDepthStencilImage(VulkanResource* rsrc, const struct VkClearDepthStencilValue* clear_value, const size_t num_ranges, const struct VkImageSubresourceRange* ranges) {
+    resourceContext->ClearDepthImage(rsrc, clear_value, num_ranges, ranges);
 }
 
 VulkanResource* CreateSampler(const struct VkSamplerCreateInfo* info, void* user_data) {
@@ -174,8 +186,12 @@ static ResourceContext_API* GetResourceAPI() {
     api.CreateBuffer = CreateBuffer;
     api.CreateNamedBuffer = CreateNamedBuffer;
     api.SetBufferData = SetBufferData;
+    api.FillBuffer = FillBuffer;
     api.CreateImage = CreateImage;
     api.CreateNamedImage = CreateNamedImage;
+    api.SetImageData = SetImageData;
+    api.ClearColorImage = ClearColorImage;
+    api.ClearDepthStencilImage = ClearDepthStencilImage;
     api.CreateSampler = CreateSampler;
     api.CopyResource = CopyResource;
     api.CreateResourceCopy = CreateResourceCopy;
