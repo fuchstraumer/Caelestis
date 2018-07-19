@@ -17,7 +17,7 @@ struct ResourceContext_API {
     VulkanResource* (*CreateImage)(const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data);
     VulkanResource* (*CreateNamedImage)(const char* name, const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data);
     void (*SetImageData)(VulkanResource* image, const size_t num_data, const gpu_image_resource_data_t* data);
-    void (*ClearColorImage)(VulkanResource* image, const struct VkClearColorValue* clear_color, const size_t range_count, const struct VkImageSubresourceRange* ranges);
+    void (*ClearColorImage)(VulkanResource* image, const union VkClearColorValue* clear_color, const size_t range_count, const struct VkImageSubresourceRange* ranges);
     void (*ClearDepthStencilImage)(VulkanResource* image, const struct VkClearDepthStencilValue* clear_value, const size_t range_count, const struct VkImageSubresourceRange* ranges);
     VulkanResource* (*CreateSampler)(const struct VkSamplerCreateInfo* info, void* user_data);
     // Make sure dst has been initialized first.

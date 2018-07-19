@@ -328,7 +328,7 @@ VulkanResource* ResourceContext::CreateSampler(const VkSamplerCreateInfo* info, 
 }
 
 VulkanResource* ResourceContext::CreateResourceCopy(VulkanResource* src) {
-    return nullptr;
+    throw std::runtime_error("Currently not supported, sorry!");
 }
 
 void ResourceContext::CopyResource(VulkanResource * src, VulkanResource * dest) {

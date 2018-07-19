@@ -123,7 +123,7 @@ void SetImageData(VulkanResource* image, const size_t num_data, const gpu_image_
     resourceContext->SetImageData(image, num_data, data);
 }
 
-void ClearColorImage(VulkanResource* image, const struct VkClearColorValue* clear_value, const size_t num_ranges, const struct VkImageSubresourceRange* ranges) {
+void ClearColorImage(VulkanResource* image, const union VkClearColorValue* clear_value, const size_t num_ranges, const struct VkImageSubresourceRange* ranges) {
     resourceContext->ClearColorImage(image, clear_value, num_ranges, ranges);
 }
 
