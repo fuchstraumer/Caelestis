@@ -147,7 +147,7 @@ VkRenderPass CreateBasicRenderpass(const vpr::Device* device, const vpr::Swapcha
 }
 
 VkPipeline CreateBasicPipeline(const vpr::Device * device, uint32_t num_stages, const VkPipelineShaderStageCreateInfo * pStages, const VkPipelineVertexInputStateCreateInfo * vertex_state, VkPipelineLayout pipeline_layout,
-    VkRenderPass renderpass) {
+    VkRenderPass renderpass, VkCompareOp depth_op, VkPipelineCache cache, VkPipeline derived_pipeline) {
     VkPipeline pipeline = VK_NULL_HANDLE;
 
     constexpr static VkPipelineInputAssemblyStateCreateInfo assembly_info{
@@ -196,13 +196,13 @@ VkPipeline CreateBasicPipeline(const vpr::Device * device, uint32_t num_stages, 
         VK_FALSE
     };
 
-    constexpr static VkPipelineDepthStencilStateCreateInfo depth_info{
+    const VkPipelineDepthStencilStateCreateInfo depth_info {
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         nullptr,
         0,
         VK_TRUE,
         VK_TRUE,
-        VK_COMPARE_OP_LESS,
+        depth_op,
         VK_FALSE,
         VK_FALSE,
         VK_STENCIL_OP_ZERO,
@@ -246,7 +246,7 @@ VkPipeline CreateBasicPipeline(const vpr::Device * device, uint32_t num_stages, 
     VkGraphicsPipelineCreateInfo pipeline_create_info = {
         VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         nullptr,
-        0,
+        VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT,
         2,
         pStages,
         vertex_state,
@@ -261,11 +261,15 @@ VkPipeline CreateBasicPipeline(const vpr::Device * device, uint32_t num_stages, 
         pipeline_layout,
         renderpass,
         0,
-        VK_NULL_HANDLE,
+        derived_pipeline,
         -1
     };
 
-    VkResult result = vkCreateGraphicsPipelines(device->vkHandle(), VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline);
+    if (derived_pipeline != VK_NULL_HANDLE) {
+        pipeline_create_info.flags |= VK_PIPELINE_CREATE_DERIVATIVE_BIT;
+    }
+
+    VkResult result = vkCreateGraphicsPipelines(device->vkHandle(), cache, 1, &pipeline_create_info, nullptr, &pipeline);
     VkAssert(result);
 
     return pipeline;

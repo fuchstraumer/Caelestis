@@ -22,7 +22,7 @@
 #include "vpr/vkAssert.hpp"
 #include "../../../third_party/easyloggingpp/src/easylogging++.h"
 
-constexpr static std::array<glm::vec3, 8> skybox_positions {
+const static std::array<glm::vec3, 8> skybox_positions {
     glm::vec3{-1.0f,-1.0f, 1.0f },
     glm::vec3{ 1.0f,-1.0f, 1.0f },
     glm::vec3{ 1.0f, 1.0f, 1.0f },
