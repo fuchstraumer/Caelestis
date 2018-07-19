@@ -8,30 +8,10 @@
 #include "vpr/PhysicalDevice.hpp"
 #include "vpr/vkAssert.hpp"
 #include "UploadBuffer.hpp"
-#include <foonathan/memory/memory_stack.hpp>
 #include <vector>
 #include <algorithm>
+#include "easylogging++.h"
 
-struct userDataCopies {
-    foonathan::memory::memory_stack<> allocator;
-    std::vector<void*> storedAddresses;
-
-    // blocks should be ~128mb in size. will fit tons of small allocations, and a few bigger ones
-    userDataCopies() : allocator(size_t(32e8)) {}
-
-    void* allocate(size_t size, size_t alignment) {
-        void* result = allocator.allocate(size, alignment == 0 ? alignof(uint32_t) : alignment);
-        storedAddresses.emplace_back(result);
-        return result;
-    }
-
-    void flush() {
-        storedAddresses.clear(); storedAddresses.shrink_to_fit();
-        allocator.shrink_to_fit();
-    }
-};
-
-static userDataCopies userData;
 static std::vector<std::unique_ptr<UploadBuffer>> uploadBuffers;
 
 static VkAccessFlags accessFlagsFromBufferUsage(VkBufferUsageFlags usage_flags) {
@@ -106,9 +86,7 @@ ResourceContext::ResourceContext(vpr::Device* _device, vpr::PhysicalDevice* phys
 }
 
 ResourceContext::~ResourceContext() {
-    for (auto& rsrc : resources) {
-        DestroyResource(rsrc.get());
-    }
+    Destroy();
 }
 
 VulkanResource* ResourceContext::CreateBuffer(const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data) {
@@ -122,8 +100,17 @@ VulkanResource* ResourceContext::CreateBuffer(const VkBufferCreateInfo* info, co
         resource->Info = &info_iter.first->second;
         resource->UserData = user_data;
     }
+
+    if ((_memory_type == memory_type::DEVICE_LOCAL) && (num_data != 0)) {
+        // Device local buffer that will be transferred into, make sure it has the requisite flag.
+        VkBufferCreateInfo* buffer_info = reinterpret_cast<VkBufferCreateInfo*>(resource->Info);
+        if (!(buffer_info->usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT)) {
+            LOG(WARNING) << "Buffer requiring transfer_dst usage flags did not have usage flags set! Updating now...";
+        }
+        buffer_info->usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
     
-    VkResult result = vkCreateBuffer(device->vkHandle(), info, nullptr, reinterpret_cast<VkBuffer*>(&resource->Handle));
+    VkResult result = vkCreateBuffer(device->vkHandle(), reinterpret_cast<VkBufferCreateInfo*>(resource->Info), nullptr, reinterpret_cast<VkBuffer*>(&resource->Handle));
     VkAssert(result);
 
     resourceInfos.resourceMemoryType.emplace(resource, _memory_type);
@@ -266,6 +253,7 @@ void ResourceContext::DestroyResource(VulkanResource * rsrc) {
         return entry.get() == rsrc;
     });
     if (iter == std::end(resources)) {
+        LOG(ERROR) << "Tried to erase resource that isn't in internal containers!";
         throw std::runtime_error("Tried to erase resource that isn't in internal containers!");
     }
     else {
@@ -299,22 +287,29 @@ void ResourceContext::Update() {
 }
 
 void ResourceContext::FlushStagingBuffers() {
+    
+    if (uploadBuffers.empty()) {
+        return;
+    }
+
     for (auto& buff : uploadBuffers) {
         allocator->FreeMemory(&buff->alloc);
         vkDestroyBuffer(device->vkHandle(), buff->Buffer, nullptr);
         buff.reset();
     }
-    auto& loader = ResourceLoader::GetResourceLoader();
-    for (auto& addr : referencedLoaderAddresses) {
-        loader.unloadAddress(addr.second);
-    }
+
     uploadBuffers.clear(); uploadBuffers.shrink_to_fit();
-    userData.flush();
+}
+
+void ResourceContext::Destroy() {
+    for (auto& rsrc : resources) {
+        DestroyResource(rsrc.get());
+    }
 }
 
 void ResourceContext::setBufferInitialDataHostOnly(VulkanResource* resource, const size_t num_data, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc, memory_type _memory_type) {
     void* mapped_address = nullptr;
-    alloc.Map(alloc.Size, alloc.Offset(), &mapped_address);
+    alloc.Map(alloc.Size, 0, &mapped_address);
     size_t offset = 0;
     for (size_t i = 0; i < num_data; ++i) {
         void* curr_address = (void*)((size_t)mapped_address + offset);
@@ -323,7 +318,7 @@ void ResourceContext::setBufferInitialDataHostOnly(VulkanResource* resource, con
     }
     alloc.Unmap();
     if (_memory_type == memory_type::HOST_VISIBLE) {
-        VkMappedMemoryRange mapped_memory{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), alloc.Offset(), alloc.Size };
+        VkMappedMemoryRange mapped_memory{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), 0, alloc.Size };
         VkResult result = vkFlushMappedMemoryRanges(device->vkHandle(), 1, &mapped_memory);
         VkAssert(result);
     }

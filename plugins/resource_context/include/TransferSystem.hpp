@@ -38,6 +38,7 @@ public:
 
 private:
 
+    std::atomic<bool> cmdBufferDirty = false;
     bool initialized = false;
     std::unique_ptr<vpr::CommandPool> transferPool;
     std::unique_ptr<vpr::Fence> fence;

@@ -6,7 +6,7 @@
 #include <thread>
 #include <condition_variable>
 #include <future>
-#include <queue>
+#include <list>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -23,9 +23,9 @@
         ~ResourceLoader();
     public:
 
-        void Subscribe(const std::string& file_type, FactoryFunctor func, DeleteFunctor del_fn);
-        void Load(const std::string& file_type, const std::string& file_path, void* requester, SignalFunctor signal);
-        void Unload(const std::string& file_type, const std::string& path);
+        void Subscribe(const char* file_type, FactoryFunctor func, DeleteFunctor del_fn);
+        void Load(const char* file_type, const char* file_path, void* requester, SignalFunctor signal);
+        void Unload(const char* file_type, const char* path);
 
         void Start();
         void Stop();
@@ -62,9 +62,9 @@
         std::unordered_map<std::string, FactoryFunctor> factories;
         std::unordered_map<std::string, DeleteFunctor> deleters;
         std::unordered_map<std::string, ResourceData> resources;
-        std::queue<loadRequest> requests;
-        std::mutex queueMutex;
-        std::condition_variable cVar;
+        std::list<loadRequest> requests;
+        std::recursive_mutex queueMutex;
+        std::condition_variable_any cVar;
         std::atomic<bool> shutdown{ false };
         std::array<std::thread, 2> workers;
     };

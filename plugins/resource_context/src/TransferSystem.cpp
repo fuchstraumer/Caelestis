@@ -61,6 +61,10 @@ void ResourceTransferSystem::CompleteTransfers() {
         throw std::runtime_error("Transfer system was not properly initialized!");
     }
 
+    if (!cmdBufferDirty) {
+        return;
+    }
+
     auto& guard = AcquireSpinLock();
 
     auto& pool = *transferPool;
@@ -87,7 +91,7 @@ void ResourceTransferSystem::CompleteTransfers() {
     result = vkResetFences(device->vkHandle(), 1, &fence->vkHandle());
     VkAssert(result);
 
-    transferPool->ResetCmdPool();
+    transferPool->ResetCmdBuffer(0);
 
     constexpr static VkCommandBufferBeginInfo begin_info{
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -98,6 +102,7 @@ void ResourceTransferSystem::CompleteTransfers() {
 
     result = vkBeginCommandBuffer(pool[0], &begin_info);
     VkAssert(result);
+    cmdBufferDirty = false;
 
 }
 
@@ -106,6 +111,7 @@ ResourceTransferSystem::transferSpinLockGuard ResourceTransferSystem::AcquireSpi
 }
 
 VkCommandBuffer ResourceTransferSystem::TransferCmdBuffer() {
+    cmdBufferDirty = true;
     auto& pool = *transferPool;
     return pool[0];
 }

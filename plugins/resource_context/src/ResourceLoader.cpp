@@ -3,6 +3,7 @@
 #ifdef _MSC_VER
 #include <execution>
 #endif // _MSC_VER
+#include "easylogging++.h"
 
     ResourceLoader::ResourceLoader() {
         Start();
@@ -12,12 +13,12 @@
         Stop();
     }
 
-    void ResourceLoader::Subscribe(const std::string& file_type, FactoryFunctor func, DeleteFunctor del_fn) {
+    void ResourceLoader::Subscribe(const char* file_type, FactoryFunctor func, DeleteFunctor del_fn) {
         factories[file_type] = func;
         deleters[file_type] = del_fn;
     }
 
-    void ResourceLoader::Load(const std::string& file_type, const std::string& file_path, void* _requester, SignalFunctor signal) {
+    void ResourceLoader::Load(const char* file_type, const char* file_path, void* _requester, SignalFunctor signal) {
         namespace fs = std::experimental::filesystem;
         fs::path fs_file_path = fs::absolute(fs::path(file_path));
         const std::string absolute_path = fs_file_path.string();
@@ -52,20 +53,29 @@
         req.signal = signal;
         req.factory = factories.at(file_type);
         {
-            std::lock_guard<std::mutex> guard(queueMutex);
-            requests.push(req);
+            std::unique_lock<std::recursive_mutex> guard(queueMutex);
+            requests.push_back(req);
+            guard.unlock();
         }
-        cVar.notify_all();
+        cVar.notify_one();
 
     }   
 
-    void ResourceLoader::Unload(const std::string& file_type, const std::string& path) {
+    void ResourceLoader::Unload(const char* file_type, const char* _path) {
+        namespace fs = std::experimental::filesystem;
+        fs::path file_path(_path);
+        if (!fs::exists(file_path)) {
+            LOG(ERROR) << "Tried to unload non-existent file path!";
+        }
+        
+        const std::string path = fs::absolute(file_path).string();
+
         if (resources.count(path) != 0) {
-            std::lock_guard<std::mutex> guard(queueMutex);
+            std::lock_guard<std::recursive_mutex> guard(queueMutex);
             auto iter = resources.find(path);
             --iter->second.RefCount;
             if (iter->second.RefCount == 0) {
-                deleters.at(iter->first)(iter->second.Data);
+                deleters.at(iter->second.FileType)(iter->second.Data);
             }
             resources.erase(iter);
         }
@@ -77,25 +87,29 @@
     }
 
     void ResourceLoader::Start() {
+        shutdown = false;
         workers[0] = std::thread(&ResourceLoader::workerFunction, this);
         workers[1] = std::thread(&ResourceLoader::workerFunction, this);
-
-        shutdown = false;
     }
 
     void ResourceLoader::Stop() {
         shutdown = true;      
         
+        cVar.notify_all();
+
         if (workers[0].joinable()) {
             workers[0].join();
         }
+
+        cVar.notify_all();
         
         if (workers[1].joinable()) {
             workers[1].join();
         }
 
-        for (auto& rsrc : resources) {
-            deleters.at(rsrc.first)(rsrc.second.Data);
+        while (!resources.empty()) {
+            auto iter = resources.begin();
+            Unload(iter->second.FileType.c_str(), iter->first.c_str());
         }
 
     }
@@ -126,18 +140,20 @@
         auto iter = std::find_if(std::begin(resources), std::end(resources), find_fn);
 #endif   
         if (iter != std::end(resources)) {
-            Unload(iter->second.FileType, iter->second.AbsoluteFilePath);
+            Unload(iter->second.FileType.c_str(), iter->second.AbsoluteFilePath.c_str());
         }
     }
 
     void ResourceLoader::workerFunction() {
         while (!shutdown) {
-            std::unique_lock<std::mutex> lock{queueMutex};
-            cVar.wait(lock, [&]{ 
-                return !requests.empty() || shutdown;
-            });
+            std::unique_lock<std::recursive_mutex> lock{queueMutex};
+            cVar.wait(lock, [this]()->bool { return shutdown || !requests.empty(); });
+            if (shutdown) {
+                lock.unlock();
+                return;
+            }
             loadRequest request = requests.front();
-            requests.pop();
+            requests.pop_front();
             lock.unlock();
             // proceed to load.
             request.destinationData.Data = request.factory(request.destinationData.AbsoluteFilePath.c_str());

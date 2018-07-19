@@ -40,6 +40,7 @@ public:
     // Call at end of frame
     void FlushStagingBuffers();
 
+    void Destroy();
 private:
 
     void setBufferInitialDataHostOnly(VulkanResource * resource, const size_t num_data, const gpu_resource_data_t * initial_data, vpr::Allocation& alloc, memory_type _memory_type);

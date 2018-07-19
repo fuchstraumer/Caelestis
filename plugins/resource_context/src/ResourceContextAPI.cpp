@@ -6,6 +6,11 @@
 #include "renderer_context/include/core/RendererContext.hpp"
 #include "ResourceContext.hpp"
 #include "ResourceLoader.hpp"
+#include "vpr/Allocator.hpp"
+#include "vpr/PipelineCache.hpp"
+#include "vpr/PhysicalDevice.hpp"
+#include "easylogging++.h"
+INITIALIZE_NULL_EASYLOGGINGPP
 
 static RendererContext* rendererContext = nullptr;
 static ApplicationContext_API* AppContextAPI = nullptr;
@@ -17,11 +22,9 @@ static void BeginResizeCallback(uint32_t handle, uint32_t w, uint32_t h) {
     loader.Stop();
     resourceContext->Update();
     resourceContext->FlushStagingBuffers();
-    delete resourceContext;
 }
 
 static void CompleteResizeCallback(uint32_t handle, uint32_t w, uint32_t h) {
-    resourceContext = new ResourceContext(rendererContext->LogicalDevice, rendererContext->PhysicalDevices[0]);
     auto& loader = ResourceLoader::GetResourceLoader();
     loader.Start();
 }
@@ -34,15 +37,31 @@ static const char* GetName() {
     return "ResourceContext";
 }
 
+static void SetEasyloggingRepositoryUsingAppContext() {
+    el::Helpers::setStorage(*reinterpret_cast<el::base::type::StoragePointer*>(AppContextAPI->GetLoggingStoragePointer()));
+    vpr::SetLoggingRepository_VprAlloc(AppContextAPI->GetLoggingStoragePointer());
+}
+
+static void WriteLoadedLog() {
+    std::string device_name = rendererContext->PhysicalDevices[0]->GetProperties().deviceName;
+    uint32_t version_int = rendererContext->PhysicalDevices[0]->GetProperties().driverVersion;
+    std::string version_str = "v" + std::to_string(VK_VERSION_MAJOR(version_int)) + "." + std::to_string(VK_VERSION_MINOR(version_int)) + "." + std::to_string(VK_VERSION_PATCH(version_int));
+    std::string creation_info_log = "ResourceContext plugin loaded successfully, created resource system on device " + device_name + " with driver " + version_str;
+    LOG(INFO) << creation_info_log;
+}
+
 static void Load(GetEngineAPI_Fn fn) {
     AppContextAPI = reinterpret_cast<ApplicationContext_API*>(fn(APPLICATION_CONTEXT_API_ID));
     RendererAPI = reinterpret_cast<RendererContext_API*>(fn(RENDERER_CONTEXT_API_ID));
+    SetEasyloggingRepositoryUsingAppContext();
     SwapchainCallbacks_API api{nullptr};
     api.BeginSwapchainResize = BeginResizeCallback;
     api.CompleteSwapchainResize = CompleteResizeCallback;
     RendererAPI->RegisterSwapchainCallbacks(&api);
     rendererContext = RendererAPI->GetContext();
     resourceContext = new ResourceContext(rendererContext->LogicalDevice, rendererContext->PhysicalDevices[0]);
+    // Write info about active system and active hardware.
+    WriteLoadedLog();
 }
 
 static void Unload() {
