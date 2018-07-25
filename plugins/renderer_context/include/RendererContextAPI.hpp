@@ -11,10 +11,9 @@ constexpr static uint32_t RENDERER_CONTEXT_API_ID = 0x100c217e;
 */
 
 struct SwapchainCallbacks_API {
+    
     void (*SwapchainCreated)(uint32_t swapchain_handle, uint32_t width, uint32_t height);
-    // Occurs upon first receipt of swapchain resize event. Signals that appropriate resources should be destroyed
     void (*BeginSwapchainResize)(uint32_t swapchain_handle, uint32_t width, uint32_t height);
-    // Occurs once swapchain has been recreated and updated succesfully: recreate destroyed resources as appropriate.
     void (*CompleteSwapchainResize)(uint32_t swapchain_handle, uint32_t width, uint32_t height);
     void (*SwapchainDestroyed)(uint32_t swapchain_handle);
 };
@@ -24,6 +23,8 @@ struct RendererContext_API {
     void (*RegisterSwapchainCallbacks)(SwapchainCallbacks_API* callbacks);
     // Interface to platform window
     void (*GetWindowSize)(int& width, int& height);
+    void (*GetFramebufferSize)(int& f_x, int& f_y);
+    double(*GetTime)(void);
     // Input handling interface
     const char* (*GetClipboardText)(void);
     // Affected by input mode. GLFW_CURSOR_DISABLED -> locking is enabled
@@ -32,8 +33,14 @@ struct RendererContext_API {
     // GLFW_CURSOR_NORMAL - cursor is free and visible on the screen. position bounded.
     // GLFW_CURSOR_HIDDEN - cursor is free, but not visible on the screen. position bounded.
     // GLFW_CURSOR_DISABLED - cursor is "locked" but position is unbounded
-    void (*SetInputMode)(int mode);
+    void (*SetInputMode)(int mode, int value);
+    int (*GetInputMode)(int mode);
     void (*GetCursorPosition)(double& x_pos, double& y_pos);
+    void (*SetCursorPosition)(double x, double y);
+    void (*SetCursor)(void* cursor_ptr);
+    void*(*CreateCursor)(void* glfw_image, int w, int h);
+    void*(*CreateStandardCursor)(int cursor_type);
+    void (*DestroyCursor)(void* cursor_ptr);
     bool (*WindowShouldClose)(void);
     using cursor_pos_callback_t = void(*)(double pos_x, double pos_y);
     using cursor_enter_callback_t = void(*)(int enter);
@@ -49,6 +56,9 @@ struct RendererContext_API {
     void (*RegisterPathDropCallback)(path_drop_callback_t callback_fn);
     void (*RegisterMouseButtonCallback)(mouse_button_callback_t callback_fn);
     void (*RegisterKeyboardKeyCallback)(keyboard_key_callback_t callback_fn);
+    void*(*GetWin32_WindowHandle)(void);
+    int (*GetMouseButton)(int button);
+    int (*GetWindowAttribute)(int attrib);
 };
 
 #endif //!RENDERER_CONTEXT_API_HPP

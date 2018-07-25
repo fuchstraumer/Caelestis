@@ -19,7 +19,11 @@
 #include <forward_list>
 #include <functional>
 #include <string>
-
+#ifdef _WIN32
+#undef APIENTRY
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>   // for glfwGetWin32Window
+#endif
 static ApplicationContext_API* AppContextAPI = nullptr;
 static RendererContext* Context = nullptr;
 
@@ -118,7 +122,7 @@ static void LogicalUpdate() {
     }
 }
 
-static void Update(float dt) {
+static void Update(double dt) {
 
 }
 
@@ -149,6 +153,10 @@ static void GetWindowSize(int& width, int& height) {
     Context->Window->GetWindowSize(width, height);
 }
 
+static void GetFramebufferSize(int& w, int& h) {
+    glfwGetFramebufferSize(Context->Window->glfwWindow(), &w, &h);
+}
+
 static const char* GetClipboardText() {
     return glfwGetClipboardString(Context->Window->glfwWindow());
 }
@@ -158,8 +166,32 @@ static bool MouseLockingEnabled() {
     return mode == GLFW_CURSOR_DISABLED;
 }
 
-static void SetInputMode(int mode) {
-    Context->Window->SetCursorInputMode(mode);
+static void SetInputMode(int mode, int value) {
+    Context->Window->SetInputMode(mode, value);
+}
+
+static int GetInputMode(int mode) {
+    return glfwGetInputMode(Context->Window->glfwWindow(), mode);
+}
+
+static void SetCursorPosition(double x, double y) {
+    glfwSetCursorPos(Context->Window->glfwWindow(), x, y);
+}
+
+static void SetCursor(void* cursor) {
+    glfwSetCursor(Context->Window->glfwWindow(), reinterpret_cast<GLFWcursor*>(cursor));
+}
+
+static void* CreateCursor(void* glfw_image, int w, int h) {
+    return glfwCreateCursor(reinterpret_cast<GLFWimage*>(glfw_image), w, h);
+}
+
+static void* CreateStandardCursor(int type) {
+    return glfwCreateStandardCursor(type);
+}
+
+static void DestroyCursor(void* cursor) {
+    glfwDestroyCursor(reinterpret_cast<GLFWcursor*>(cursor));
 }
 
 static void GetCursorPosition(double& x, double& y) {
@@ -198,6 +230,22 @@ static void RegisterKeyboardFn(keyboard_key_callback_t fn) {
     Context->Window->AddKeyboardKeyCallbackFn(fn);
 }
 
+static void* GetWin32_WindowHandle() {
+#ifdef _WIN32
+    return glfwGetWin32Window(Context->Window->glfwWindow());
+#else
+    return nullptr;
+#endif
+}
+
+static int GetMouseButton(int button) {
+    return glfwGetMouseButton(Context->Window->glfwWindow(), button);
+}
+
+static int GetWindowAttribute(int attrib) {
+    return glfwGetWindowAttrib(Context->Window->glfwWindow(), attrib);
+}
+
 static Plugin_API* CoreAPI() {
     static Plugin_API api{ nullptr };
     api.PluginID = GetID;
@@ -214,10 +262,17 @@ static RendererContext_API* RendererContextAPI() {
     api.GetContext = GetContext;
     api.RegisterSwapchainCallbacks = AddSwapchainCallbacks;
     api.GetWindowSize = GetWindowSize;
+    api.GetFramebufferSize = GetFramebufferSize;
     api.GetClipboardText = GetClipboardText;
     api.MouseLockingEnabled = MouseLockingEnabled;
     api.SetInputMode = SetInputMode;
+    api.GetInputMode = GetInputMode;
     api.GetCursorPosition = GetCursorPosition;
+    api.SetCursorPosition = SetCursorPosition;
+    api.SetCursor = SetCursor;
+    api.CreateCursor = CreateCursor;
+    api.CreateStandardCursor = CreateStandardCursor;
+    api.DestroyCursor = DestroyCursor;
     api.WindowShouldClose = ShouldWindowClose;
     api.RegisterCursorPosCallback = RegisterCursorPos;
     api.RegisterCursorEnterCallback = RegisterCursorEnter;
@@ -226,6 +281,9 @@ static RendererContext_API* RendererContextAPI() {
     api.RegisterPathDropCallback = RegisterPathDropFn;
     api.RegisterMouseButtonCallback = RegisterMouseButtonFn;
     api.RegisterKeyboardKeyCallback = RegisterKeyboardFn;
+    api.GetWin32_WindowHandle = GetWin32_WindowHandle;
+    api.GetMouseButton = GetMouseButton;
+    api.GetWindowAttribute = GetWindowAttribute;
     return &api;
 }
 

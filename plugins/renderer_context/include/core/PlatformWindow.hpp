@@ -46,7 +46,7 @@ public:
     void AddPathDropCallbackFn(path_drop_callback_t fn);
     void AddMouseButtonCallbackFn(mouse_button_callback_t fn);
     void AddKeyboardKeyCallbackFn(keyboard_key_callback_t fn);
-    void SetCursorInputMode(int mode);
+    void SetInputMode(int mode, int value);
 
     WindowCallbackLists& GetCallbacks();
 

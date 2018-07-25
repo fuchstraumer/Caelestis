@@ -85,6 +85,7 @@ PlatformWindow::PlatformWindow(int w, int h, const char* app_name, uint32_t wind
     createWindow(app_name);
     glfwSetWindowSizeCallback(window, ResizeCallback);
     callbacks = new WindowCallbackLists();
+    setCallbacks();
 }
 
 PlatformWindow::~PlatformWindow() {
@@ -147,8 +148,8 @@ void PlatformWindow::AddKeyboardKeyCallbackFn(keyboard_key_callback_t fn) {
     callbacks->keyboardKeyCallbacks.push_front(fn);
 }
 
-void PlatformWindow::SetCursorInputMode(int mode) {
-    glfwSetInputMode(window, GLFW_CURSOR, mode);
+void PlatformWindow::SetInputMode(int mode, int value) {
+    glfwSetInputMode(window, mode, value);
 }
 
 WindowCallbackLists& PlatformWindow::GetCallbacks() {
