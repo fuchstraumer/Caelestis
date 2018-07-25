@@ -1,14 +1,10 @@
-#include "stdafx.h"
 #include "TerrainNode.hpp"
-#include "engine\util\sphere.h"
-#include "engine\util\view_frustum.hpp"
 #include "NodeRenderer.hpp"
 
-size_t vulpes::terrain::TerrainNode::MaxLOD = 16;
-float vulpes::terrain::TerrainNode::SwitchRatio = 1.80f;
+size_t TerrainNode::MaxLOD = 16;
+float TerrainNode::SwitchRatio = 1.80f;
 
-void vulpes::terrain::TerrainNode::Subdivide() {
-
+void TerrainNode::Subdivide() {
 	double child_length = SideLength / 2.0;
 	glm::ivec3 grid_pos = glm::ivec3(2 * GridCoordinates.x, 2 * GridCoordinates.y, LOD_Level() + 1);
 	glm::vec3 pos = glm::vec3(SpatialCoordinates.x, 0.0f, SpatialCoordinates.z);
@@ -24,8 +20,7 @@ void vulpes::terrain::TerrainNode::Subdivide() {
 	Children[3]->CreateHeightData(HeightData.get());
 }
 
-void vulpes::terrain::TerrainNode::Update(const glm::vec3 & camera_position, const util::view_frustum & view, NodeRenderer* node_pool) {
-	
+void TerrainNode::Update(const glm::vec3 & camera_position, const util::view_frustum & view, NodeRenderer* node_pool) {
 	// Get distance from camera to bounds of this node.
 	// Radius of sphere is 1.1 times current node side length, which specifies
 	// the range from a node we consider to be the LOD switch distance
@@ -70,11 +65,11 @@ void vulpes::terrain::TerrainNode::Update(const glm::vec3 & camera_position, con
 	}
 }
 
-vulpes::terrain::TerrainNode::TerrainNode(const glm::ivec3& parent_coords, const glm::ivec3& logical_coords, const glm::vec3& position, const double& length) : 
+TerrainNode::TerrainNode(const glm::ivec3& parent_coords, const glm::ivec3& logical_coords, const glm::vec3& position, const double& length) : 
 	ParentGridCoordinates(parent_coords), GridCoordinates(logical_coords), SideLength(length), aabb({ position, position + static_cast<float>(length) }), 
 	SpatialCoordinates(position) {}
 
-vulpes::terrain::TerrainNode::~TerrainNode() {
+TerrainNode::~TerrainNode() {
 	if (!IsLeaf()) {
 		for (auto& child : Children) {
 			child.reset();
@@ -83,7 +78,7 @@ vulpes::terrain::TerrainNode::~TerrainNode() {
 	mesh.cleanup();
 }
 
-bool vulpes::terrain::TerrainNode::IsLeaf() const {
+bool TerrainNode::IsLeaf() const {
 	for (auto& child : Children) {
 		if (child) {
 			return false;
@@ -92,7 +87,7 @@ bool vulpes::terrain::TerrainNode::IsLeaf() const {
 	return true;
 }
 
-void vulpes::terrain::TerrainNode::Prune(){
+void TerrainNode::Prune(){
 	for (auto& child : Children) {
 		if (!child) {
 			continue;
@@ -102,17 +97,17 @@ void vulpes::terrain::TerrainNode::Prune(){
 	}
 }
 
-int vulpes::terrain::TerrainNode::LOD_Level() const {
+int TerrainNode::LOD_Level() const {
 	return GridCoordinates.z;
 }
 
-void vulpes::terrain::TerrainNode::CreateMesh(const Device * dvc) {
+void TerrainNode::CreateMesh(const Device * dvc) {
 	mesh = mesh::PlanarMesh(SideLength, GridCoordinates, SpatialCoordinates + glm::vec3(0.0f, 0.0f, -SideLength), glm::vec3(1.0f));
 	mesh.Generate(HeightData.get());
 	mesh.create_buffers(dvc);
 }
 
-void vulpes::terrain::TerrainNode::CreateHeightData(const HeightNode* parent_node) {
+void TerrainNode::CreateHeightData(const HeightNode* parent_node) {
 	auto create_height_node_from_parent = [](const glm::ivec3& _grid_coordinates, const HeightNode* _parent_node) {
 		return std::move(std::make_unique<HeightNode>(_grid_coordinates, _parent_node));
 	};

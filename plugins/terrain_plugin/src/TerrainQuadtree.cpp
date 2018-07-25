@@ -1,8 +1,6 @@
-#include "stdafx.h"
 #include "TerrainQuadtree.hpp"
 
-
-vulpes::terrain::TerrainQuadtree::TerrainQuadtree(const Device* device, TransferPool* transfer_pool, const float & split_factor, const size_t & max_detail_level, const double& root_side_length, const glm::vec3& root_tile_position) : nodeRenderer(device, transfer_pool), MaxLOD(max_detail_level) {
+TerrainQuadtree::TerrainQuadtree(const Device* device, TransferPool* transfer_pool, const float & split_factor, const size_t & max_detail_level, const double& root_side_length, const glm::vec3& root_tile_position) : nodeRenderer(device, transfer_pool), MaxLOD(max_detail_level) {
 	root = std::make_unique<TerrainNode>(glm::ivec3(0, 0, 0), glm::ivec3(0, 0, 0), root_tile_position, root_side_length);
 	TerrainNode::MaxLOD = MaxLOD;
 	TerrainNode::SwitchRatio = split_factor;
@@ -10,11 +8,11 @@ vulpes::terrain::TerrainQuadtree::TerrainQuadtree(const Device* device, Transfer
 	root->HeightData = std::make_unique<HeightNode>(glm::ivec3(0, 0, 0), root_noise);
 }
 
-void vulpes::terrain::TerrainQuadtree::SetupNodePipeline(const VkRenderPass & renderpass, const glm::mat4 & projection) {
+void TerrainQuadtree::SetupNodePipeline(const VkRenderPass & renderpass, const glm::mat4 & projection) {
 	nodeRenderer.CreatePipeline(renderpass, projection);
 }
 
-void vulpes::terrain::TerrainQuadtree::UpdateQuadtree(const glm::vec3 & camera_position, const glm::mat4& view) {
+void TerrainQuadtree::UpdateQuadtree(const glm::vec3 & camera_position, const glm::mat4& view) {
 	if (nodeRenderer.UpdateLOD) {
 		// Create new view frustum
 		util::view_frustum view_f;
@@ -36,6 +34,6 @@ void vulpes::terrain::TerrainQuadtree::UpdateQuadtree(const glm::vec3 & camera_p
 	}
 }
 
-void vulpes::terrain::TerrainQuadtree::RenderNodes(VkCommandBuffer & graphics_cmd, VkCommandBufferBeginInfo& begin_info, const glm::mat4 & view, const glm::vec3& camera_pos, const VkViewport& viewport, const VkRect2D& rect) {
+void TerrainQuadtree::RenderNodes(VkCommandBuffer & graphics_cmd, VkCommandBufferBeginInfo& begin_info, const glm::mat4 & view, const glm::vec3& camera_pos, const VkViewport& viewport, const VkRect2D& rect) {
 	nodeRenderer.Render(graphics_cmd, begin_info, view, camera_pos, viewport, rect); 
 }
