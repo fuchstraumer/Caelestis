@@ -13,9 +13,8 @@
 #include "resource/Texture.hpp"
 #include "resource/PipelineCache.hpp"
 
-bool vulpes::terrain::NodeRenderer::DrawAABBs = false;
-float vulpes::terrain::NodeRenderer::MaxRenderDistance = 100000.0f;
-vulpes::util::TaskPool vulpes::terrain::NodeRenderer::HeightDataTasks = std::move(vulpes::util::TaskPool());
+bool NodeRenderer::DrawAABBs = false;
+float NodeRenderer::MaxRenderDistance = 100000.0f;
 
 // Used to simply color nodes based on LOD level
 static const std::array<glm::vec4, 20> LOD_COLOR_ARRAY = {
@@ -40,23 +39,20 @@ static const std::array<glm::vec4, 20> LOD_COLOR_ARRAY = {
 	glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
 };
 
-vulpes::terrain::NodeRenderer::NodeRenderer(const Device * parent_dvc, TransferPool* transfer_pool) : device(parent_dvc), pipeline(nullptr), transferPool(transfer_pool) {
+NodeRenderer::NodeRenderer(const Device * parent_dvc, TransferPool* transfer_pool) : device(parent_dvc), pipeline(nullptr), transferPool(transfer_pool) {
 
 	auto init_hm = GetNoiseHeightmap(HeightNode::RootSampleGridSize + 5, glm::vec3(0.0f), 1.0f);
 	glm::ivec3 grid_pos = glm::ivec3(0, 0, 0);
 	std::shared_ptr<HeightNode> root = std::make_shared<HeightNode>(glm::ivec3(0, 0, 0), init_hm);
 	
 	setupDescriptors();
-
 	setupPipelineLayout();
-
 	allocateDescriptors();
-
 	createShaders();
 
 }
 
-void vulpes::terrain::NodeRenderer::setupDescriptors() {
+void NodeRenderer::setupDescriptors() {
 	static const std::array<VkDescriptorPoolSize, 1> pools{
 		VkDescriptorPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
 	};
@@ -81,7 +77,7 @@ void vulpes::terrain::NodeRenderer::setupDescriptors() {
 	VkAssert(result);
 }
 
-void vulpes::terrain::NodeRenderer::setupPipelineLayout() {
+void NodeRenderer::setupPipelineLayout() {
 	
 	VkPipelineLayoutCreateInfo pipeline_info = vk_pipeline_layout_create_info_base;
 	pipeline_info.setLayoutCount = 1;
@@ -94,7 +90,7 @@ void vulpes::terrain::NodeRenderer::setupPipelineLayout() {
 	VkAssert(result);
 }
 
-void vulpes::terrain::NodeRenderer::allocateDescriptors() {
+void NodeRenderer::allocateDescriptors() {
 
 	VkDescriptorSetAllocateInfo alloc_info = vk_descriptor_set_alloc_info_base;
 	alloc_info.descriptorPool = descriptorPool;
@@ -105,12 +101,12 @@ void vulpes::terrain::NodeRenderer::allocateDescriptors() {
 	VkAssert(result);
 }
 
-void vulpes::terrain::NodeRenderer::createShaders() {
+void NodeRenderer::createShaders() {
 	vert = std::make_unique<ShaderModule>(device, "rsrc/shaders/terrain/terrain.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	frag = std::make_unique<ShaderModule>(device, "rsrc/shaders/terrain/terrain.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
-vulpes::terrain::NodeRenderer::~NodeRenderer() {
+NodeRenderer::~NodeRenderer() {
 	VkResult result = vkFreeDescriptorSets(device->vkHandle(), descriptorPool, 1, &descriptorSet);
 	VkAssert(result);
 	vkDestroyDescriptorPool(device->vkHandle(), descriptorPool, nullptr);
@@ -118,7 +114,7 @@ vulpes::terrain::NodeRenderer::~NodeRenderer() {
 	vkDestroyPipelineLayout(device->vkHandle(), pipelineLayout, nullptr);
 }
 
-void vulpes::terrain::NodeRenderer::CreatePipeline(const VkRenderPass & renderpass, const glm::mat4& projection) {
+void NodeRenderer::CreatePipeline(const VkRenderPass & renderpass, const glm::mat4& projection) {
 
 	updateUBO(projection);
 
@@ -170,11 +166,11 @@ void vulpes::terrain::NodeRenderer::CreatePipeline(const VkRenderPass & renderpa
 	pipeline->Init(pipeline_create_info, pipelineCache->vkHandle());
 }
 
-void vulpes::terrain::NodeRenderer::updateUBO(const glm::mat4 & projection) {
+void NodeRenderer::updateUBO(const glm::mat4 & projection) {
 	uboData.projection = projection;
 }
 
-void vulpes::terrain::NodeRenderer::AddNode(TerrainNode * node){
+void NodeRenderer::AddNode(TerrainNode * node){
 	if (node->Status == NodeStatus::NeedsTransfer) {
 		transferNodes.push_front(std::shared_ptr<TerrainNode>(node));
 	}
@@ -185,7 +181,7 @@ void vulpes::terrain::NodeRenderer::AddNode(TerrainNode * node){
 	
 }
 
-void vulpes::terrain::NodeRenderer::Render(VkCommandBuffer& graphics_cmd, VkCommandBufferBeginInfo& begin_info, const glm::mat4 & view, const glm::vec3& view_pos, const VkViewport& viewport, const VkRect2D& scissor) {
+void NodeRenderer::Render(VkCommandBuffer& graphics_cmd, VkCommandBufferBeginInfo& begin_info, const glm::mat4 & view, const glm::vec3& view_pos, const VkViewport& viewport, const VkRect2D& scissor) {
 	
 	frameViewport = &viewport;
 	frameScissorRect = &scissor;
@@ -198,7 +194,7 @@ void vulpes::terrain::NodeRenderer::Render(VkCommandBuffer& graphics_cmd, VkComm
 
 }
 
-void vulpes::terrain::NodeRenderer::renderNodes(VkCommandBuffer& cmd_buffer, VkCommandBufferBeginInfo& begin_info) {
+void NodeRenderer::renderNodes(VkCommandBuffer& cmd_buffer, VkCommandBufferBeginInfo& begin_info) {
 	
 	VkResult result = vkBeginCommandBuffer(cmd_buffer, &begin_info);
 	VkAssert(result);
@@ -251,7 +247,7 @@ void vulpes::terrain::NodeRenderer::renderNodes(VkCommandBuffer& cmd_buffer, VkC
 
 }
 
-void vulpes::terrain::NodeRenderer::transferNodesToDvc() {
+void NodeRenderer::transferNodesToDvc() {
 
 	if (transferNodes.empty()) {
 		return;
@@ -271,7 +267,7 @@ void vulpes::terrain::NodeRenderer::transferNodesToDvc() {
 
 }
 
-void vulpes::terrain::NodeRenderer::transferNodeToDvc(std::shared_ptr<TerrainNode> node_to_transfer) {
+void NodeRenderer::transferNodeToDvc(std::shared_ptr<TerrainNode> node_to_transfer) {
 
 	// Create mesh data for curr
 	node_to_transfer->CreateMesh(device);
@@ -282,7 +278,7 @@ void vulpes::terrain::NodeRenderer::transferNodeToDvc(std::shared_ptr<TerrainNod
 	readyNodes.insert(node_to_transfer);
 }
 
-void vulpes::terrain::NodeRenderer::updateGUI() {
+void NodeRenderer::updateGUI() {
 	ImGui::Begin("Debug");
 	size_t num_nodes = readyNodes.size();
 	ImGui::InputInt("Number of Nodes", reinterpret_cast<int*>(&num_nodes));
@@ -290,7 +286,7 @@ void vulpes::terrain::NodeRenderer::updateGUI() {
 	ImGui::End();
 }
 
-void vulpes::terrain::NodeRenderer::RunTasks() {
+void NodeRenderer::RunTasks() {
 	HeightDataTasks.Run();
 }
 

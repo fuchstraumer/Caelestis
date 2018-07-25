@@ -4,9 +4,7 @@
 #include "stdafx.h"
 #include "engine\util\noise.hpp"
 
-namespace terrain {
-
-    enum class NodeStatus {
+enum class NodeStatus {
     Undefined, // Initial value for all nodes. If a node has this, it has not been properly constructed (or has been deleted)
     Active, // Being used in next frame
     Subdivided, // Has been subdivided, render children instead of this.
@@ -66,8 +64,6 @@ protected:
 
 static inline std::unique_ptr<HeightNode> CreateHeightNodeFromParent(const glm::ivec3& grid_coords, const HeightNode* parent_node) {
     return std::move(std::make_unique<HeightNode>(grid_coords, parent_node));
-}
-
 }
 
 #endif // !VULPES_HEIGHTMAP_H

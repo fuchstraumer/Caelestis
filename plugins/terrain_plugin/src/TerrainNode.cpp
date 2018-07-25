@@ -118,4 +118,3 @@ void vulpes::terrain::TerrainNode::CreateHeightData(const HeightNode* parent_nod
 	};
 	heightDataFuture = std::async(std::launch::async, create_height_node_from_parent, GridCoordinates, parent_node);
 }
-
