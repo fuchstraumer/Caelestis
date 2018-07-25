@@ -4,10 +4,6 @@
 #include "filesystem/FileManipulation.hpp"
 #include "dialog/Dialog.hpp"
 #include "ApplicationConfigurationFile.hpp"
-#include "memory/Allocator.hpp"
-#include <unordered_map>
-#include <string>
-#include <experimental/filesystem>
 #ifdef _WIN32
 #include "platform/GameModeWin32.hpp"
 #endif
@@ -19,6 +15,11 @@ INITIALIZE_EASYLOGGINGPP
 #undef MoveFile
 #undef CopyFile
 #undef CreateFile
+#include <unordered_map>
+#include <string>
+#include <vector>
+#include <experimental/filesystem>
+#include <unordered_map>
 
 constexpr const char* const APPLICATION_CONTEXT_CFG_FILE_NAME = "ApplicationConfig.json";
 static ApplicationConfigurationFile CfgFile;
@@ -198,21 +199,6 @@ static void GetRequiredModules(size_t* num, const char** names) {
     }
 }
 
-constexpr static AllocatorCreateInfo heap_alloc_info {
-    allocator_trait_flags::HeapAllocator,
-    0,
-    nullptr
-};
-
-static Allocator* GetHeapAllocator() {
-    static Allocator alloc(&heap_alloc_info);
-    return &alloc;
-}
-
-static Allocator* CreateNewAllocator(const AllocatorCreateInfo* create_info) {
-    return new Allocator(create_info);
-}
-
 static const char* GetModuleCfgFile(const char* module_name) {
     return CfgFile.GetModuleConfigFile(module_name);
 }
@@ -294,8 +280,6 @@ static void* ApplicationContextAPI() {
     api.MoveFile = MoveFile;
     api.GetRequiredModules = GetRequiredModules;
     api.GetPluginConfigFile = GetModuleCfgFile;
-    api.GetHeapAllocator = GetHeapAllocator;
-    api.CreateNewAllocator = CreateNewAllocator;
     api.GetLoggingStoragePointer = GetLoggingStoragePointer;
     api.InfoLog = InfoLog;
     api.WarningLog = WarningLog;

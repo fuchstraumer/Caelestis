@@ -116,14 +116,6 @@ struct ApplicationContext_API {
     void (*GetRequiredModules)(size_t* num_modules, const char** modules);
     const char* (*GetPluginConfigFile)(const char* module_name);
     /*
-        Construction and retrieval of allocator objects.
-        Flags are composed to create policy/trait-defined allocators.
-        Tracked allocation is going to add overhead, but is great for debugging.
-    */
-    class Allocator* (*GetHeapAllocator)(void);
-    class Allocator* (*CreateNewAllocator)(const struct AllocatorCreateInfo* create_info);
-    class Allocator* (*CreateNewTrackedAllocator)(const struct AllocatorCreateInfo* create_info, struct TrackedAllocatorCallbacks* callbacks);
-    /*
         Use this to publish logging functions through a single interface, guaranteeing they use a singular logging repository when called through
         here. One may also retrieve the logging repository through this interface, and use it to set a shared repository in other modules.
     */

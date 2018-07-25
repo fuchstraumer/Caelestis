@@ -24,12 +24,9 @@ public:
     VulkanResource* CreateBuffer(const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
     VulkanResource* CreateNamedBuffer(const char* name, const VkBufferCreateInfo* info, const VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
     void SetBufferData(VulkanResource* dest_buffer, const size_t num_data, const gpu_resource_data_t* data);
-    void FillBuffer(VulkanResource* dest_buffer, uint32_t value);
     VulkanResource* CreateImage(const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
     VulkanResource* CreateNamedImage(const char* name, const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const memory_type _memory_type, void* user_data = nullptr);
     void SetImageData(VulkanResource* image, const size_t num_data, const gpu_image_resource_data_t* data);
-    void ClearColorImage(VulkanResource* image, const VkClearColorValue* clear_color, const size_t range_count, const VkImageSubresourceRange* ranges);
-    void ClearDepthImage(VulkanResource* image, const VkClearDepthStencilValue* clear_value, const size_t range_count, const VkImageSubresourceRange* ranges);
     VulkanResource* CreateSampler(const VkSamplerCreateInfo* info, void* user_data = nullptr);
     VulkanResource* CreateResourceCopy(VulkanResource* src);
     void CopyResource(VulkanResource* src, VulkanResource* dest);
@@ -47,7 +44,6 @@ public:
 private:
 
     void setBufferInitialDataHostOnly(VulkanResource * resource, const size_t num_data, const gpu_resource_data_t * initial_data, vpr::Allocation& alloc, memory_type _memory_type);
-    bool needToCopyData(const void * data_ptr) const;
     void setBufferInitialDataUploadBuffer(VulkanResource* resource, const size_t num_data, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc);
     void setImageInitialData(VulkanResource* resource, const size_t num_data, const gpu_image_resource_data_t* initial_data, vpr::Allocation & alloc);
     vpr::AllocationRequirements getAllocReqs(memory_type _memory_type) const noexcept;

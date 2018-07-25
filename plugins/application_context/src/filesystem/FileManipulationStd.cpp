@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 namespace stdfs = std::experimental::filesystem;
-static std::unordered_map<stdfs::path, std::string> pathStrings;
+static std::unordered_map<std::string, std::string> pathStrings;
 
 namespace fs {
 
@@ -41,10 +41,13 @@ bool PathExists(const char* _path) {
     return stdfs::exists(stdfs::path(_path));
 }
 
-const char* GetAbsolutePath(const char* input) { 
+const char* GetAbsolutePath(const char* input) {
     stdfs::path path(input);
-    if (stdfs::exists(path)) {
-        auto iter = pathStrings.emplace(stdfs::absolute(path), stdfs::absolute(path).string());
+    if (pathStrings.count(stdfs::absolute(path).string()) != 0) {
+        return pathStrings.at(stdfs::absolute(path).string()).c_str();
+    }
+    else if (stdfs::exists(path)) {
+        auto iter = pathStrings.emplace(stdfs::absolute(path).string(), stdfs::absolute(path).string());
         return iter.first->second.c_str();
     }
     else {
@@ -54,8 +57,11 @@ const char* GetAbsolutePath(const char* input) {
 
 const char* GetCanonicalPath(const char* input) {
     stdfs::path path(input);
-    if (stdfs::exists(path)) {
-        auto iter = pathStrings.emplace(stdfs::canonical(path), stdfs::canonical(path).string());
+    if (pathStrings.count(stdfs::canonical(path).string()) != 0) {
+        return pathStrings.at(stdfs::canonical(path).string()).c_str();
+    }
+    else if (stdfs::exists(path)) {
+        auto iter = pathStrings.emplace(stdfs::canonical(path).string(), stdfs::canonical(path).string());
         return iter.first->second.c_str();
     }
     else {

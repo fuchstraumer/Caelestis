@@ -10,6 +10,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <functional>
 
     using FactoryFunctor = void*(*)(const char* fname);
@@ -41,29 +42,23 @@
 
     private:
 
-        // Used by ResourceContext: if a user uses the address of data we have already stored in here in the initial
-        // data structure, re-use this systems address instead of copying it into our per-frame memory arena
-        void* findAddress(const void* data_ptr);
-        // unload or update the refcount of the given address
-        void unloadAddress(const void* data_ptr);
-
-        friend class ResourceContext;
-
         struct loadRequest {
-            loadRequest(ResourceData& dest) : destinationData(dest), requester(nullptr) {}
-            ResourceData& destinationData;
+            loadRequest(ResourceData dest) : destinationData(dest), requester(nullptr) {}
+            ResourceData destinationData;
             void* requester; // state pointer of requesting object, if given
             SignalFunctor signal;
-            FactoryFunctor factory;
         };
 
         void workerFunction();
+        void waitForPendingRequest(const std::string& absolute_file_path, SignalFunctor signal);
 
         std::unordered_map<std::string, FactoryFunctor> factories;
         std::unordered_map<std::string, DeleteFunctor> deleters;
         std::unordered_map<std::string, ResourceData> resources;
+        std::unordered_set<std::string> pendingResources;
         std::list<loadRequest> requests;
         std::recursive_mutex queueMutex;
+        std::recursive_mutex pendingDataMutex;
         std::condition_variable_any cVar;
         std::atomic<bool> shutdown{ false };
         std::array<std::thread, 2> workers;

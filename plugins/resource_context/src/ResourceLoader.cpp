@@ -23,11 +23,14 @@
         fs::path fs_file_path = fs::absolute(fs::path(file_path));
         const std::string absolute_path = fs_file_path.string();
 
-        if (resources.count(absolute_path) != 0) {
-            // Call the signal saying this resource is already loaded
-            ++resources.at(absolute_path).RefCount;
-            signal(_requester, resources.at(absolute_path).Data);
-            return;
+        {
+            // Check to see if resource is already loaded. Don't bother with edge case of a request
+            // already in pending_resources
+            if (resources.count(absolute_path) != 0) {
+                ++resources.at(absolute_path).RefCount;
+                signal(_requester, resources.at(absolute_path).Data);
+                return;
+            }       
         }
         
         if (!fs::exists(fs_file_path)) {
@@ -44,14 +47,13 @@
 
         ResourceData data;      
         data.FileType = file_type;
+        pendingResources.emplace(absolute_path);
         data.AbsoluteFilePath = absolute_path;
         data.RefCount = 1;
-        auto iter = resources.emplace(absolute_path, data);
 
-        loadRequest req(iter.first->second);
+        loadRequest req(data);
         req.requester = _requester;
         req.signal = signal;
-        req.factory = factories.at(file_type);
         {
             std::unique_lock<std::recursive_mutex> guard(queueMutex);
             requests.push_back(req);
@@ -100,8 +102,6 @@
         if (workers[0].joinable()) {
             workers[0].join();
         }
-
-        cVar.notify_all();
         
         if (workers[1].joinable()) {
             workers[1].join();
@@ -114,50 +114,36 @@
 
     }
 
-    void* ResourceLoader::findAddress(const void * data_ptr) {
-        void* result = nullptr;
-        auto find_fn = [data_ptr, &result](decltype(resources)::value_type& data) {
-            if (data.second.Data == data_ptr) {
-                result = data.second.Data;
-                data.second.RefCount++;
-            }
-        };
-#ifdef _MSC_VER
-        std::for_each(std::execution::par_unseq, std::begin(resources), std::end(resources), find_fn);
-#else
-        std::for_each(std::begin(resources), std::end(resources), find_fn);
-#endif        
-        return result;
-    }
+void ResourceLoader::workerFunction() {
+    while (!shutdown) {
+        std::unique_lock<std::recursive_mutex> lock{queueMutex};
+        cVar.wait(lock, [this]()->bool { return shutdown || !requests.empty(); });
 
-    void ResourceLoader::unloadAddress(const void * data_ptr) {
-        auto find_fn = [data_ptr](const decltype(resources)::value_type& data) {
-            return (data_ptr == data.second.Data);
-        };
-#ifdef _MSC_VER
-        auto iter = std::find_if(std::execution::par_unseq, std::begin(resources), std::end(resources), find_fn);
-#else
-        auto iter = std::find_if(std::begin(resources), std::end(resources), find_fn);
-#endif   
-        if (iter != std::end(resources)) {
-            Unload(iter->second.FileType.c_str(), iter->second.AbsoluteFilePath.c_str());
-        }
-    }
-
-    void ResourceLoader::workerFunction() {
-        while (!shutdown) {
-            std::unique_lock<std::recursive_mutex> lock{queueMutex};
-            cVar.wait(lock, [this]()->bool { return shutdown || !requests.empty(); });
-            if (shutdown) {
-                lock.unlock();
-                return;
-            }
-            loadRequest request = requests.front();
-            requests.pop_front();
+        if (shutdown) {
             lock.unlock();
-            // proceed to load.
-            request.destinationData.Data = request.factory(request.destinationData.AbsoluteFilePath.c_str());
-            request.signal(request.requester, request.destinationData.Data);
+            return;
+        }
+
+        loadRequest request = requests.front();
+        requests.pop_front();
+        FactoryFunctor factory_fn = factories.at(request.destinationData.AbsoluteFilePath);
+        lock.unlock(); 
+
+        {
+            request.destinationData.Data = factory_fn(request.destinationData.AbsoluteFilePath.c_str());
+            std::unique_lock<std::recursive_mutex> pendingDataLock(pendingDataMutex);
+            // how to handle failure to emplace? what could it mean?
+            auto iter = resources.emplace(request.destinationData.AbsoluteFilePath, std::move(request.destinationData));
+            pendingResources.erase(request.destinationData.AbsoluteFilePath);
+            void* data = iter.first->second.Data;
+            // safe to unlock, signal function won't mutate object variables unsafely
+            pendingDataLock.unlock();
+            request.signal(request.requester, data);
         }
     }
+}
+
+void ResourceLoader::waitForPendingRequest(const std::string & absolute_file_path, SignalFunctor signal) {
+
+}
 

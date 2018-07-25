@@ -156,14 +156,6 @@ void ResourceContext::SetBufferData(VulkanResource* dest_buffer, const size_t nu
     }
 }
 
-void ResourceContext::FillBuffer(VulkanResource * rsrc, uint32_t value) {
-    auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
-    auto transfer_guard = transfer_system.AcquireSpinLock();
-    VkCommandBuffer cmd = transfer_system.TransferCmdBuffer();
-    const VkBufferCreateInfo* info = reinterpret_cast<const VkBufferCreateInfo*>(rsrc->Info);
-    vkCmdFillBuffer(cmd, (VkBuffer)rsrc->Handle, 0, info->size, value);
-}
-
 VulkanResource* ResourceContext::CreateImage(const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const memory_type _memory_type, void* user_data) {
     VulkanResource* resource = nullptr;
 
@@ -228,86 +220,6 @@ void ResourceContext::SetImageData(VulkanResource* image, const size_t num_data,
     setImageInitialData(image, num_data, data, resourceAllocations.at(image));
 }
 
-void ResourceContext::ClearColorImage(VulkanResource* resource, const VkClearColorValue * clear_color, const size_t range_count, const VkImageSubresourceRange * ranges) {
-    auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
-    auto guard = transfer_system.AcquireSpinLock();
-    VkCommandBuffer cmd = transfer_system.TransferCmdBuffer();
-    const VkImageCreateInfo* info = reinterpret_cast<const VkImageCreateInfo*>(resource->Info);
-    const VkImageMemoryBarrier barrier0{
-        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        nullptr,
-        0,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        imageLayoutFromUsage(info->usage),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        device->QueueFamilyIndices.Transfer,
-        device->QueueFamilyIndices.Transfer,
-        (VkImage)resource->Handle,
-        VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers }
-    };
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier0);
-    if (range_count == 0) {
-        const VkImageSubresourceRange range{ VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers };
-        vkCmdClearColorImage(cmd, (VkImage)resource->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_color, 1, &range);
-    }
-    else {
-        vkCmdClearColorImage(cmd, (VkImage)resource->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_color, range_count, ranges);
-    }
-    const VkImageMemoryBarrier barrier1{
-        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        nullptr,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        accessFlagsFromImageUsage(info->usage),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        imageLayoutFromUsage(info->usage),
-        device->QueueFamilyIndices.Transfer,
-        device->QueueFamilyIndices.Graphics,
-        (VkImage)resource->Handle,
-        VkImageSubresourceRange { VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers }
-    };
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier1);
-}
-
-void ResourceContext::ClearDepthImage(VulkanResource* resource, const VkClearDepthStencilValue* clear_value, const size_t range_count, const VkImageSubresourceRange * ranges) {
-    auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
-    auto guard = transfer_system.AcquireSpinLock();
-    VkCommandBuffer cmd = transfer_system.TransferCmdBuffer();
-    const VkImageCreateInfo* info = reinterpret_cast<const VkImageCreateInfo*>(resource->Info);
-    const VkImageMemoryBarrier barrier0{
-        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        nullptr,
-        0,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        imageLayoutFromUsage(info->usage),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        device->QueueFamilyIndices.Transfer,
-        device->QueueFamilyIndices.Transfer,
-        (VkImage)resource->Handle,
-        VkImageSubresourceRange{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, info->mipLevels, 0, info->arrayLayers }
-    };
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier0);
-    if (range_count == 0) {
-        const VkImageSubresourceRange range{ VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers };
-        vkCmdClearDepthStencilImage(cmd, (VkImage)resource->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_value, 1, &range);
-    }
-    else {
-        vkCmdClearDepthStencilImage(cmd, (VkImage)resource->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, clear_value, range_count, ranges);
-    }
-    const VkImageMemoryBarrier barrier1{
-        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        nullptr,
-        VK_ACCESS_TRANSFER_WRITE_BIT,
-        accessFlagsFromImageUsage(info->usage),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        imageLayoutFromUsage(info->usage),
-        device->QueueFamilyIndices.Transfer,
-        device->QueueFamilyIndices.Graphics,
-        (VkImage)resource->Handle,
-        VkImageSubresourceRange{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, info->mipLevels, 0, info->arrayLayers }
-    };
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier1);
-}
-
 VulkanResource* ResourceContext::CreateSampler(const VkSamplerCreateInfo* info, void* user_data) {
     VulkanResource* resource = nullptr; 
     {
@@ -327,8 +239,8 @@ VulkanResource* ResourceContext::CreateSampler(const VkSamplerCreateInfo* info, 
     return resource;
 }
 
-VulkanResource* ResourceContext::CreateResourceCopy(VulkanResource* src) {
-    throw std::runtime_error("Currently not supported, sorry!");
+VulkanResource * ResourceContext::CreateResourceCopy(VulkanResource * src) {
+    return nullptr;
 }
 
 void ResourceContext::CopyResource(VulkanResource * src, VulkanResource * dest) {
@@ -406,20 +318,10 @@ void ResourceContext::setBufferInitialDataHostOnly(VulkanResource* resource, con
     }
     alloc.Unmap();
     if (_memory_type == memory_type::HOST_VISIBLE) {
-        VkMappedMemoryRange mapped_memory{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), 0, alloc.Size };
+        VkMappedMemoryRange mapped_memory{ VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, alloc.Memory(), alloc.Offset(), VK_WHOLE_SIZE };
         VkResult result = vkFlushMappedMemoryRanges(device->vkHandle(), 1, &mapped_memory);
         VkAssert(result);
     }
-}
-
-bool ResourceContext::needToCopyData(const void* data_ptr) const {
-    auto& loader = ResourceLoader::GetResourceLoader();
-    if (loader.findAddress(data_ptr) != nullptr) {
-        // Don't need to copy, data is stored in a ref-counted
-        // system we know will persist while we need it
-        return false;
-    }
-    return true;
 }
 
 void ResourceContext::setBufferInitialDataUploadBuffer(VulkanResource* resource, const size_t num_data, const gpu_resource_data_t* initial_data, vpr::Allocation& alloc) {
@@ -432,7 +334,7 @@ void ResourceContext::setBufferInitialDataUploadBuffer(VulkanResource* resource,
         upload_buffer = uploadBuffers.back().get();
     }
     
-    if (needToCopyData(initial_data->Data)) {
+    {
         size_t offset = 0;
         for (size_t i = 0; i < num_data; ++i) {
             upload_buffer->SetData(initial_data[i].Data, initial_data[i].DataSize, offset);
