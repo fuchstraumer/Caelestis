@@ -3,7 +3,11 @@
 #define TERRAIN_PLUGIN_NODE_RENDERER_HPP
 #include "ForwardDecl.hpp"
 #include "HeightNode.hpp"
-
+#include "glm/mat4x4.hpp"
+#include <vulkan/vulkan.h>
+#include <memory>
+#include <set>
+#include <forward_list>
 /*
     
     Node Renderer - 
@@ -57,11 +61,10 @@ private:
     VkDescriptorSet descriptorSet;
     VkDescriptorPool descriptorPool;
     VkPipelineLayout pipelineLayout;
-    std::unique_ptr<ShaderModule> vert, frag;
-    const Device* device;
-    std::unique_ptr<GraphicsPipeline> pipeline;
-    std::unique_ptr<PipelineCache> pipelineCache;
-    TransferPool* transferPool;
+    std::unique_ptr<vpr::ShaderModule> vert, frag;
+    const vpr::Device* device;
+    std::unique_ptr<vpr::GraphicsPipeline> pipeline;
+    std::unique_ptr<vpr::PipelineCache> pipelineCache;
     const VkViewport* frameViewport;
     const VkRect2D* frameScissorRect;
     const glm::vec3* frameCameraPos;

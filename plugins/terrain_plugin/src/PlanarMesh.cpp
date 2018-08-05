@@ -1,47 +1,34 @@
 #include "PlanarMesh.hpp"
 #include "HeightNode.hpp"
+#include <algorithm>
+#include <execution>
 
-PlanarMesh::PlanarMesh(const double& side_length, const glm::ivec3& grid_pos, const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& angle) : Mesh(pos, scale, angle), SideLength(side_length), GridPos(grid_pos), SubdivisionLevel(grid_pos.z) {}
+PlanarMesh::PlanarMesh(const float side_length, const glm::ivec3& grid_pos, const glm::vec3& pos, const glm::vec3& _scale, const glm::vec3& angle) : position(pos), scale(_scale), rotation(angle), sideLength(side_length), gridPos(grid_pos), subdivisionLevel(grid_pos.z) {}
 
-PlanarMesh& PlanarMesh::operator=(PlanarMesh && other) {
-    SideLength = std::move(other.SideLength);
-    SubdivisionLevel = std::move(other.SubdivisionLevel);
-    position = std::move(other.position);
-    scale = std::move(other.scale);
-    angle = std::move(other.angle);
-    vbo = std::move(other.vbo);
-    ebo = std::move(other.ebo);
-    device = std::move(other.device);
-    model = std::move(other.model);
-    indices = std::move(other.indices);
-    vertices = std::move(other.vertices);
-    GridPos = std::move(other.GridPos);
-    return *this;
-}
+PlanarMesh::~PlanarMesh() {}
 
-void PlanarMesh::Generate(terrain::HeightNode* height_node) {
-    SubdivisionLevel = height_node->MeshGridSize();
+void PlanarMesh::Generate(HeightNode* height_node) {
+    subdivisionLevel = height_node->MeshGridSize();
 
-    size_t count2 = SubdivisionLevel + 1;
-    size_t numTris = SubdivisionLevel*SubdivisionLevel * 6;
+    size_t count2 = subdivisionLevel + 1;
+    size_t numTris = subdivisionLevel*subdivisionLevel * 6;
     size_t numVerts = count2*count2;
-    float grid_scale = static_cast<float>(SideLength) / static_cast<float>(SubdivisionLevel);
+    float grid_scale = static_cast<float>(sideLength) / static_cast<float>(subdivisionLevel);
     size_t idx = 0;
     vertices.resize(numVerts);
     
     // Place vertices and set normal to 0.0f
     for (float y = 0.0f; y < static_cast<float>(count2); ++y) {
         for (float x = 0.0f; x < static_cast<float>(count2); ++x) {
-            vertices.positions[idx] = glm::vec3(x * grid_scale, height_node->GetHeight(glm::vec2(x * grid_scale, y * grid_scale)), y * grid_scale);
-            vertices.normals_uvs[idx].normal = glm::vec3(0.0f);
+            vertices[idx].position = glm::vec3(x * grid_scale, height_node->GetHeight(glm::vec2(x * grid_scale, y * grid_scale)), y * grid_scale);
             ++idx;
         }
     }
 
     idx = 0;
     indices.resize(numTris + 1);
-    for (size_t y = 0; y < SubdivisionLevel; ++y) {
-        for (size_t x = 0; x < SubdivisionLevel; ++x) {
+    for (size_t y = 0; y < subdivisionLevel; ++y) {
+        for (size_t x = 0; x < subdivisionLevel; ++x) {
             /*
                 wrong diagonal: flipped as required by Proland's sampling system
                 https://proland.inrialpes.fr/doc/proland-4.0/terrain/html/index.html -> See sec. 2.2.2 
@@ -55,12 +42,12 @@ void PlanarMesh::Generate(terrain::HeightNode* height_node) {
             indices[idx + 2] = static_cast<uint32_t>((y * count2) + x);
             {
                 // Generate normals for this triangle.
-                const glm::vec3 edge0 = vertices.positions[indices[idx]] - vertices.positions[indices[idx + 1]];
-                const glm::vec3 edge1 = vertices.positions[indices[idx + 2]] - vertices.positions[indices[idx + 1]];
+                const glm::vec3 edge0 = vertices[indices[idx]].position - vertices[indices[idx + 1]].position;
+                const glm::vec3 edge1 = vertices[indices[idx + 2]].position - vertices[indices[idx + 1]].position;
                 glm::vec3 normal = glm::cross(edge0, edge1);
-                vertices.normals_uvs[indices[idx]].normal += normal;
-                vertices.normals_uvs[indices[idx + 1]].normal += normal;
-                vertices.normals_uvs[indices[idx + 2]].normal += normal;
+                vertices[indices[idx]].normal += normal;
+                vertices[indices[idx + 1]].normal += normal;
+                vertices[indices[idx + 2]].normal += normal;
             }
             /*
                 wrong diagonal
@@ -74,22 +61,20 @@ void PlanarMesh::Generate(terrain::HeightNode* height_node) {
             
             {
                 // Next set of normals.
-                const glm::vec3 edge0 = vertices.positions[indices[idx + 3]] - vertices.positions[indices[idx + 4]];
-                const glm::vec3 edge1 = vertices.positions[indices[idx + 5]] - vertices.positions[indices[idx + 4]];
+                const glm::vec3 edge0 = vertices[indices[idx + 3]].position - vertices[indices[idx + 4]].position;
+                const glm::vec3 edge1 = vertices[indices[idx + 5]].position - vertices[indices[idx + 4]].position;
                 glm::vec3 normal = glm::cross(edge0, edge1);
-                vertices.normals_uvs[indices[idx + 3]].normal += normal;
-                vertices.normals_uvs[indices[idx + 4]].normal += normal;
-                vertices.normals_uvs[indices[idx + 5]].normal += normal;
+                vertices[indices[idx + 3]].normal += normal;
+                vertices[indices[idx + 4]].normal += normal;
+                vertices[indices[idx + 5]].normal += normal;
             }
             idx += 6;
         }
     }
 
     // normalize each normal vector, otherwise normal vectors don't behave like normals.
-    for (auto iter = vertices.normals_uvs.begin(); iter != vertices.normals_uvs.end(); ++iter) {
-        iter->normal = glm::normalize(iter->normal);
-    }
+    std::for_each(std::execution::par_unseq, std::begin(vertices), std::end(vertices), [](vertex_t& vert) {
+        vert.normal = glm::normalize(vert.normal);
+    });
 
-    indices.shrink_to_fit();
-    vertices.shrink_to_fit();
 }

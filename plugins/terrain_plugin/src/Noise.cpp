@@ -1,5 +1,6 @@
 #include "Noise.hpp"
-
+#include "glm/vec3.hpp"
+#include "glm/vec2.hpp"
 constexpr static float grad3lut[16][3] = {
     { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f, 1.0f }, // 12 cube edges
     { -1.0f, 0.0f, 1.0f },{ 0.0f, -1.0f, 1.0f },

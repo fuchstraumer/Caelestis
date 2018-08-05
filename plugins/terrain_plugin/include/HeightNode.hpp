@@ -1,6 +1,10 @@
 #pragma once
 #ifndef TERRAIN_PLUGIN_HEIGHT_NODE_HPP
 #define TERRAIN_PLUGIN_HEIGHT_NODE_HPP
+#include "HeightSample.hpp"
+#include "glm/vec3.hpp"
+#include <vector>
+#include <memory>
 
 enum class NodeStatus {
     Undefined, // Initial value for all nodes. If a node has this, it has not been properly constructed (or has been deleted)
@@ -53,8 +57,6 @@ protected:
 
 };
 
-static inline std::unique_ptr<HeightNode> CreateHeightNodeFromParent(const glm::ivec3& grid_coords, const HeightNode* parent_node) {
-    return std::move(std::make_unique<HeightNode>(grid_coords, parent_node));
-}
+std::unique_ptr<HeightNode> CreateHeightNodeFromParent(const glm::ivec3& grid_coords, const HeightNode* parent_node);
 
 #endif // !TERRAIN_PLUGIN_HEIGHT_NODE_HPP

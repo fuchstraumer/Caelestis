@@ -1,19 +1,17 @@
 #pragma once
 #ifndef DIAMOND_DOGS_HEIGHT_SAMPLE_HPP
 #define DIAMOND_DOGS_HEIGHT_SAMPLE_HPP
-#include <array>
 #include <vector>
 #include "Noise.hpp"
+#include "glm/vec3.hpp"
 
 struct HeightSample {
-
     HeightSample() {}
-
     bool operator<(const HeightSample& other) const;
     bool operator>(const HeightSample& other) const;
     bool operator==(const HeightSample& other) const;
-
-    std::array<float, 3> Sample, Normal;
+    glm::vec3 Sample;
+    glm::vec3 Normal;
 };
 
 static inline std::vector<HeightSample> GetNoiseHeightmap(const size_t & num_samples, const glm::vec3 & starting_location, const float & noise_step_size) {

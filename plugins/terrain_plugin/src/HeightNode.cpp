@@ -1,11 +1,12 @@
 #include "HeightNode.hpp"
-
-
+#include "glm/vec2.hpp"
+#include <algorithm>
+#include <execution>
 size_t HeightNode::RootSampleGridSize = 16;
 double HeightNode::RootNodeLength = 10000;
 
 HeightNode::HeightNode(const glm::ivec3 & node_grid_coordinates, std::vector<HeightSample> init_samples) : gridCoords(node_grid_coordinates), sampleGridSize(RootSampleGridSize), meshGridSize(RootSampleGridSize - 5), samples(std::move(init_samples)) {
-    auto min_max = std::minmax_element(samples.cbegin(), samples.cend());
+    auto min_max = std::minmax_element(std::execution::par_unseq, samples.cbegin(), samples.cend());
     MinZ = samples.at(min_max.first - samples.cbegin()).Sample.x;
     MaxZ = samples.at(min_max.second - samples.cbegin()).Sample.x;
 }
@@ -173,3 +174,7 @@ void HeightNode::SetRootNodeSize(const size_t & new_size) {
 void HeightNode::SetRootNodeLength(const double & new_length) {
     RootNodeLength = new_length;
 } 
+
+std::unique_ptr<HeightNode> CreateHeightNodeFromParent(const glm::ivec3 & grid_coords, const HeightNode * parent_node) {
+    return std::move(std::make_unique<HeightNode>(grid_coords, parent_node));
+}

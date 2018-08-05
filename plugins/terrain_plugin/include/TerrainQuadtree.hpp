@@ -1,15 +1,22 @@
 #pragma once
 #ifndef TERRAIN_PLUGIN_QUADTREE_HPP
 #define TERRAIN_PLUGIN_QUADTREE_HPP
+#include "ForwardDecl.hpp"
+#include "glm/vec3.hpp"
+#include "glm/mat4x4.hpp"
+#include <unordered_map>
+#include <memory>
+#include <vulkan/vulkan.h>
 
-using nodeCache = std::unordered_map<glm::ivec3, std::shared_ptr<HeightNode>>;
+class HeightNode;
+class TerrainNode;
 
 class TerrainQuadtree {
     TerrainQuadtree(const TerrainQuadtree&) = delete;
     TerrainQuadtree& operator=(const TerrainQuadtree&) = delete;
 public:
 
-    TerrainQuadtree(const Device* device, TransferPool* transfer_pool, const float& split_factor, const size_t& max_detail_level, const double& root_side_length, const glm::vec3& root_tile_position);
+    TerrainQuadtree(const vpr::Device* device, const float& split_factor, const size_t& max_detail_level, const double& root_side_length, const glm::vec3& root_tile_position);
 
     void SetupNodePipeline(const VkRenderPass& renderpass, const glm::mat4& projection);
     void UpdateQuadtree(const glm::vec3 & camera_position, const glm::mat4& view);
@@ -18,8 +25,7 @@ public:
 private:
 
     std::unique_ptr<TerrainNode> root;
-    NodeRenderer nodeRenderer;
-    nodeCache cachedHeightData;
+    std::unordered_map<glm::ivec3, std::shared_ptr<HeightNode>> cachedHeightData;
     size_t MaxLOD;
 
 };

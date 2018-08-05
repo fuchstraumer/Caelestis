@@ -4,7 +4,8 @@
 #include "ForwardDecl.hpp"
 #include "PlanarMesh.hpp"
 #include "HeightNode.hpp"
-
+#include <array>
+#include <future>
 enum class NodeStatus {
     Active,
     NeedsTransfer,
@@ -14,6 +15,8 @@ enum class NodeStatus {
 };
 
 class NodeRenderer;
+struct view_frustum;
+
 
 class TerrainNode {
     TerrainNode(const TerrainNode& other) = delete;
@@ -25,13 +28,13 @@ public:
 
     void Subdivide();
     // updates this nodes status, and then the node adds itself to the renderer's pool of nodes if its going to be rendered.
-    void Update(const glm::vec3 & camera_position, const util::view_frustum& view, NodeRenderer* node_pool);
+    void Update(const glm::vec3 & camera_position, const view_frustum& view, NodeRenderer* node_pool);
     // true if all of the Child pointers are nullptr
     bool IsLeaf() const;
     // Recursive method to clean up node tree
     void Prune();
     int LOD_Level() const;
-    void CreateMesh(const Device* dvc);
+    void CreateMesh(const vpr::Device* dvc);
     void CreateHeightData(const HeightNode* parent_node);
     
     static size_t MaxLOD;
@@ -42,7 +45,7 @@ public:
     // used w/ node renderer to decide if this is being rendered and/or if it needs data transferred
     // to the device (so we can batch transfer commands)
     NodeStatus Status;
-    mesh::PlanarMesh mesh;
+    PlanarMesh mesh;
     // Coordinates of this node in the grid defining the quadtree
     // xy are the grid positions, z is the LOD level.
     glm::ivec3 GridCoordinates;
@@ -56,7 +59,6 @@ public:
 
 private:
     std::future<std::unique_ptr<HeightNode>> heightDataFuture;
-    util::AABB aabb;
 };
 
 #endif // !TERRAIN_PLUGIN_TERRAIN_NODE_HPP
