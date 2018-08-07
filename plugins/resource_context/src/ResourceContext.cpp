@@ -344,7 +344,7 @@ void ResourceContext::setBufferInitialDataUploadBuffer(VulkanResource* resource,
 
     auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
     {
-        auto& guard = transfer_system.AcquireSpinLock();
+        auto guard = transfer_system.AcquireSpinLock();
         auto cmd = transfer_system.TransferCmdBuffer();        
         const VkBufferCreateInfo* p_info = reinterpret_cast<VkBufferCreateInfo*>(resource->Info);
         const VkBufferMemoryBarrier memory_barrier0 {
@@ -416,7 +416,7 @@ void ResourceContext::setImageInitialData(VulkanResource* resource, const size_t
 
     auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
     {
-        auto& guard = transfer_system.AcquireSpinLock();
+        auto guard = transfer_system.AcquireSpinLock();
         VkCommandBuffer cmd = transfer_system.TransferCmdBuffer();
         const VkImageMemoryBarrier barrier0{
             VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
