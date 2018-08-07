@@ -1,7 +1,7 @@
 #pragma once
 #ifndef RENDERER_CONTEXT_WINDOW_INPUT_HPP
 #define RENDERER_CONTEXT_WINDOW_INPUT_HPP
-
+#include <cstddef>
 struct GLFWwindow;
 struct WindowInputImpl;
 
