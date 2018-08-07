@@ -28,8 +28,8 @@ static ApplicationContext_API* AppContextAPI = nullptr;
 static RendererContext* Context = nullptr;
 
 struct SwapchainCallbackLists {
-    using SwapchainCallbackDefaultType = std::add_pointer<void(uint32_t,uint32_t,uint32_t)>::type;
-    using SwapchainDestructionCallbackType = std::add_pointer<void(uint32_t)>::type;
+    using SwapchainCallbackDefaultType = std::add_pointer<void(uint64_t,uint32_t,uint32_t)>::type;
+    using SwapchainDestructionCallbackType = std::add_pointer<void(uint64_t)>::type;
     std::list<SwapchainCallbackDefaultType> CreationCallbacks;
     std::list<SwapchainCallbackDefaultType> BeginResizeCallbacks;
     std::list<SwapchainCallbackDefaultType> CompleteResizeCallbacks;
@@ -55,7 +55,7 @@ static void RecreateSwapchain() {
     Context->Window->GetWindowSize(width, height);
 
     for (auto& fn : SwapchainCallbacks.BeginResizeCallbacks) {
-        fn((uint32_t)(Context->Swapchain->vkHandle()), width, height);
+        fn((uint64_t)(Context->Swapchain->vkHandle()), width, height);
     }
 
     vpr::RecreateSwapchainAndSurface(Context->Swapchain, Context->WindowSurface);
@@ -63,7 +63,7 @@ static void RecreateSwapchain() {
 
     Context->Window->GetWindowSize(width, height);
     for (auto& fn : SwapchainCallbacks.CompleteResizeCallbacks) {
-        fn((uint32_t)(Context->Swapchain->vkHandle()), width, height);
+        fn((uint64_t)(Context->Swapchain->vkHandle()), width, height);
     }
 
     vkDeviceWaitIdle(Context->LogicalDevice->vkHandle());

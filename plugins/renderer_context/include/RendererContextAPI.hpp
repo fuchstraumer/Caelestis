@@ -11,11 +11,10 @@ constexpr static uint32_t RENDERER_CONTEXT_API_ID = 0x100c217e;
 */
 
 struct SwapchainCallbacks_API {
-    
-    void (*SwapchainCreated)(uint32_t swapchain_handle, uint32_t width, uint32_t height);
-    void (*BeginSwapchainResize)(uint32_t swapchain_handle, uint32_t width, uint32_t height);
-    void (*CompleteSwapchainResize)(uint32_t swapchain_handle, uint32_t width, uint32_t height);
-    void (*SwapchainDestroyed)(uint32_t swapchain_handle);
+    void (*SwapchainCreated)(uint64_t swapchain_handle, uint32_t width, uint32_t height);
+    void (*BeginSwapchainResize)(uint64_t swapchain_handle, uint32_t width, uint32_t height);
+    void (*CompleteSwapchainResize)(uint64_t swapchain_handle, uint32_t width, uint32_t height);
+    void (*SwapchainDestroyed)(uint64_t swapchain_handle);
 };
 
 struct RendererContext_API {
