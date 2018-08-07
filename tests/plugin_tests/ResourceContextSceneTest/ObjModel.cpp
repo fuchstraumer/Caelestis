@@ -5,6 +5,7 @@
 #include <glm/gtx/hash.hpp>
 #define TINYOBJ_LOADER_OPT_IMPLEMENTATION 
 #pragma warning(push, 0)
+#include <algorithm>
 #include <tinyobjloader/experimental/tinyobj_loader_opt.h>
 #pragma warning(pop)
 #include <fstream>

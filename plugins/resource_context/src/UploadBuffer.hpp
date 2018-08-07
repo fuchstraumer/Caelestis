@@ -1,11 +1,11 @@
 #pragma once
 #ifndef RESOURCE_CONTEXT_UPLOAD_BUFFER_HPP
 #define RESOURCE_CONTEXT_UPLOAD_BUFFER_HPP
-#include "vpr/Allocator.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/vkAssert.hpp"
-#include "vpr/AllocationRequirements.hpp"
-#include "vpr/Allocation.hpp"
+#include "Allocator.hpp"
+#include "LogicalDevice.hpp"
+#include "vkAssert.hpp"
+#include "AllocationRequirements.hpp"
+#include "Allocation.hpp"
 #include <vulkan/vulkan.h>
 
 constexpr static VkBufferCreateInfo staging_buffer_create_info{

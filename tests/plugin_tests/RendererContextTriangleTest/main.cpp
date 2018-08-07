@@ -6,12 +6,12 @@
 
 static RendererContext* context = nullptr;
 
-static void BeginRecreateCallback(uint32_t handle, uint32_t width, uint32_t height) {
+static void BeginRecreateCallback(uint64_t handle, uint32_t width, uint32_t height) {
     auto& tri = VulkanTriangle::GetScene();
     tri.Destroy();
 }
 
-static void CompleteResizeCallback(uint32_t handle, uint32_t width, uint32_t height) {
+static void CompleteResizeCallback(uint64_t handle, uint32_t width, uint32_t height) {
     auto& tri = VulkanTriangle::GetScene();
     RequiredVprObjects objects{
         context->LogicalDevice, context->PhysicalDevices[0], context->VulkanInstance, context->Swapchain

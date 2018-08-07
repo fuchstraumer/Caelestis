@@ -6,9 +6,9 @@
 #include "renderer_context/include/core/RendererContext.hpp"
 #include "ResourceContext.hpp"
 #include "ResourceLoader.hpp"
-#include "vpr/Allocator.hpp"
-#include "vpr/PipelineCache.hpp"
-#include "vpr/PhysicalDevice.hpp"
+#include "Allocator.hpp"
+#include "PipelineCache.hpp"
+#include "PhysicalDevice.hpp"
 #include "easylogging++.h"
 INITIALIZE_NULL_EASYLOGGINGPP
 

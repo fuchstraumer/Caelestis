@@ -27,6 +27,7 @@ TARGET_INCLUDE_DIRECTORIES(resource_context PRIVATE
     "${Vulkan_INCLUDE_DIR}"
     "../../ext/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    ${VPR_INCLUDE_DIRS_PLUGIN_RELATIVE}
     "../../plugins"
     "../../third_party/easyloggingpp/src"
 )

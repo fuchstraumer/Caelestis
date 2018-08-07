@@ -1,8 +1,8 @@
 #include "CommonCreationFunctions.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/PhysicalDevice.hpp"
-#include "vpr/Swapchain.hpp"
-#include "vpr/vkAssert.hpp"
+#include "LogicalDevice.hpp"
+#include "PhysicalDevice.hpp"
+#include "Swapchain.hpp"
+#include "vkAssert.hpp"
 
 uint32_t GetMemoryTypeIndex(uint32_t type_bits, VkMemoryPropertyFlags properties, VkPhysicalDeviceMemoryProperties memory_properties) {
      for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {

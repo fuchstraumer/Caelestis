@@ -19,7 +19,7 @@ struct Plugin_API {
     // Fixed-timestep update of logical components not requiring updates w/ timestep value
     void (*LogicalUpdate)(void);
     // Called per frame, dt is frametime. use for time-dependent updates like physical systems and simulations
-    void (*TimeDependentUpdate)(float dt);
+    void (*TimeDependentUpdate)(double dt);
     // For potential future API expansion
     void* ReservedFns[8];
 };

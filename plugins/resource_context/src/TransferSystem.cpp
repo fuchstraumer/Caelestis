@@ -1,9 +1,9 @@
 #include "TransferSystem.hpp"
-#include "vpr/CommandPool.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/Fence.hpp"
-#include "vpr/Semaphore.hpp"
-#include "vpr/vkAssert.hpp"
+#include "CommandPool.hpp"
+#include "LogicalDevice.hpp"
+#include "Fence.hpp"
+#include "Semaphore.hpp"
+#include "vkAssert.hpp"
 
 VkCommandPoolCreateInfo getCreateInfo(const vpr::Device* device) {
     constexpr static VkCommandPoolCreateInfo pool_info{
