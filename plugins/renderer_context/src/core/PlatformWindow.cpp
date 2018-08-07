@@ -2,11 +2,11 @@
 #include "core/WindowInput.hpp"
 #include <forward_list>
 #define GLFW_INCLUDE_VULKAN
+#include "GLFW/glfw3.h"
 #if defined(_WIN32) 
 #undef APIENTRY
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define GLFW_EXPOSE_NATIVE_WGL
-#include "GLFW/glfw3.h"
 #include "GLFW/glfw3native.h"
 #endif
 #include "core/RendererContext.hpp"
