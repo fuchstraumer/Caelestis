@@ -17,14 +17,14 @@ static ApplicationContext_API* AppContextAPI = nullptr;
 static RendererContext_API* RendererAPI = nullptr;
 static ResourceContext* resourceContext = nullptr;
 
-static void BeginResizeCallback(uint32_t handle, uint32_t w, uint32_t h) {
+static void BeginResizeCallback(uint64_t handle, uint32_t w, uint32_t h) {
     auto& loader = ResourceLoader::GetResourceLoader();
     loader.Stop();
     resourceContext->Update();
     resourceContext->FlushStagingBuffers();
 }
 
-static void CompleteResizeCallback(uint32_t handle, uint32_t w, uint32_t h) {
+static void CompleteResizeCallback(uint64_t handle, uint32_t w, uint32_t h) {
     auto& loader = ResourceLoader::GetResourceLoader();
     loader.Start();
 }
