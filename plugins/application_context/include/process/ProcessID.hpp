@@ -7,6 +7,8 @@
 typedef unsigned long DWORD;
 typedef DWORD PlatformProcessID;
 #else
+#include <sys/types.h>
+#include <unistd.h>
 typedef pid_t PlatformProcessID;
 #endif
 

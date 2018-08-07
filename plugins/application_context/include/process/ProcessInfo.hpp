@@ -2,8 +2,7 @@
 #ifndef APPLICATION_CONTEXT_PROCESS_INFO_HPP
 #define APPLICATION_CONTEXT_PROCESS_INFO_HPP
 #include <cstdint>
-
-struct ProcessID;
+#include "ProcessID.hpp"
 
 class ProcessInfo {
 public:
@@ -37,6 +36,7 @@ public:
 
 private:
 
+    ProcessID pid;
     struct SystemInfo* sysInfo;
 
 };
