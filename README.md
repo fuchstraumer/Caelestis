@@ -29,5 +29,6 @@ For now, you can attempt to download and build + run the examples as you see fit
 The only further steps will be copying two things into the binary directory of the test executables:
 - The DLLs of the compiled plugins and dependencies: these will be installed to `${CMAKE_INSTALL_PREFIX}/bin`. I personally use a folder called `ext` in the root directory of this project for my CMake install directory
 - Compiled shader code from the plugin test directories should be installed, as well.
+- Take the `.json` configuration files from each plugin test directory, and install them to the corresponding directory they are built in as well.
 
 I'd like to automate this step but I'm a bit stuck as to how: CMake doesn't seem to have any easy way to do it that doesn't get messy and gross fast.
