@@ -17,12 +17,6 @@ VkCommandPoolCreateInfo getCreateInfo(const vpr::Device* device) {
     return result;
 }
 
-constexpr static VkFenceCreateInfo fence_info{
-    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-    nullptr,
-    0
-};
-
 ResourceTransferSystem::ResourceTransferSystem() : transferPool(nullptr), device(nullptr), fence(nullptr) {}
 
 ResourceTransferSystem::~ResourceTransferSystem() {}
@@ -65,7 +59,7 @@ void ResourceTransferSystem::CompleteTransfers() {
         return;
     }
 
-    auto& guard = AcquireSpinLock();
+    auto guard = AcquireSpinLock();
 
     auto& pool = *transferPool;
     if (vkEndCommandBuffer(pool[0]) != VK_SUCCESS) {
