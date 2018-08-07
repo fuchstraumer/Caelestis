@@ -8,6 +8,8 @@ So far, it features:
 - a resource context layer, which helps manage Vulkan resources in a simpler manner
 - it's all cross-platform! It's been tested so far on Mac OSX, Win10, and Ubuntu 17.10. Mac requires `brew`, primarily to install Boost so we can still get `variant` and `filesystem` when using XCode's dated version of clang (Apple pls)
 
+None of the plugins link to the plugin manager, and plugins don't link to each other. Multiple plugins link to the various `vpr` plugins though (from my [VulpesRender](https://github.com/fuchstraumer/VulpesRender) project, a simple RAII-focused Vulkan abstraction layer), along with linking to some other shared dependencies. But in general, things should be strictly decoupled. Read on for more on that.
+
 ### Plugin System?
 
 I have attempted to use a plugin system akin to the one espoused by our-machinery [here](http://ourmachinery.com/post/little-machines-working-together-part-1/) (and in the corresponding second part, along with [this]() extension on hot-reloading). I currently don't support hot-reloading, however, as my plugins don't hold enough state to make that worthy. Additionally, (as you will find out) I haven't quite yet got CMake to install the compiled plugin shared libs robustly. So, it's a bit difficult.
