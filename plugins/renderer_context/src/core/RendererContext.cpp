@@ -279,6 +279,7 @@ RendererContext::~RendererContext() {
         free(EnabledDeviceExtensions[i]);
     }
     delete[] EnabledDeviceExtensions;
+    delete[] EnabledDeviceFeatures;
     delete WindowSurface;
     delete Swapchain;
     delete LogicalDevice;
