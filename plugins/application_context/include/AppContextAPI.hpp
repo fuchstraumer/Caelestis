@@ -2,6 +2,7 @@
 #ifndef APPLICATION_CONTEXT_API_HPP
 #define APPLICATION_CONTEXT_API_HPP
 #include <cstdint>
+#include <cstddef>
 
 constexpr static uint32_t APPLICATION_CONTEXT_API_ID = 0x920ac193;
 constexpr static uint32_t FIBER_JOB_SYSTEM_API_ID = 0x2e37eeb4;
