@@ -1,4 +1,4 @@
-const int grad_3d_lut[256][3] =
+const int restrict grad_3d_lut[256][3]
 {
 	{ 0,0, 1 },
 	{ 0,0,-1 },
@@ -329,9 +329,9 @@ float simplex3d(in float px, in float py, in float pz, in int seed, out vec3 der
 	}
 
 	// Get simplex coords in xyz coords
-	vec3 p1(p0.x - i1.x + G3, p0.y - i1.y + G3, p0.z - i1.z + G3);
-	vec3 p2(p0.x - i2.x + (2.0f * G3), p0.y - i2.y + (2.0f * G3), p0.z - i2.z + (2.0f * G3));
-	vec3 p3(p0.x - 1.0f + (3.0f * G3), p0.y - 1.0f + (3.0f * G3), p0.z - 1.0f + (3.0f * G3));
+	vec3 p1 = vec3(p0.x - i1.x + G3, p0.y - i1.y + G3, p0.z - i1.z + G3);
+	vec3 p2 = vec3(p0.x - i2.x + (2.0f * G3), p0.y - i2.y + (2.0f * G3), p0.z - i2.z + (2.0f * G3));
+	vec3 p3 = vec3(p0.x - 1.0f + (3.0f * G3), p0.y - 1.0f + (3.0f * G3), p0.z - 1.0f + (3.0f * G3));
 
 	uint h0 = hash_3d(i_s.x, i_s.y, i_s.z, seed);
 	uint h1 = hash_3d(i_s.x + i1.x, i_s.y + i1.y, i_s.z + i1.z, seed);
@@ -339,10 +339,10 @@ float simplex3d(in float px, in float py, in float pz, in int seed, out vec3 der
 	uint h3 = hash_3d(i_s.x + 1, i_s.y + 1, i_s.z + 1, seed);
 
 	// Get gradient vectors using hash coordinates and get contributions from each of four corners.
-	vec3 g0(grad_3d_lut[h0][0], grad_3d_lut[h0][1], grad_3d_lut[h0][2]);
-	vec3 g1(grad_3d_lut[h1][0], grad_3d_lut[h1][1], grad_3d_lut[h1][2]);
-	vec3 g2(grad_3d_lut[h2][0], grad_3d_lut[h2][1], grad_3d_lut[h2][2]);
-	vec3 g3(grad_3d_lut[h3][0], grad_3d_lut[h3][1], grad_3d_lut[h3][2]);
+	vec3 g0 = vec3(grad_3d_lut[h0][0], grad_3d_lut[h0][1], grad_3d_lut[h0][2]);
+	vec3 g1 = vec3(grad_3d_lut[h1][0], grad_3d_lut[h1][1], grad_3d_lut[h1][2]);
+	vec3 g2 = vec3(grad_3d_lut[h2][0], grad_3d_lut[h2][1], grad_3d_lut[h2][2]);
+	vec3 g3 = vec3(grad_3d_lut[h3][0], grad_3d_lut[h3][1], grad_3d_lut[h3][2]);
 
 
 	float t0, t1, t2, t3;

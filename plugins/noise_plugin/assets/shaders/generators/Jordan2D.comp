@@ -8,7 +8,7 @@ layout (constant_id = 1) const uint MaxY = 256;
 layout (constant_id = 2) const uint MaxZ = 1;
 
 layout (set = 0, binding = 0, rgba32f) restrict readonly uniform imageBuffer positions;
-layout (set = 0, binding = 3, r32f) restrict writeonly imageBuffer outputImg;
+layout (set = 0, binding = 3, r32f) restrict writeonly uniform imageBuffer outputImg;
 
 layout (set = 1, binding = 0) uniform ubo {
     float freq;
@@ -23,7 +23,7 @@ layout (set = 1, binding = 0) uniform ubo {
 
 #include "perlin2d.comp"
 
-int GetIdx(int i, int j, int k) {
+int GetIdx(uint i, uint j, uint k) {
     return int(MaxX * MaxY * k + MaxX * j + i);
 }
 
@@ -38,7 +38,7 @@ void main() {
     vec4 pos = imageLoad(positions, idx);
     pos *= params.freq;
 
-    vec3 n = perlinDeriv(p, float(params.seed));
+    vec3 n = perlinDeriv(pos.xy, float(params.seed));
     vec3 n2 = n * n;
     float sum = n2.x;
 
@@ -49,7 +49,8 @@ void main() {
     float dampened_ampl = 0.40f;
 
     for (int i = 1; i < params.octaves; ++i) {
-        n = perlinDeriv(p + dsum_warp.xy, float(seed + i / 256));
+        int seed = (params.seed + i) & 0xffffffff;
+        n = perlinDeriv(pos.xy + dsum_warp.xy, float(seed + i / 256));
         n2 = n * n.x;
         sum += dampened_ampl * n2.x;
         dsum_warp += params.warp * n2.yz;
@@ -59,6 +60,6 @@ void main() {
         dampened_ampl = ampl * (1.0f - params.damp_scale / (1.0f + dot(dsum_damp, dsum_damp)));
     }
 
-    imageStore(output, idx, vec4(sum, 0.0f, 0.0f, 0.0f));
+    imageStore(outputImg, idx, vec4(sum, 0.0f, 0.0f, 0.0f));
 
 }

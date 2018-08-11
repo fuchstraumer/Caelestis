@@ -25,7 +25,7 @@ float perlin2d(vec2 p, float seed) {
     return n * 1.50;
 }
 
-vec2 perlinPsuedoDeriv(vec2 p, float seed) {
+vec3 perlinPsuedoDeriv(vec2 p, float seed) {
     vec2 i = floor(p);
     vec2 f = p - i;
 
@@ -46,10 +46,10 @@ vec2 perlinPsuedoDeriv(vec2 p, float seed) {
     vec4 grads = vec4(a, b - a, c - a, a - b - c + d);
     float n = dot(grads, w4);
 
-    float dx = dw.x * (grads.y + grads.w * w.y):
+    float dx = dw.x * (grads.y + grads.w * w.y);
     float dy = dw.y * (grads.z + grads.w * w.x);
 
-    return vec4(n, dx, dy) * 1.50f;
+    return vec3(n, dx, dy) * 1.50f;
 }
 
 vec3 perlinDeriv(vec2 p, float seed) {

@@ -8,7 +8,7 @@ layout (constant_id = 1) const uint MaxY = 256;
 layout (constant_id = 2) const uint MaxZ = 1;
 
 layout (set = 0, binding = 0, rgba32f) restrict readonly uniform imageBuffer positions;
-layout (set = 0, binding = 3, r32f) restrict writeonly imageBuffer outputImg;
+layout (set = 0, binding = 3, r32f) restrict writeonly uniform imageBuffer outputImg;
 
 layout (set = 1, binding = 0) uniform ubo {
     float freq;
@@ -23,7 +23,7 @@ layout (set = 1, binding = 0) uniform ubo {
 
 #include "simplex3d_deriv.comp"
 
-int GetIdx(int i, int j, int k) {
+int GetIdx(uint i, uint j, uint k) {
     return int(MaxX * MaxY * k + MaxX * j + i);
 }
 
@@ -45,7 +45,7 @@ void main() {
     for (int i = 0; i < params.octaves; ++i) {
         vec3 deriv;
         int seed = (params.seed + i) & 0xffffffff;
-        float n = simplex3d(pos.x, pos.y, pos.z, deriv);
+        float n = simplex3d(pos.x, pos.y, pos.z, seed, deriv);
         result += (1.0f - abs(n)) * amplitude;
         deriv_sum += amplitude * deriv * -n;
         pos *= lacunarity;
@@ -53,6 +53,6 @@ void main() {
         amplitude *= (params.persistence * clamp(result, 0.0f, 1.0f));
     }
 
-    imageStore(output, idx, vec4(result, 0.0f, 0.0f, 0.0f));
+    imageStore(outputImg, idx, vec4(result, 0.0f, 0.0f, 0.0f));
 
 }
