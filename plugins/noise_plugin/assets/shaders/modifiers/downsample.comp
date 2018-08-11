@@ -9,10 +9,10 @@ layout (constant_id = 1) const int MaxY = 256;
 layout (constant_id = 2) const int MaxZ = 1;
 layout (constant_id = 3) const int MinX = MaxX / 4;
 layout (constant_id = 4) const int MinY = MaxY / 4;
-layout (set = 0, binding = 1, r32f) restrict readonly uniform imageBuffer input;
-layout (set = 0, binding = 3, r32f) restrict writeonly imageBuffer outputImg;
+layout (set = 0, binding = 1, r32f) restrict readonly uniform imageBuffer input0;
+layout (set = 0, binding = 3, r32f) restrict writeonly uniform imageBuffer outputImg;
 
-int GetIdx(int i, int j, int k) {
+int GetIdx(uint i, uint j, uint k) {
     return int(MaxX * MaxY * k + MaxX * j + i);
 }
 
@@ -23,14 +23,14 @@ void main() {
     }
 
     int threadIdx = GetIdx(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);
-    float inValue = imageLoad(input, threadIdx).r;
+    float inValue = imageLoad(input0, threadIdx).r;
 
     float downsampledValue = inValue + subgroupQuadSwapHorizontal(inValue);
     downsampledValue += subgroupQuadSwapVertical(downsampledValue);
 
     if (gl_SubgroupInvocationID == subgroupQuadBroadcast(gl_SubgroupInvocationID, 0)) {
-        int downsampleIdx = (MinX * MinY * gl_GlobalInvocationID.z) + (MinX * gl_GlobalInvocationID.y) + gl_GlobalInvocationID.x;
-        imageStore(output, downsampleIdx, vec4(downsampledValue, 0.0f, 0.0f, 0.0f));
+        int downsampleIdx = int((MinX * MinY * gl_GlobalInvocationID.z) + (MinX * gl_GlobalInvocationID.y) + gl_GlobalInvocationID.x);
+        imageStore(outputImg, downsampleIdx, vec4(downsampledValue, 0.0f, 0.0f, 0.0f));
     }
 
 }
