@@ -4,7 +4,6 @@
 #include <vector>
 #include <utility>
 #include <memory>
-#include <variant>
 /*
     
     Defines a base module class.
@@ -22,6 +21,12 @@ struct ResourceContext_API;
 struct VulkanResource;
 
 namespace cnoise {
+
+    enum class noise_t {
+        Invalid = 0,
+        Simplex = 1,
+        Perlin = 2
+    };
 
     class Module {
         // Delete copy ctor and operator

@@ -1,6 +1,4 @@
-#include "FBM.hpp"
-#include "generators\FBM.cuh"
-#include "generators\fbm.hpp"
+#include "generators/FBM.hpp"
 
 namespace cnoise {
     
@@ -16,12 +14,7 @@ namespace cnoise {
         }
 
         void FBM2D::Generate(){
-            if (CUDA_LOADED) {
-                cudaFBM_Launcher(GetDataPtr(), static_cast<int>(dims.first), static_cast<int>(dims.second), NoiseType, make_float2(Origin.first, Origin.second), Attributes.Frequency, Attributes.Lacunarity, Attributes.Persistence, Attributes.Seed, Attributes.Octaves);
-            }
-            else {
-                cpuFBM_Launcher(GetDataPtr(), static_cast<int>(dims.first), static_cast<int>(dims.second), NoiseType, Origin.first, Origin.second, Attributes.Frequency, Attributes.Lacunarity, Attributes.Persistence, Attributes.Octaves, Attributes.Seed);
-            }
+
             Generated = true;
         }
     }

@@ -1,6 +1,4 @@
-#include "Blend.hpp"
-#include "combiners/blend.cuh"
-#include "combiners/blend.hpp"
+#include "combiners/Blend.hpp"
 
 cnoise::combiners::Blend::Blend(const size_t& width, const size_t& height, const std::shared_ptr<Module>& in0 = nullptr, const std::shared_ptr<Module>& in1 = nullptr, const std::shared_ptr<Module>& weight_module = nullptr) : Module(width, height) {
     sourceModules.push_back(in0);
@@ -9,14 +7,6 @@ cnoise::combiners::Blend::Blend(const size_t& width, const size_t& height, const
 }
 
 void cnoise::combiners::Blend::Generate() {
-    
-
-    if (CUDA_LOADED) {
-        cudaBlendLauncher(GetDataPtr(), sourceModules[0]->GetDataPtr(), sourceModules[1]->GetDataPtr(), sourceModules[2]->GetDataPtr(), static_cast<int>(dims.first), static_cast<int>(dims.second));
-    }
-    else {
-        cpuBlendLauncher(GetDataPtr(), sourceModules[0]->GetDataPtr(), sourceModules[1]->GetDataPtr(), sourceModules[2]->GetDataPtr(), static_cast<int>(dims.first), static_cast<int>(dims.second));
-    }
 
     Generated = true;
 }

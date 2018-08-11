@@ -1,8 +1,5 @@
-#include "Add.hpp"
+#include "combiners/Add.hpp"
 #include <iostream>
-
-#include "combiners/add.cuh"
-#include "combiners/add.hpp"
 
 namespace cnoise {
 
@@ -14,13 +11,6 @@ namespace cnoise {
 
         void Add::Generate(){
             checkSourceModules();
-            
-            if (CUDA_LOADED) {
-                cudaAddLauncher(GetDataPtr(), sourceModules[0]->GetDataPtr(), sourceModules[1]->GetDataPtr(), static_cast<int>(dims.first), static_cast<int>(dims.second));
-            }
-            else {
-                cpuAddLauncher(GetDataPtr(), sourceModules.front()->GetDataPtr(), sourceModules[1]->GetDataPtr(), static_cast<int>(dims.first), static_cast<int>(dims.second));
-            }
 
             Generated = true;
         }

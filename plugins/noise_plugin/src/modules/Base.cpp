@@ -54,7 +54,7 @@ namespace cnoise {
             auto min_max = std::minmax_element(var.cbegin(), var.cend());
             const float& min = *min_max.first;
             const float& max = *min_max.second;
-            std::vector<float> result(var.data.cbegin(), var.data.cend());
+            std::vector<float> result(var.cbegin(), var.cend());
             for(auto& elem : result) {
                 elem = (elem - min) / (max - min);
             }
