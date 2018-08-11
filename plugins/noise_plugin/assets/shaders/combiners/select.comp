@@ -1,16 +1,17 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
+#extension GL_KHR_vulkan_glsl : enable
 
-layout (constant_index = 0) const uint MaxX = 256;
-layout (constant_index = 1) const uint MaxY = 256;
-layout (constant_index = 2) const uint MaxZ = 1;
+layout (constant_id = 0) const uint MaxX = 256;
+layout (constant_id = 1) const uint MaxY = 256;
+layout (constant_id = 2) const uint MaxZ = 1;
 
-layout (set = 0, binding = 0, rgba32f) restrict readonly imageBuffer positions;
-layout (set = 0, binding = 1, r32f) restrict readonly imageBuffer input0;
-layout (set = 0, binding = 2, r32f) restrict readonly imageBuffer input1;
-layout (set = 0, binding = 3, r32f) restrict writeonly imageBuffer output;
-layout (set = 1, binding = 0, r32f) restrict readonly imageBuffer selectItem;
+layout (set = 0, binding = 0, rgba32f) restrict readonly uniform imageBuffer positions;
+layout (set = 0, binding = 1, r32f) restrict readonly uniform imageBuffer input0;
+layout (set = 0, binding = 2, r32f) restrict readonly uniform imageBuffer input1;
+layout (set = 0, binding = 3, r32f) restrict writeonly imageBuffer outputImg;
+layout (set = 1, binding = 0, r32f) restrict readonly uniform imageBuffer selectItem;
 
 layout (push_constant) params {
     float (offset = 0) UpperBound;
