@@ -10,9 +10,9 @@ layout (constant_id = 2) const uint MaxZ = 1;
 layout (set = 0, binding = 0, rgba32f) restrict readonly uniform imageBuffer positions;
 layout (set = 0, binding = 1, r32f) restrict readonly uniform imageBuffer input0;
 layout (set = 0, binding = 2, r32f) restrict readonly uniform imageBuffer input1;
-layout (set = 0, binding = 3, r32f) restrict writeonly imageBuffer outputImg;
+layout (set = 0, binding = 3, r32f) restrict writeonly uniform imageBuffer outputImg;
 
-int GetIdx(int i, int j, int k) {
+int GetIdx(uint i, uint j, uint k) {
     return int(MaxX * MaxY * k + MaxX * j + i);
 }
 
@@ -22,5 +22,5 @@ void main() {
         return;
     }
     int idx = GetIdx(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);
-    imageStore(output, idx, vec4(pow(imageLoad(input0,idx).r, imageLoad(input1,idx).r), 0.0f, 0.0f, 0.0f));
+    imageStore(outputImg, idx, vec4(pow(imageLoad(input0,idx).r, imageLoad(input1,idx).r), 0.0f, 0.0f, 0.0f));
 }

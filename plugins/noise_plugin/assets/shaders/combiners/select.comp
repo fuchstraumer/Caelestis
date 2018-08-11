@@ -10,16 +10,16 @@ layout (constant_id = 2) const uint MaxZ = 1;
 layout (set = 0, binding = 0, rgba32f) restrict readonly uniform imageBuffer positions;
 layout (set = 0, binding = 1, r32f) restrict readonly uniform imageBuffer input0;
 layout (set = 0, binding = 2, r32f) restrict readonly uniform imageBuffer input1;
-layout (set = 0, binding = 3, r32f) restrict writeonly imageBuffer outputImg;
+layout (set = 0, binding = 3, r32f) restrict writeonly uniform imageBuffer outputImg;
 layout (set = 1, binding = 0, r32f) restrict readonly uniform imageBuffer selectItem;
 
-layout (push_constant) params {
-    float (offset = 0) UpperBound;
-    float (offset = 4) LowerBound;
-    float (offset = 8) Falloff;
+layout (push_constant) uniform params {
+    float UpperBound;
+    float LowerBound;
+    float Falloff;
 } Params;
 
-int GetIdx(int i, int j, int k) {
+int GetIdx(uint i, uint j, uint k) {
     return int(MaxX * MaxY * k + MaxX * j + i);
 }
 
@@ -47,39 +47,39 @@ void main() {
 
     if (Params.Falloff > 0.0f) {
         if (select < (Params.LowerBound - Params.Falloff)) {
-            imageStore(output, idx, vec4(prev0, 0.0f, 0.0f, 0.0f));
+            imageStore(outputImg, idx, vec4(prev0, 0.0f, 0.0f, 0.0f));
             return;
         }
         else if (select < (Params.LowerBound + Params.Falloff)) {
             const float l_curve = Params.LowerBound - Params.Falloff;
             const float u_curve = Params.LowerBound + Params.Falloff;
             alpha = SCurve3((select - l_curve) / (u_curve - l_curve));
-            imageStore(output, idx, vec4(LerpSelect(prev0, prev1, alpha), 0.0f, 0.0f, 0.0f));
+            imageStore(outputImg, idx, vec4(LerpSelect(prev0, prev1, alpha), 0.0f, 0.0f, 0.0f));
             return;
         }
         else if (select < (Params.UpperBound - Params.Falloff)) {
-            imageStore(output, idx, vec4(prev1, 0.0f, 0.0f, 0.0f));
+            imageStore(outputImg, idx, vec4(prev1, 0.0f, 0.0f, 0.0f));
             return;
         }
         else if (select < (Params.UpperBound + Params.Falloff)) {
             const float l_curve = Params.UpperBound - Params.Falloff;
             const float u_curve = Params.UpperBound + Params.Falloff;
             alpha = SCurve3((select - l_curve) / (u_curve - l_curve));
-            imageStore(output, idx, vec4(LerpSelect(prev0, prev1, alpha), 0.0f, 0.0f, 0.0f));
+            imageStore(outputImg, idx, vec4(LerpSelect(prev0, prev1, alpha), 0.0f, 0.0f, 0.0f));
             return;
         }
         else {
-            imageStore(output, idx, vec4(prev0, 0.0f, 0.0f, 0.0f));
+            imageStore(outputImg, idx, vec4(prev0, 0.0f, 0.0f, 0.0f));
             return;
         }
     }
     else {
         if (select < Params.LowerBound || select > Params.UpperBound) {
-            imageStore(output, idx, vec4(prev0, 0.0f, 0.0f, 0.0f));
+            imageStore(outputImg, idx, vec4(prev0, 0.0f, 0.0f, 0.0f));
             return;
         }
         else {
-            imageStore(output, idx, vec4(prev1, 0.0f, 0.0f, 0.0f));
+            imageStore(outputImg, idx, vec4(prev1, 0.0f, 0.0f, 0.0f));
             return;
         }
     }
