@@ -5,13 +5,13 @@
 #include "core/RendererContext.hpp"
 #include "core/PlatformWindow.hpp"
 #include "core/WindowInput.hpp"
-#include "vpr/Allocator.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/PhysicalDevice.hpp"
-#include "vpr/Instance.hpp"
-#include "vpr/Swapchain.hpp"
-#include "vpr/SurfaceKHR.hpp"
-#include "vpr/PipelineCache.hpp"
+#include "Allocator.hpp"
+#include "LogicalDevice.hpp"
+#include "PhysicalDevice.hpp"
+#include "Instance.hpp"
+#include "Swapchain.hpp"
+#include "SurfaceKHR.hpp"
+#include "PipelineCache.hpp"
 #include "GLFW/glfw3.h"
 #include <vector>
 #include <memory>
@@ -28,8 +28,8 @@ static ApplicationContext_API* AppContextAPI = nullptr;
 static RendererContext* Context = nullptr;
 
 struct SwapchainCallbackLists {
-    using SwapchainCallbackDefaultType = std::add_pointer<void(uint32_t,uint32_t,uint32_t)>::type;
-    using SwapchainDestructionCallbackType = std::add_pointer<void(uint32_t)>::type;
+    using SwapchainCallbackDefaultType = std::add_pointer<void(uint64_t,uint32_t,uint32_t)>::type;
+    using SwapchainDestructionCallbackType = std::add_pointer<void(uint64_t)>::type;
     std::list<SwapchainCallbackDefaultType> CreationCallbacks;
     std::list<SwapchainCallbackDefaultType> BeginResizeCallbacks;
     std::list<SwapchainCallbackDefaultType> CompleteResizeCallbacks;
@@ -55,7 +55,7 @@ static void RecreateSwapchain() {
     Context->Window->GetWindowSize(width, height);
 
     for (auto& fn : SwapchainCallbacks.BeginResizeCallbacks) {
-        fn((uint32_t)(Context->Swapchain->vkHandle()), width, height);
+        fn((uint64_t)(Context->Swapchain->vkHandle()), width, height);
     }
 
     vpr::RecreateSwapchainAndSurface(Context->Swapchain, Context->WindowSurface);
@@ -63,7 +63,7 @@ static void RecreateSwapchain() {
 
     Context->Window->GetWindowSize(width, height);
     for (auto& fn : SwapchainCallbacks.CompleteResizeCallbacks) {
-        fn((uint32_t)(Context->Swapchain->vkHandle()), width, height);
+        fn((uint64_t)(Context->Swapchain->vkHandle()), width, height);
     }
 
     vkDeviceWaitIdle(Context->LogicalDevice->vkHandle());

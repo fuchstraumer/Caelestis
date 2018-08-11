@@ -61,7 +61,7 @@ int _wconvertmtos(SIZE_T sz) {
     return static_cast<int>(sz / (1024 * 1024));
 }
 
-ProcessInfo::ProcessInfo(const ProcessID& id) : sysInfo(new SystemInfo()) {
+ProcessInfo::ProcessInfo(const ProcessID& id) : pid(id), sysInfo(new SystemInfo()) {
     auto& pse_api = PsAPI_INIT::GetPsApi();
 }
 

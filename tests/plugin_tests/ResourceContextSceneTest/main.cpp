@@ -5,7 +5,7 @@
 #include "../../../plugin_manager/include/PluginManager.hpp"
 #include "../../..//plugin_manager/include/CoreAPIs.hpp"
 #include "../../../plugins/application_context/include/AppContextAPI.hpp"
-#include "vpr/PipelineCache.hpp"
+#include "PipelineCache.hpp"
 #include "easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 
@@ -24,12 +24,12 @@ static void skyboxLoadedCallback(void* scene_ptr, void* data) {
     reinterpret_cast<VulkanComplexScene*>(scene_ptr)->CreateSkyboxTexture(data);
 }
 
-static void BeginResizeCallback(uint32_t handle, uint32_t width, uint32_t height) {
+static void BeginResizeCallback(uint64_t handle, uint32_t width, uint32_t height) {
     auto& scene = VulkanComplexScene::GetScene();
     scene.Destroy();
 }
 
-static void CompleteResizeCallback(uint32_t handle, uint32_t width, uint32_t height) {
+static void CompleteResizeCallback(uint64_t handle, uint32_t width, uint32_t height) {
     auto& scene = VulkanComplexScene::GetScene();
     scene.Construct(RequiredVprObjects{ context->LogicalDevice, context->PhysicalDevices[0], context->VulkanInstance, context->Swapchain }, resource_api);
     resource_api->LoadFile("OBJ", "House.obj", &scene, objFileLoadedCallback);

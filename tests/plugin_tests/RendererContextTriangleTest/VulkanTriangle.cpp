@@ -1,10 +1,10 @@
 #include "VulkanTriangle.hpp"
-#include "vpr/PhysicalDevice.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/ShaderModule.hpp"
-#include "vpr/Swapchain.hpp"
-#include "vpr/vkAssert.hpp"
-#include "vpr/Semaphore.hpp"
+#include "PhysicalDevice.hpp"
+#include "LogicalDevice.hpp"
+#include "ShaderModule.hpp"
+#include "Swapchain.hpp"
+#include "vkAssert.hpp"
+#include "Semaphore.hpp"
 #include <fstream>
 
 VulkanTriangle::VulkanTriangle() : VulkanScene() {}

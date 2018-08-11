@@ -2,6 +2,7 @@
 #ifndef RESOURCE_CONTEXT_PLUGIN_API_HPP
 #define RESOURCE_CONTEXT_PLUGIN_API_HPP
 #include <cstdint>
+#include <cstddef>
 
 constexpr static uint32_t RESOURCE_CONTEXT_API_ID = 0x284b106d;
 

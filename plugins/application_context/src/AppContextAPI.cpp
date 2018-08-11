@@ -18,7 +18,11 @@ INITIALIZE_EASYLOGGINGPP
 #include <unordered_map>
 #include <string>
 #include <vector>
+#ifndef __APPLE_CC__
 #include <experimental/filesystem>
+#else
+#include <boost/filesystem.hpp>
+#endif
 #include <unordered_map>
 
 constexpr const char* const APPLICATION_CONTEXT_CFG_FILE_NAME = "ApplicationConfig.json";
@@ -26,7 +30,11 @@ static ApplicationConfigurationFile CfgFile;
 static ProcessInfo* processInfo = nullptr;
 
 static void FindApplicationConfigFile() {
+#ifndef __APPLE_CC__
     namespace stdfs = std::experimental::filesystem;
+#else
+    namespace stdfs = boost::filesystem;
+#endif
     
     if (!stdfs::exists(APPLICATION_CONTEXT_CFG_FILE_NAME)) {
         char* found_file = nullptr;
@@ -63,7 +71,11 @@ static uint32_t PluginID() {
 }
 
 static void WriteLoadedLog() {
+#ifndef __APPLE_CC__
     namespace fs = std::experimental::filesystem;
+#else
+    namespace fs = boost::filesystem;
+#endif
     LOG(INFO) << "Application context loaded.";
     LOG(INFO) << "Temporary data path: " << fs::temp_directory_path().string();
     LOG(INFO) << "Current canonical working directory: " << fs::canonical(fs::current_path()).string();
@@ -144,7 +156,11 @@ const char* CanonicalPath(const char* p) {
 
 static bool FindFile(const char* f, const char* starting_dir, uint32_t limit, char** ff) {
     if (starting_dir == nullptr) {
+#ifndef __APPLE_CC__
         namespace stdfs = std::experimental::filesystem;
+#else
+        namespace stdfs = boost::filesystem;
+#endif
         const std::string current_path = stdfs::current_path().string();
         return fs::FindFile(f, current_path.c_str(), limit, ff);
     }

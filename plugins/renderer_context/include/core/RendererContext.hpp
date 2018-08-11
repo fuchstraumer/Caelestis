@@ -1,6 +1,7 @@
 #pragma once
 #ifndef RENDERER_CONTEXT_OBJECT_HPP
 #define RENDERER_CONTEXT_OBJECT_HPP
+#include <cstddef>
 
 namespace vpr {
     class Instance;
@@ -17,21 +18,22 @@ struct RendererContext {
     ~RendererContext();
     static void SetShouldResize(const bool& resize);
     static bool ShouldResizeExchange(bool value);
-    vpr::Instance* VulkanInstance;
-    vpr::PhysicalDevice** PhysicalDevices;
-    size_t NumPhysicalDevices;
-    vpr::Device* LogicalDevice;
-    vpr::Swapchain* Swapchain;
-    vpr::Swapchain** VirtualSwapchains;
-    PlatformWindow* Window;
-    vpr::SurfaceKHR* WindowSurface;
-    char** EnabledInstanceExtensions;
-    size_t NumInstanceExtensions;
-    char** EnabledDeviceExtensions;
-    size_t NumDeviceExtensions;
-    char** EnabledDeviceFeatures;
-    size_t NumFeatures;
-    const char* WindowMode;
+    vpr::Instance* VulkanInstance{ nullptr };
+    vpr::PhysicalDevice** PhysicalDevices{ nullptr };
+    size_t NumPhysicalDevices{ 0 };
+    vpr::Device* LogicalDevice{ nullptr };
+    vpr::Swapchain* Swapchain{ nullptr };
+    size_t NumVirtualSwapchains{ 0 };
+    vpr::Swapchain** VirtualSwapchains{ nullptr };
+    PlatformWindow* Window{ nullptr };
+    vpr::SurfaceKHR* WindowSurface{ nullptr };
+    char** EnabledInstanceExtensions{ nullptr };
+    size_t NumInstanceExtensions{ 0 };
+    char** EnabledDeviceExtensions{ nullptr };
+    size_t NumDeviceExtensions{ 0 };
+    char** EnabledDeviceFeatures{ nullptr };
+    size_t NumFeatures{ 0 };
+    const char* WindowMode{ "" };
 private:
     RendererContext(const RendererContext&) = delete;
     RendererContext& operator=(const RendererContext&) = delete;

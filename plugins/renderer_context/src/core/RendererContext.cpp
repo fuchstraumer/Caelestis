@@ -1,11 +1,11 @@
 #include "core/RendererContext.hpp"
 #include "../../application_context/include/AppContextAPI.hpp"
 #include "nlohmann/json.hpp"
-#include "vpr/Instance.hpp"
-#include "vpr/PhysicalDevice.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/Swapchain.hpp"
-#include "vpr/SurfaceKHR.hpp"
+#include "Instance.hpp"
+#include "PhysicalDevice.hpp"
+#include "LogicalDevice.hpp"
+#include "Swapchain.hpp"
+#include "SurfaceKHR.hpp"
 #include <vulkan/vulkan.h>
 #include "core/PlatformWindow.hpp"
 #include <fstream>
@@ -279,6 +279,7 @@ RendererContext::~RendererContext() {
         free(EnabledDeviceExtensions[i]);
     }
     delete[] EnabledDeviceExtensions;
+    delete[] EnabledDeviceFeatures;
     delete WindowSurface;
     delete Swapchain;
     delete LogicalDevice;

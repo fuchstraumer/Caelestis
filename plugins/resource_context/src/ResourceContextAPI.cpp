@@ -6,9 +6,9 @@
 #include "renderer_context/include/core/RendererContext.hpp"
 #include "ResourceContext.hpp"
 #include "ResourceLoader.hpp"
-#include "vpr/Allocator.hpp"
-#include "vpr/PipelineCache.hpp"
-#include "vpr/PhysicalDevice.hpp"
+#include "Allocator.hpp"
+#include "PipelineCache.hpp"
+#include "PhysicalDevice.hpp"
 #include "easylogging++.h"
 INITIALIZE_NULL_EASYLOGGINGPP
 
@@ -17,14 +17,14 @@ static ApplicationContext_API* AppContextAPI = nullptr;
 static RendererContext_API* RendererAPI = nullptr;
 static ResourceContext* resourceContext = nullptr;
 
-static void BeginResizeCallback(uint32_t handle, uint32_t w, uint32_t h) {
+static void BeginResizeCallback(uint64_t handle, uint32_t w, uint32_t h) {
     auto& loader = ResourceLoader::GetResourceLoader();
     loader.Stop();
     resourceContext->Update();
     resourceContext->FlushStagingBuffers();
 }
 
-static void CompleteResizeCallback(uint32_t handle, uint32_t w, uint32_t h) {
+static void CompleteResizeCallback(uint64_t handle, uint32_t w, uint32_t h) {
     auto& loader = ResourceLoader::GetResourceLoader();
     loader.Start();
 }

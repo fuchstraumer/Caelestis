@@ -5,14 +5,14 @@
 #include <vector>
 
 struct SystemInfo {
-    std::string osFamily;
-    std::string osName;
-    std::string osVersion;
-    size_t AddressSize;
-    size_t TotalMemorySize;
-    size_t NumCores;
-    size_t PageSize;
-    std::string CpuArchitecture;
+    std::string osFamily{ "" };
+    std::string osName{ "" };
+    std::string osVersion{ "" };
+    size_t AddressSize{ 64 };
+    size_t TotalMemorySize{ 0 };
+    size_t NumCores{ 0 };
+    size_t PageSize{ 0 };
+    std::string CpuArchitecture{ "" };
     std::vector<std::string> ExtraSysInfo;
 };
 

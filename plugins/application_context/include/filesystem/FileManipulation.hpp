@@ -2,7 +2,7 @@
 #ifndef APPLICATION_CONTEXT_FILE_MANIPULATION_HPP
 #define APPLICATION_CONTEXT_FILE_MANIPULATION_HPP
 #include <cstdint>
-
+#include <cstddef>
 namespace fs {
 
 namespace file_type {
@@ -48,8 +48,8 @@ int CopyFile(const char* from, const char* to, uint32_t options);
 uint32_t GetPermissions(const char* path);
 int SetPermissions(const char* path, uint32_t permissions);
 int Remove(const char* path);
-int RemoveAll(const char* path, size_t* num_removed);
-int ResizeFile(const char* path, const size_t new_size);
+int RemoveAll(const char* path, std::size_t* num_removed);
+int ResizeFile(const char* path, const std::size_t new_size);
 int RenameFile(const char* path, const char* new_name);
 int MoveFile(const char* path, const char* new_path);
 

@@ -1,8 +1,16 @@
 #include "filesystem/FileManipulation.hpp"
+#ifdef __APPLE_CC__
+#include <boost/filesystem.hpp>
+#else
 #include <experimental/filesystem>
+#endif
 #include <unordered_map>
 
+#ifndef __APPLE_CC__
 namespace stdfs = std::experimental::filesystem;
+#else
+namespace stdfs = boost::filesystem;
+#endif
 static std::unordered_map<std::string, std::string> pathStrings;
 
 namespace fs {
@@ -12,7 +20,11 @@ const char* TempDirPath() {
 }
 
 int CreateDirectory(const char* name, bool recursive) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+#endif
     if (recursive) {
         stdfs::create_directories(stdfs::path(name), ec);
         return ec.value();
@@ -24,7 +36,11 @@ int CreateDirectory(const char* name, bool recursive) {
 }
 
 int CreateFile(const char* fname, uint32_t file_type, bool recursive) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+#endif
     if (recursive) {
         return 0;
     }
@@ -80,8 +96,12 @@ bool FindFile(const char* fname, const char* starting_dir, uint32_t depth_limit,
         file_name_path = file_name_path.filename();
 
         if (stdfs::exists(file_name_path)) {
-            const std::string found_path = file_name_path.string();
-            *found_file = _strdup(found_path.c_str());
+            const std::string found_path_str = file_name_path.string();
+#ifndef __APPLE_CC__
+            *found_file = _strdup(found_path_str.c_str());
+#else
+            *found_file = strdup(found_path_str.c_str());
+#endif
             return true;
         }
 
@@ -102,7 +122,11 @@ bool FindFile(const char* fname, const char* starting_dir, uint32_t depth_limit,
                 stdfs::path entry_path(dir_entry);
                 if (entry_path.has_filename() && (entry_path.filename() == file_name_path)) {
                     const std::string found_path_str = entry_path.string();
+#ifndef __APPLE_CC__
                     *found_file = _strdup(found_path_str.c_str());
+#else
+                    *found_file = strdup(found_path_str.c_str());
+#endif
                     return true;
                 }
             }
@@ -121,7 +145,13 @@ int Copy(const char* from, const char* to, uint32_t options) {
 }
 
 int CopyFile(const char* from, const char* to, uint32_t options) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+    boost::filesystem::copy_option option(static_cast<boost::filesystem::copy_option>(options));
+    stdfs::copy_file(stdfs::path(from), stdfs::path(to), option, ec);
+#endif
     stdfs::copy_file(stdfs::path(from), stdfs::path(to), stdfs::copy_options(options), ec);
     return ec.value();
 }
@@ -135,34 +165,53 @@ int SetPermissions(const char* path, uint32_t permissions) {
 }
 
 int Remove(const char* _path) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+#endif
     stdfs::remove(stdfs::path(_path), ec);
     return ec.value();
 }
 
 int RemoveAll(const char* path, size_t* num_removed) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+#endif
     size_t num = stdfs::remove_all(stdfs::path(path), ec);
     *num_removed = num;
     return ec.value();
 }
 
 int ResizeFile(const char* path, const size_t new_size) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+#endif
     stdfs::resize_file(stdfs::path(path), new_size, ec);
     return ec.value();
 }
 
 int RenameFile(const char* path, const char* new_name) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+#endif
     stdfs::path new_path(path);
-    new_path.replace_filename(new_name);
     stdfs::rename(stdfs::path(path), new_path, ec);
     return ec.value();
 }
 
 int MoveFile(const char* path, const char* new_path) {
+#ifndef __APPLE_CC__
     std::error_code ec;
+#else
+    boost::system::error_code ec;
+#endif
     stdfs::rename(stdfs::path(path), stdfs::path(new_path), ec);
     return ec.value();
 }

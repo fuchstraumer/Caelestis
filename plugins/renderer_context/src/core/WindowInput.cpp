@@ -141,7 +141,11 @@ void WindowInput::ConsumeScancodeActions(int code, int* actions, int* modifiers)
 void WindowInput::GetInputCharacters(size_t* num_chars, unsigned int* dest_str) {
     *num_chars = inputChars.size();
     if (dest_str != nullptr) {
+#ifdef _MSC_VER
         memcpy_s(dest_str, *num_chars * sizeof(unsigned int), inputChars.data(), sizeof(unsigned int) * *num_chars);
+#else
+        memcpy(dest_str, inputChars.data(), sizeof(unsigned int) * (*num_chars));
+#endif
         std::lock_guard<std::mutex> inputCharsGuard(charMutex);
         inputChars.erase(std::begin(inputChars), std::begin(inputChars) + *num_chars);
         inputChars.shrink_to_fit();

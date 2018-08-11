@@ -28,5 +28,5 @@ TARGET_INCLUDE_DIRECTORIES(ResourceContextSceneTest PRIVATE
     "../../../third_party/tinyobjloader/experimental"
 )
 
-TARGET_LINK_LIBRARIES(ResourceContextSceneTest PRIVATE foonathan_memory vpr_core vpr_resource
+TARGET_LINK_LIBRARIES(ResourceContextSceneTest PRIVATE vpr_core vpr_resource
     vpr_sync vpr_alloc vpr_command ${Vulkan_LIBRARY} easyloggingpp)

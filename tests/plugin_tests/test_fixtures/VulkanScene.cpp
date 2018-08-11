@@ -1,8 +1,8 @@
 #include "VulkanScene.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/Swapchain.hpp"
-#include "vpr/Semaphore.hpp"
-#include "vpr/vkAssert.hpp"
+#include "LogicalDevice.hpp"
+#include "Swapchain.hpp"
+#include "Semaphore.hpp"
+#include "vkAssert.hpp"
 #include <vulkan/vulkan.h>
 #include <thread>
 

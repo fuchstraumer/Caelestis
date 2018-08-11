@@ -1,9 +1,9 @@
 #include "TransferSystem.hpp"
-#include "vpr/CommandPool.hpp"
-#include "vpr/LogicalDevice.hpp"
-#include "vpr/Fence.hpp"
-#include "vpr/Semaphore.hpp"
-#include "vpr/vkAssert.hpp"
+#include "CommandPool.hpp"
+#include "LogicalDevice.hpp"
+#include "Fence.hpp"
+#include "Semaphore.hpp"
+#include "vkAssert.hpp"
 
 VkCommandPoolCreateInfo getCreateInfo(const vpr::Device* device) {
     constexpr static VkCommandPoolCreateInfo pool_info{
@@ -16,12 +16,6 @@ VkCommandPoolCreateInfo getCreateInfo(const vpr::Device* device) {
     result.queueFamilyIndex = device->QueueFamilyIndices.Transfer;
     return result;
 }
-
-constexpr static VkFenceCreateInfo fence_info{
-    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-    nullptr,
-    0
-};
 
 ResourceTransferSystem::ResourceTransferSystem() : transferPool(nullptr), device(nullptr), fence(nullptr) {}
 
@@ -65,7 +59,7 @@ void ResourceTransferSystem::CompleteTransfers() {
         return;
     }
 
-    auto& guard = AcquireSpinLock();
+    auto guard = AcquireSpinLock();
 
     auto& pool = *transferPool;
     if (vkEndCommandBuffer(pool[0]) != VK_SUCCESS) {

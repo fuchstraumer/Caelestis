@@ -22,7 +22,8 @@ namespace button_type {
         YesNo,
         YesNoCancel,
         AbortRetryIgnore,
-        RetryCancel
+        RetryCancel,
+        Abort
     };
 }
 

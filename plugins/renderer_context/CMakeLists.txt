@@ -12,6 +12,6 @@ ADD_PLUGIN(renderer_context
 )
 
 TARGET_INCLUDE_DIRECTORIES(renderer_context PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    "../../ext/include/" "../../third_party/json/include" "${Vulkan_INCLUDE_DIR}")
+    "../../ext/include/" "../../third_party/json/include" "${Vulkan_INCLUDE_DIR}" ${VPR_INCLUDE_DIRS_PLUGIN_RELATIVE})
 TARGET_LINK_LIBRARIES(renderer_context PRIVATE vpr_core glfw ${Vulkan_LIBRARY})
 TARGET_COMPILE_DEFINITIONS(renderer_context PRIVATE "D_SCL_SECURE_NO_WARNINGS" "SCL_SECURE_NO_WARNINGS")

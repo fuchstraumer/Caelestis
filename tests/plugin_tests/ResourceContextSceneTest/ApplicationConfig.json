@@ -3,6 +3,6 @@
         "RendererContext"
     ],
     "ModuleConfigs" : {
-        "RendererContext" : "RendererContextCfg.json"
+        "RendererContext" : "RendererContextCfgSceneTest.json"
     }
 }

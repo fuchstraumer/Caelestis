@@ -1,9 +1,9 @@
 #pragma once
 #ifndef RESOURCE_CONTEXT_HPP
 #define RESOURCE_CONTEXT_HPP
-#include "vpr/ForwardDecl.hpp"
-#include "vpr/Allocation.hpp"
-#include "vpr/AllocationRequirements.hpp"
+#include "ForwardDecl.hpp"
+#include "Allocation.hpp"
+#include "AllocationRequirements.hpp"
 #include "ResourceTypes.hpp"
 #include <unordered_set>
 #include <unordered_map>

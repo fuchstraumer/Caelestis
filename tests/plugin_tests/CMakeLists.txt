@@ -1,9 +1,20 @@
 
+SET(VPR_INCLUDE_DIRS_TEST_RELATIVE
+    "../../../third_party/vulpesrender/alloc/include"
+    "../../../third_party/vulpesrender/command/include"
+    "../../../third_party/vulpesrender/common"
+    "../../../third_party/vulpesrender/core/include"
+    "../../../third_party/vulpesrender/render/include"
+    "../../../third_party/vulpesrender/resource/include"
+    "../../../third_party/vulpesrender/sync/include"
+)
+
 FUNCTION(ADD_PLUGIN_TEST NAME)
     ADD_EXECUTABLE(${NAME} ${ARGN})
     TARGET_INCLUDE_DIRECTORIES(${NAME} PRIVATE
         "../../../plugin_manager/include"
         "../../../ext/include"
+        ${VPR_INCLUDE_DIRS_TEST_RELATIVE}
     )
     TARGET_COMPILE_DEFINITIONS(${NAME} PUBLIC 
         $<BUILD_INTERFACE:BUILDING_SHARED_LIBRARY> $<INSTALL_INTERFACE:USING_SHARED_LIBRARY>

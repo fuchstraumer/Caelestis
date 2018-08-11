@@ -1,5 +1,9 @@
 #include "ResourceLoader.hpp"
+#ifndef __APPLE_CC__
 #include <experimental/filesystem>
+#else
+#include <boost/filesystem.hpp>
+#endif
 #ifdef _MSC_VER
 #include <execution>
 #endif // _MSC_VER
@@ -19,7 +23,11 @@
     }
 
     void ResourceLoader::Load(const char* file_type, const char* file_path, void* _requester, SignalFunctor signal) {
+#ifndef __APPLE_CC__
         namespace fs = std::experimental::filesystem;
+#else
+        namespace fs = boost::filesystem;
+#endif
         fs::path fs_file_path = fs::absolute(fs::path(file_path));
         const std::string absolute_path = fs_file_path.string();
 
@@ -64,7 +72,11 @@
     }   
 
     void ResourceLoader::Unload(const char* file_type, const char* _path) {
+#ifndef __APPLE_CC__
         namespace fs = std::experimental::filesystem;
+#else
+        namespace fs = boost::filesystem;
+#endif
         fs::path file_path(_path);
         if (!fs::exists(file_path)) {
             LOG(ERROR) << "Tried to unload non-existent file path!";
@@ -126,7 +138,7 @@ void ResourceLoader::workerFunction() {
 
         loadRequest request = requests.front();
         requests.pop_front();
-        FactoryFunctor factory_fn = factories.at(request.destinationData.AbsoluteFilePath);
+        FactoryFunctor factory_fn = factories.at(request.destinationData.FileType);
         lock.unlock(); 
 
         {
