@@ -31,6 +31,7 @@ public:
     virtual void Construct(RequiredVprObjects vpr_objects, void* user_data) = 0;
     virtual void Destroy() = 0;
     virtual void Render(void* user_data);
+    size_t CurrentFrameIdx() const;
 
 protected:
 

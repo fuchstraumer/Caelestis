@@ -20,6 +20,8 @@
 #include <iostream>
 #include <array>
 #include "vkAssert.hpp"
+#include "HouseShaders.hpp"
+#include "SkyboxShaders.hpp"
 #include "../../../third_party/easyloggingpp/src/easylogging++.h"
 
 const static std::array<glm::vec3, 8> skybox_positions {
@@ -90,22 +92,25 @@ VulkanComplexScene::~VulkanComplexScene() {
 VulkanComplexScene& VulkanComplexScene::GetScene() {
     static VulkanComplexScene scene;
     return scene;
-}
+}    
+
+glm::vec3 scale(0.2f, 0.2f, 0.2f);
 
 void VulkanComplexScene::Construct(RequiredVprObjects objects, void * user_data) {
     vprObjects = objects;
     resourceContext = reinterpret_cast<const ResourceContext_API*>(user_data);
     houseUboData.view = glm::lookAt(glm::vec3(-5.0f, -5.0f, 4.0f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     skyboxUboData.view = glm::mat3(houseUboData.view);
-    const glm::mat4 clip{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f };
-    houseUboData.projection = glm::perspective(glm::radians(45.0f), static_cast<float>(objects.swapchain->Extent().width / objects.swapchain->Extent().height), 0.1f, 1000.0f);
+    houseUboData.projection = glm::perspectiveFov(glm::radians(70.0f), static_cast<float>(objects.swapchain->Extent().width), static_cast<float>(objects.swapchain->Extent().height), 0.1f, 1000.0f);
     houseUboData.projection[1][1] *= -1.0f;
     skyboxUboData.projection = houseUboData.projection;
     houseUboData.model = glm::mat4(1.0f);
+    houseUboData.model = glm::scale(houseUboData.model, scale);
     skyboxUboData.model = glm::mat4(1.0f);
     createSemaphores();
     createSampler();
     createUBOs();
+    update();
     createFences();
     createCommandPool();
     createSkyboxMesh();
@@ -152,7 +157,7 @@ void VulkanComplexScene::Destroy() {
     houseMeshReady = false;
 }
 
-void* VulkanComplexScene::LoadObjFile(const char* fname) {
+void* VulkanComplexScene::LoadObjFile(const char* fname, void* user_data) {
     return new LoadedObjModel(fname);
 }
 
@@ -161,7 +166,7 @@ void VulkanComplexScene::DestroyObjFileData(void * obj_file) {
     delete model;
 }
 
-void* VulkanComplexScene::LoadJpegImage(const char* fname) {
+void* VulkanComplexScene::LoadJpegImage(const char* fname, void* user_data) {
     return new stb_image_data_t(fname);
 }
 
@@ -170,7 +175,7 @@ void VulkanComplexScene::DestroyJpegFileData(void * jpeg_file) {
     delete image;
 }
 
-void* VulkanComplexScene::LoadCompressedTexture(const char* fname) {
+void* VulkanComplexScene::LoadCompressedTexture(const char* fname, void* user_data) {
     return new gli::texture_cube(gli::load(fname));
 }
 
@@ -335,6 +340,10 @@ void VulkanComplexScene::CreateSkyboxTexture(void * texture_data) {
 
 }
 
+bool VulkanComplexScene::AllAssetsLoaded() {
+    return (skyboxTextureReady && houseMeshReady && houseTextureReady);
+}
+
 void VulkanComplexScene::WaitForAllLoaded() {
     while (!skyboxTextureReady || !houseMeshReady || !houseTextureReady) {
         
@@ -344,11 +353,15 @@ void VulkanComplexScene::WaitForAllLoaded() {
     std::cerr << "All data loaded.";
 }
 
+const glm::vec3 translation(0.0f, 0.0f, 0.0f);
+
 void VulkanComplexScene::update() {
     static auto start_time = std::chrono::high_resolution_clock::now();
     auto curr_time = std::chrono::high_resolution_clock::now();
     float diff = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - start_time).count()) / 10000.0f;
-    houseUboData.model = glm::rotate(glm::mat4(1.0f), diff * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // pivot house around center axis based on time.
+    houseUboData.model = glm::scale(glm::mat4(1.0f), scale);
+    houseUboData.model = glm::rotate(houseUboData.model, diff * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // pivot house around center axis based on time.
+    houseUboData.model = glm::translate(houseUboData.model, translation);
     const gpu_resource_data_t house_ubo_data{
         &houseUboData,
         sizeof(ubo_data_t),
@@ -642,10 +655,10 @@ void VulkanComplexScene::createPipelineLayouts() {
 }
 
 void VulkanComplexScene::createShaders() {
-    houseVert = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tests/ResourceContextSceneTest/House.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    houseFrag = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tests/ResourceContextSceneTest/House.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-    skyboxVert = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tests/ResourceContextSceneTest/Skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    skyboxFrag = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), "../../../../tests/plugin_tests/ResourceContextSceneTest/Skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    houseVert = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), VK_SHADER_STAGE_VERTEX_BIT, house_shader_vert_spv, sizeof(house_shader_vert_spv));
+    houseFrag = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, house_shader_frag_spv, sizeof(house_shader_frag_spv));
+    skyboxVert = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), VK_SHADER_STAGE_VERTEX_BIT, skybox_shader_vert_spv, sizeof(skybox_shader_vert_spv));
+    skyboxFrag = std::make_unique<vpr::ShaderModule>(vprObjects.device->vkHandle(), VK_SHADER_STAGE_FRAGMENT_BIT, skybox_shader_frag_spv, sizeof(skybox_shader_frag_spv));
 }
 
 void VulkanComplexScene::createFramebuffers() {
@@ -704,7 +717,7 @@ void VulkanComplexScene::createHousePipeline() {
     };
 
     houseCache = std::make_unique<vpr::PipelineCache>(vprObjects.device->vkHandle(), vprObjects.physicalDevice->vkHandle(), typeid(VulkanComplexScene).hash_code() + std::hash<std::string>()("HouseCache"));
-    housePipeline = CreateBasicPipeline(vprObjects.device, 2, shader_stages, &vertex_info, pipelineLayout->vkHandle(), renderPass, VK_COMPARE_OP_LESS, houseCache->vkHandle());
+    housePipeline = CreateBasicPipeline(vprObjects.device, 2, shader_stages, &vertex_info, pipelineLayout->vkHandle(), renderPass, VK_COMPARE_OP_LESS, houseCache->vkHandle(), VK_NULL_HANDLE, VK_CULL_MODE_BACK_BIT);
 
 }
 

@@ -23,6 +23,10 @@ void VulkanScene::Render(void* user_data) {
     endFrame();
 }
 
+size_t VulkanScene::CurrentFrameIdx() const {
+    return static_cast<size_t>(currentBuffer);
+}
+
 void VulkanScene::createSemaphores() {
     imageAcquireSemaphore = std::make_unique<vpr::Semaphore>(vprObjects.device->vkHandle());
     renderCompleteSemaphore = std::make_unique<vpr::Semaphore>(vprObjects.device->vkHandle());

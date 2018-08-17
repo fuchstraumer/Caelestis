@@ -147,14 +147,14 @@ VkRenderPass CreateBasicRenderpass(const vpr::Device* device, const vpr::Swapcha
 }
 
 VkPipeline CreateBasicPipeline(const vpr::Device * device, uint32_t num_stages, const VkPipelineShaderStageCreateInfo * pStages, const VkPipelineVertexInputStateCreateInfo * vertex_state, VkPipelineLayout pipeline_layout,
-    VkRenderPass renderpass, VkCompareOp depth_op, VkPipelineCache cache, VkPipeline derived_pipeline) {
+    VkRenderPass renderpass, VkCompareOp depth_op, VkPipelineCache cache, VkPipeline derived_pipeline, VkCullModeFlags cull_mode, VkPrimitiveTopology topology) {
     VkPipeline pipeline = VK_NULL_HANDLE;
 
-    constexpr static VkPipelineInputAssemblyStateCreateInfo assembly_info{
+    const VkPipelineInputAssemblyStateCreateInfo assembly_info{
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         nullptr,
         0,
-        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        topology,
         VK_FALSE
     };
 
@@ -168,15 +168,15 @@ VkPipeline CreateBasicPipeline(const vpr::Device * device, uint32_t num_stages, 
         nullptr
     };
 
-    constexpr static VkPipelineRasterizationStateCreateInfo rasterization_info{
+    const VkPipelineRasterizationStateCreateInfo rasterization_info{
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         nullptr,
         0,
         VK_FALSE,
         VK_FALSE,
         VK_POLYGON_MODE_FILL,
-        VK_CULL_MODE_NONE,
-        VK_FRONT_FACE_CLOCKWISE,
+        cull_mode,
+        VK_FRONT_FACE_COUNTER_CLOCKWISE,
         VK_FALSE,
         0.0f,
         0.0f,
@@ -273,4 +273,27 @@ VkPipeline CreateBasicPipeline(const vpr::Device * device, uint32_t num_stages, 
     VkAssert(result);
 
     return pipeline;
+}
+
+DepthStencil::DepthStencil(const vpr::Device * device, const vpr::PhysicalDevice * p_device, const vpr::Swapchain * swap) : Parent(device->vkHandle()) {
+    *this = CreateDepthStencil(device, p_device, swap);
+    Parent = device->vkHandle();
+}
+
+DepthStencil::~DepthStencil() {
+    if (Parent == VK_NULL_HANDLE) {
+        return;
+    }
+
+    if (Memory != VK_NULL_HANDLE) {
+        vkFreeMemory(Parent, Memory, nullptr);
+    }
+
+    if (View != VK_NULL_HANDLE) {
+        vkDestroyImageView(Parent, View, nullptr);
+    }
+
+    if (Image != VK_NULL_HANDLE) {
+        vkDestroyImage(Parent, Image, nullptr);
+    }
 }

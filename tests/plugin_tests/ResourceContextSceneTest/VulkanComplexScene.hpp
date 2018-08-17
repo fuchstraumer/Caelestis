@@ -28,17 +28,18 @@ public:
     void Construct(RequiredVprObjects objects, void* user_data) final;
     void Destroy() final;
 
-    static void* LoadObjFile(const char* fname);
+    static void* LoadObjFile(const char* fname, void* user_data = nullptr);
     static void DestroyObjFileData(void* obj_file);
-    static void* LoadJpegImage(const char* fname);
+    static void* LoadJpegImage(const char* fname, void* user_data = nullptr);
     static void DestroyJpegFileData(void* jpeg_file);
-    static void* LoadCompressedTexture(const char* fname);
+    static void* LoadCompressedTexture(const char* fname, void* user_data = nullptr);
     static void DestroyCompressedTextureData(void* compressed_texture);
 
     void CreateHouseMesh(void* obj_data);
     void CreateHouseTexture(void* texture_data);
     void CreateSkyboxTexture(void* texture_data);
 
+    bool AllAssetsLoaded();
     void WaitForAllLoaded();
 
     struct ubo_data_t {
