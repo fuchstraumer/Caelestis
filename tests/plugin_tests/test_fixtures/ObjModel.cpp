@@ -3,12 +3,11 @@
 #include "glm/vec2.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#define NOMINMAX
 #define TINYOBJ_LOADER_OPT_IMPLEMENTATION 
-#pragma warning(push, 0)
-#include <algorithm>
 #include <tinyobjloader/experimental/tinyobj_loader_opt.h>
-#pragma warning(pop)
 #include <fstream>
+#include <unordered_map>
 
 struct vertex_hash {
     size_t operator()(const LoadedObjModel::vertex_t& v) const noexcept {
@@ -36,6 +35,10 @@ LoadedObjModel::LoadedObjModel(const char * fname) {
     }
 
     std::unordered_map<vertex_t, uint32_t, vertex_hash> unique_vertices{};
+
+    indices.reserve(attrib.indices.size());
+    vertices.reserve(attrib.vertices.size());
+
     for (const auto& index : attrib.indices) {
         glm::vec3 pos {
             attrib.vertices[3 * index.vertex_index + 0],

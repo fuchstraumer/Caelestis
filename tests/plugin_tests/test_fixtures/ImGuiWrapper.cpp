@@ -15,9 +15,7 @@
 #include "resource_context/include/ResourceContextAPI.hpp"
 #include "resource_context/include/ResourceTypes.hpp"
 #include <vector>
-#include "TetherSimScene.hpp"
 #include "GLFW/glfw3.h"
-#include "Arcball.hpp"
 #include <ratio>
 
 static std::array<bool, 5> mouse_pressed{ false, false, false, false, false };
@@ -116,26 +114,6 @@ void MouseButtonCallback(int button, int action, int mods) {
         }
         else if (action == GLFW_RELEASE) {
             mouse_pressed[button] = false;
-        }
-    }
-
-    auto& cam = ArcballCamera::GetCamera();
-
-    if (button == 1) {
-        if (action == GLFW_PRESS) {
-            cam.RightClick = true;
-        }
-        else if (action == GLFW_RELEASE) {
-            cam.RightClick = false;
-        }
-    }
-
-    if (button == 2) {
-        if (action == GLFW_PRESS) {
-            cam.MiddleClick = true;
-        }
-        else if (action == GLFW_RELEASE) {
-            cam.MiddleClick = false;
         }
     }
 }
@@ -244,8 +222,12 @@ void ImGuiWrapper::Destroy() {
     layout.reset();
     descriptorPool.reset();
     for (auto& frame : frameData) {
-        resourceContext->DestroyResource(frame.vbo);
-        resourceContext->DestroyResource(frame.ebo);
+        if (frame.vbo != nullptr) {
+            resourceContext->DestroyResource(frame.vbo);
+        }
+        if (frame.ebo != nullptr) {
+            resourceContext->DestroyResource(frame.ebo);
+        }
     }
     frameData.clear();
     frameData.shrink_to_fit();
@@ -266,24 +248,23 @@ void ImGuiWrapper::EndImGuiFrame() {
 void ImGuiWrapper::newFrame() {
 
     auto& io = ImGui::GetIO();
-    auto& camera = ArcballCamera::GetCamera();
 
     timePointA = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> work_time = timePointA - timePointB;
     double work_time_seconds = static_cast<double>(work_time.count());
     io.DeltaTime = static_cast<float>(work_time_seconds);
-    camera.Deltatime = io.DeltaTime;
     vpr::Swapchain* swapchain = rendererContext->GetContext()->Swapchain;
     io.DisplaySize = ImVec2(static_cast<float>(swapchain->Extent().width), static_cast<float>(swapchain->Extent().height));
-    camera.ScreenDims.x = io.DisplaySize.x;
-    camera.ScreenDims.y = io.DisplaySize.y;
 
     for (size_t i = 0; i < mouse_pressed.size(); ++i) {
         io.MouseDown[i] = mouse_pressed[i] || rendererContext->GetMouseButton(int(i)) != 0;
     }
     mouse_pressed.fill(false);
-
+#ifdef _MSC_VER
     memcpy_s(io.KeysDown, sizeof(bool) * 512, keys.data(), sizeof(bool) * 512);
+#else
+    memcpy(io.KeysDown, keys.data(), sizeof(bool) * keys.size());
+#endif
     io.KeyCtrl = keys[GLFW_KEY_LEFT_CONTROL] || keys[GLFW_KEY_RIGHT_CONTROL];
     io.KeyShift = keys[GLFW_KEY_LEFT_SHIFT] || keys[GLFW_KEY_RIGHT_SHIFT];
     io.KeyAlt = keys[GLFW_KEY_LEFT_ALT] || keys[GLFW_KEY_RIGHT_ALT];
@@ -298,8 +279,6 @@ void ImGuiWrapper::newFrame() {
             double mouse_x, mouse_y;
             rendererContext->GetCursorPosition(mouse_x, mouse_y);
             io.MousePos = ImVec2(static_cast<float>(mouse_x), static_cast<float>(mouse_y));
-            camera.LastMousePos = camera.CurrMousePos;
-            camera.CurrMousePos = glm::vec2(io.MousePos.x, io.MousePos.y);
         }
     }
     else {
@@ -503,7 +482,11 @@ void ImGuiWrapper::createGraphicsPipeline(const VkRenderPass renderpass) {
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
     };
 
-    pipelineStateInfo.MultisampleInfo.rasterizationSamples = TetherSimScene::SAMPLE_COUNT;
+    if (device->HasExtension(VK_NV_FILL_RECTANGLE_EXTENSION_NAME)) {
+        pipelineStateInfo.RasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL_RECTANGLE_NV;
+    }
+
+    pipelineStateInfo.MultisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
     pipelineStateInfo.MultisampleInfo.sampleShadingEnable = VK_TRUE;
     pipelineStateInfo.ColorBlendInfo.attachmentCount = 1;
     pipelineStateInfo.ColorBlendInfo.pAttachments = &color_blend;
@@ -574,7 +557,7 @@ void ImGuiWrapper::updateBuffers(ImGuiFrameData* data) {
             nullptr
         };
 
-        data->vbo = resourceContext->CreateBuffer(&buffer_info, nullptr, copies.size(), copies.data(), uint32_t(memory_type::HOST_VISIBLE), nullptr);
+        data->vbo = resourceContext->CreateBuffer(&buffer_info, nullptr, copies.size(), copies.data(), uint32_t(memory_type::HOST_VISIBLE_AND_COHERENT), nullptr);
 
     }
     else {
@@ -616,7 +599,7 @@ void ImGuiWrapper::updateBuffers(ImGuiFrameData* data) {
             nullptr
         };
 
-        data->ebo = resourceContext->CreateBuffer(&buffer_info, nullptr, copies.size(), copies.data(), uint32_t(memory_type::HOST_VISIBLE), nullptr);
+        data->ebo = resourceContext->CreateBuffer(&buffer_info, nullptr, copies.size(), copies.data(), uint32_t(memory_type::HOST_VISIBLE_AND_COHERENT), nullptr);
 
     }
     else {
