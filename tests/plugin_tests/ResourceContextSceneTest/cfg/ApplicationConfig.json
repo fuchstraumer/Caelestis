@@ -3,6 +3,6 @@
         "RendererContext"
     ],
     "ModuleConfigs" : {
-        "RendererContext" : "RendererContextCfgTriangleTest.json"
+        "RendererContext" : "RendererContextCfg.json"
     }
 }
