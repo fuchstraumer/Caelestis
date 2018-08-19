@@ -6,10 +6,7 @@ void MeshData::DestroyMeshData(MeshData * mesh) {
     delete[] mesh->Parts;
 
     for (uint32_t i = 0; i < mesh->Header.NumMaterials; ++i) {
-        for (uint32_t j = 0; j < mesh->Materials[i].NumTextures; ++j) {
-            delete[] mesh->Materials[i].Textures[j].Name;
-        }
-        delete[] mesh->Materials[i].Textures;
+        delete[] mesh->Materials[i].Name;       
     }
 
     delete[] mesh->Materials;
