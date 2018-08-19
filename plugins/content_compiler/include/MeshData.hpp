@@ -2,7 +2,12 @@
 #ifndef ASSET_PIPELINE_MESH_DATA_HPP
 #define ASSET_PIPELINE_MESH_DATA_HPP
 #include <cstdint>
-#include "MaterialParameters.hpp"
+
+struct MeshProcessingOptions {
+    bool Interleaved;
+    bool Use_fp16;
+    bool AllowInt16_Indices;
+};
 
 struct MeshDataHeader {
     char Magic[12]{ "Hephaestus0" };
@@ -18,9 +23,6 @@ struct MeshDataHeader {
     uint32_t TangentAttrOffset{ 0xffffffff };
     uint32_t TangentAttrStride{ 0xffffffff };
     uint32_t TangentAttrFormat{ 0xffffffff };
-    uint32_t ColorAttrOffset{ 0xffffffff };
-    uint32_t ColorAttrStride{ 0xffffffff };
-    uint32_t ColorAttrFormat{ 0xffffffff };
     uint32_t UV0_Offset{ 0xffffffff };
     uint32_t UV0_Stride{ 0xffffffff };
     uint32_t UV0_Format{ 0xffffffff };
@@ -35,7 +37,6 @@ struct MeshDataHeader {
 };
 
 struct fvec2 {
-
     constexpr fvec2() noexcept : data{ 0.0f } {}
 
     constexpr fvec2(float v0, float v1) noexcept : data{ v0, v1 } {}
@@ -48,11 +49,11 @@ struct fvec2 {
         return data[idx];
     }
 
-    const float& x() const noexcept {
+    constexpr const float& x() const noexcept {
         return data[0];
     }
 
-    const float& y() const noexcept {
+    constexpr const float& y() const noexcept {
         return data[1];
     }
 
@@ -61,38 +62,35 @@ private:
 };
 
 struct fvec4 {
-
-    constexpr fvec4() noexcept : data{0.0f} {}
-
+    constexpr fvec4() noexcept : data{ 0.0f } {}
     constexpr fvec4(float v0, float v1, float v2, float v3) noexcept :
         data{ v0, v1, v2, v3 } {}
 
-    float& operator[](const size_t idx) {
+    constexpr float& operator[](const size_t idx) {
         return data[idx];
     }
 
-    const float& operator[](const size_t idx) const {
+    constexpr const float& operator[](const size_t idx) const {
         return data[idx];
     }
 
-    const float& x() const noexcept {
+    constexpr const float& x() const noexcept {
         return data[0];
     }
 
-    const float& y() const noexcept {
+    constexpr const float& y() const noexcept {
         return data[1];
     }
-
-    const float& z() const noexcept {
+    
+    constexpr const float& z() const noexcept {
         return data[2];
     }
 
-    const float& w() const noexcept {
+    constexpr const float& w() const noexcept {
         return data[3];
     }
 
 private:
-
     float data[4];
 };
 
@@ -101,7 +99,6 @@ struct Vertex {
     // half-precision floats
     fvec4 position;
     int16_t tangents[4];
-    uint8_t color[4];
     fvec2 uv0;
 };
 
@@ -123,15 +120,9 @@ struct PartData {
     float HalfExtent[3]{ 0.0f, 0.0f, 0.0f };
 };
 
-struct TextureInfo {
-    uint32_t NameLength;
-    const char* Name;
-};
-
 struct MaterialInfo {
-    uint32_t NumTextures;
-    TextureInfo* Textures;
-    MaterialParameters Parameters;
+    uint32_t NameLength;
+    char* Name;
 };
 
 struct MeshData {
