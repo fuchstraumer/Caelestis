@@ -1,5 +1,6 @@
-#include "AssetPipelineAPI.hpp"
-#include "MeshFile.hpp"
+#include "ContentCompilerAPI.hpp"
+#include "MeshData.hpp"
+#include "AssimpMeshImporter.hpp"
 #include "CoreAPIs.hpp"
 #include "PluginAPI.hpp"
 #include "resource_context/include/ResourceContextAPI.hpp"
@@ -14,12 +15,12 @@ static ApplicationContext_API* application_api = nullptr;
 static std::vector<std::string> loadedFiles;
 
 static void* LoadMeshData(const char* fname) {
-    return LoadMeshDataFromFile(fname, true);
+    return AssimpLoadMeshData(fname, true);
 }
 
 static void DestroyMeshData_void(void* ptr) {
     MeshData* data = reinterpret_cast<MeshData*>(ptr);
-    DestroyMeshData(data);
+    MeshData::DestroyMeshData(data);
 }
 
 static uint32_t GetID() {
@@ -57,10 +58,10 @@ static void TimeDependentUpdate(double dt) {
 }
 
 MeshData* LoadMeshData(const char* fname, bool interleaved) {
-    return LoadMeshDataFromFile(fname, interleaved);
+    return AssimpLoadMeshData(fname, interleaved);
 }
 
-void LoadMeshDataAsync(const char* fname, bool interleaved, void* requester, AssetPipeline_API::mesh_loaded_signal_t signal) {
+void LoadMeshDataAsync(const char* fname, bool interleaved, void* requester, ContentCompiler_API::mesh_loaded_signal_t signal) {
     loadedFiles.emplace_back(std::string(fname));
     resource_api->LoadFile("ASSET_PIPELINE_MESH", fname, requester, signal);
 }
@@ -76,11 +77,11 @@ static Plugin_API* GetCoreAPI() {
     return &api;
 }
 
-static AssetPipeline_API* GetAssetAPI() {
-    static AssetPipeline_API api{ nullptr };
-    api.LoadMeshFromFile = LoadMeshData;
-    api.AsyncLoadMeshFromFile = LoadMeshDataAsync;
-    api.DestroyMeshData = DestroyMeshData;
+static ContentCompiler_API* GetAssetAPI() {
+    static ContentCompiler_API api{ nullptr };
+    api.LoadMeshFromFileAssimp = LoadMeshData;
+    api.AsyncLoadMeshFromFileAssimp = LoadMeshDataAsync;
+    api.DestroyMeshData = MeshData::DestroyMeshData;
     return &api;
 }
 
