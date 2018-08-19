@@ -22,7 +22,7 @@
         deleters[file_type] = del_fn;
     }
 
-    void ResourceLoader::Load(const char* file_type, const char* file_path, void* _requester, SignalFunctor signal) {
+    void ResourceLoader::Load(const char* file_type, const char* file_path, void* _requester, SignalFunctor signal, void* user_data) {
 #ifndef __APPLE_CC__
         namespace fs = std::experimental::filesystem;
 #else
@@ -62,6 +62,7 @@
         loadRequest req(data);
         req.requester = _requester;
         req.signal = signal;
+        req.userData = user_data;
         {
             std::unique_lock<std::recursive_mutex> guard(queueMutex);
             requests.push_back(req);
@@ -142,7 +143,7 @@ void ResourceLoader::workerFunction() {
         lock.unlock(); 
 
         {
-            request.destinationData.Data = factory_fn(request.destinationData.AbsoluteFilePath.c_str());
+            request.destinationData.Data = factory_fn(request.destinationData.AbsoluteFilePath.c_str(), request.userData);
             std::unique_lock<std::recursive_mutex> pendingDataLock(pendingDataMutex);
             // how to handle failure to emplace? what could it mean?
             auto iter = resources.emplace(request.destinationData.AbsoluteFilePath, std::move(request.destinationData));

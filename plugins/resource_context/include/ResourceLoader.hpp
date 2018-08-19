@@ -13,7 +13,7 @@
 #include <unordered_set>
 #include <functional>
 
-    using FactoryFunctor = void*(*)(const char* fname);
+    using FactoryFunctor = void*(*)(const char* fname, void* user_data);
     using DeleteFunctor = void(*)(void* obj_instance);
     using SignalFunctor = void(*)(void* state, void* data);
 
@@ -25,7 +25,7 @@
     public:
 
         void Subscribe(const char* file_type, FactoryFunctor func, DeleteFunctor del_fn);
-        void Load(const char* file_type, const char* file_path, void* requester, SignalFunctor signal);
+        void Load(const char* file_type, const char* file_path, void* requester, SignalFunctor signal, void* user_data = nullptr);
         void Unload(const char* file_type, const char* path);
 
         void Start();
@@ -46,6 +46,7 @@
             loadRequest(ResourceData dest) : destinationData(dest), requester(nullptr) {}
             ResourceData destinationData;
             void* requester; // state pointer of requesting object, if given
+            void* userData; // may contain additional parameters passed to factory function
             SignalFunctor signal;
         };
 

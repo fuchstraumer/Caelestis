@@ -26,9 +26,4 @@ I'll hopefully eventually get around to documenting all of these more, but this 
 
 For now, you can attempt to download and build + run the examples as you see fit. It should work natively - though the rather large quantity of submodules in `third_party` is a hard requirement - so a git-clone works better than just downloading the `.zip`.
 
-The only further steps will be copying two things into the binary directory of the test executables:
-- The DLLs of the compiled plugins and dependencies: these will be installed to `${CMAKE_INSTALL_PREFIX}/bin`. I personally use a folder called `ext` in the root directory of this project for my CMake install directory
-- Compiled shader code from the plugin test directories should be installed, as well.
-- Take the `.json` configuration files from each plugin test directory, and install them to the corresponding directory they are built in as well.
-
-I'd like to automate this step but I'm a bit stuck as to how: CMake doesn't seem to have any easy way to do it that doesn't get messy and gross fast.
+As of recently, I've added CMake commands that should remove the requirement to copy things between folders after building. All DLLs are copied from the install folder into the current executable working directory for the tests, along with the files in `cfg`. Shaders have been compiled into hexadecimal versions of the SPIR-V bytecode, and then baked into the executable. So shouldn't need to copy those around either!

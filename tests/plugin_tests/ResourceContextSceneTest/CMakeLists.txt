@@ -9,10 +9,6 @@ ADD_PLUGIN_TEST(ResourceContextSceneTest
     "../test_fixtures/CommonCreationFunctions.cpp"
     "../test_fixtures/ObjModel.hpp"
     "../test_fixtures/ObjModel.cpp"
-    "../test_fixtures/House.vert"
-    "../test_fixtures/House.frag"
-    "Skybox.vert"
-    "Skybox.frag"
 )
 
 ADD_SUBDIRECTORY("../../../third_party/tinyobjloader" "${CMAKE_CURRENT_BINARY_DIR}/tinyobjloader")
@@ -40,3 +36,10 @@ ENDIF()
 TARGET_LINK_LIBRARIES(ResourceContextSceneTest PRIVATE ${Boost_LIBRARIES})
 TARGET_INCLUDE_DIRECTORIES(ResourceContextSceneTest PRIVATE ${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 ENDIF()
+
+ADD_CUSTOM_COMMAND(TARGET ResourceContextSceneTest POST_BUILD COMMAND ${CMAKE_COMMAND}
+    -E copy_file "../../../assets/textures/Starbox.dds" "${CMAKE_CURRENT_BINARY_DIR}/")
+ADD_CUSTOM_COMMAND(TARGET ResourceContextSceneTest POST_BUILD COMMAND ${CMAKE_COMMAND}
+    -E copy_file "../../../assets/textures/House.png" "${CMAKE_CURRENT_BINARY_DIR}/")
+ADD_CUSTOM_COMMAND(TARGET ResourceContextSceneTest POST_BUILD COMMAND ${CMAKE_COMMAND}
+    -E copy_file "../../../assets/models/House.obj"  "${CMAKE_CURRENT_BINARY_DIR}/")    

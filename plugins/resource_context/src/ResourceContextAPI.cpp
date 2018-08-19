@@ -148,9 +148,9 @@ void RegisterFileTypeFactory(const char* file_type, ResourceContext_API::factory
     loader.Subscribe(file_type, load_fn, del_fn);
 }
 
-void LoadFile(const char* file_type, const char* file_name, void* requester, ResourceContext_API::signal_function_t signal_fn) {
+void LoadFile(const char* file_type, const char* file_name, void* requester, ResourceContext_API::signal_function_t signal_fn, void* user_data) {
     auto& loader = ResourceLoader::GetResourceLoader();
-    loader.Load(file_type, file_name, requester, signal_fn);
+    loader.Load(file_type, file_name, requester, signal_fn, user_data);
 }
 
 void UnloadFile(const char* file_type, const char* fname) {
