@@ -156,6 +156,13 @@ void ResourceContext::SetBufferData(VulkanResource* dest_buffer, const size_t nu
     }
 }
 
+void ResourceContext::FillBuffer(VulkanResource * dest_buffer, const uint32_t value, const size_t offset, const size_t fill_size) {
+    auto& transfer_system = ResourceTransferSystem::GetTransferSystem();
+    auto guard = transfer_system.AcquireSpinLock();
+    auto cmd = transfer_system.TransferCmdBuffer();
+    vkCmdFillBuffer(cmd, (VkBuffer)dest_buffer->Handle, offset, fill_size, value);
+}
+
 VulkanResource* ResourceContext::CreateImage(const VkImageCreateInfo* info, const VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const memory_type _memory_type, void* user_data) {
     VulkanResource* resource = nullptr;
 

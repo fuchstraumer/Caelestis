@@ -107,6 +107,10 @@ void SetBufferData(VulkanResource* dest_buffer, const size_t num_data, const gpu
     resourceContext->SetBufferData(dest_buffer, num_data, data);
 }
 
+void FillBuffer(VulkanResource* dest, const uint32_t value, const size_t offset, const size_t fill_size) {
+    resourceContext->FillBuffer(dest, value, offset, fill_size);
+}
+
 VulkanResource* CreateImage(const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data) {
     return resourceContext->CreateImage(info, view_info, num_data, initial_data, convertToMemoryType(_memory_type), user_data);
 }
@@ -158,6 +162,10 @@ void UnloadFile(const char* file_type, const char* fname) {
     loader.Unload(file_type, fname);
 }
 
+uint64_t GetVkDevice() {
+    return (uint64_t)rendererContext->LogicalDevice;
+}
+
 static Plugin_API* GetCoreAPI() {
     static Plugin_API api{ nullptr };
     api.PluginID = GetID;
@@ -185,6 +193,7 @@ static ResourceContext_API* GetResourceAPI() {
     api.RegisterFileTypeFactory = RegisterFileTypeFactory;
     api.LoadFile = LoadFile;
     api.UnloadFile = UnloadFile;
+    api.GetVkDevice = GetVkDevice;
     return &api;
 }
 

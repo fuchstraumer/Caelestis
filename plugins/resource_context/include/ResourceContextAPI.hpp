@@ -14,6 +14,7 @@ struct ResourceContext_API {
     VulkanResource* (*CreateBuffer)(const struct VkBufferCreateInfo* info, const struct VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data);
     VulkanResource* (*CreateNamedBuffer)(const char* name, const struct VkBufferCreateInfo* info, const struct VkBufferViewCreateInfo* view_info, const size_t num_data, const gpu_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data);
     void (*SetBufferData)(VulkanResource* dest_buffer, const size_t num_data, const gpu_resource_data_t* data);
+    void (*FillBuffer)(VulkanResource* dest_buffer, const uint32_t value, const uint32_t offset, const uint32_t fill_size);
     VulkanResource* (*CreateImage)(const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data);
     VulkanResource* (*CreateNamedImage)(const char* name, const struct VkImageCreateInfo* info, const struct VkImageViewCreateInfo* view_info, const size_t num_data, const gpu_image_resource_data_t* initial_data, const uint32_t _memory_type, void* user_data);
     void (*SetImageData)(VulkanResource* image, const size_t num_data, const gpu_image_resource_data_t* data);
@@ -34,6 +35,7 @@ struct ResourceContext_API {
     // requesting_object_ptr is a potential state/class pointer that can be used by signal_fn, to allow for calling class/struct member functions on signal receipt.
     void (*LoadFile)(const char* file_type, const char* file_name, void* requesting_object_ptr, signal_function_t signal_fn, void* user_data);
     void (*UnloadFile)(const char* file_type, const char* fname);
+    uint64_t (*GetVkDevice)();
 };
 
 #endif //!RESOURCE_CONTEXT_PLUGIN_API_HPP
