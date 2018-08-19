@@ -11,6 +11,7 @@ SOURCE_GROUP("shaders/modifiers" FILES ${NOISE_MODIFIER_SHADERS})
 SOURCE_GROUP("shaders/generators" FILES ${NOISE_GENERATOR_SHADERS})
 
 ADD_PLUGIN(noise_plugin
+    "include/ModuleTypes.hpp"
     "include/NoiseModule.hpp"
     "include/ComputeDispatcher.hpp"
     "include/NoisePluginAPI.hpp"
