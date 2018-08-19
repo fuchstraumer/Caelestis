@@ -3,8 +3,6 @@ ADD_PLUGIN_TEST(RendererContextTriangleTest
     "${CMAKE_CURRENT_SOURCE_DIR}/VulkanTriangle.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/VulkanTriangle.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Triangle.vert"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Triangle.frag"
     "../test_fixtures/VulkanScene.hpp"
     "../test_fixtures/VulkanScene.cpp"
     "../test_fixtures/CommonCreationFunctions.hpp"
