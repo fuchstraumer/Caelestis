@@ -94,18 +94,16 @@ VulkanComplexScene& VulkanComplexScene::GetScene() {
     return scene;
 }    
 
-glm::vec3 scale(0.2f, 0.2f, 0.2f);
 
 void VulkanComplexScene::Construct(RequiredVprObjects objects, void * user_data) {
     vprObjects = objects;
     resourceContext = reinterpret_cast<const ResourceContext_API*>(user_data);
-    houseUboData.view = glm::lookAt(glm::vec3(-2.0f, -2.0f, 1.0f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    houseUboData.view = glm::lookAt(glm::vec3(-1.0f, -2.0f, 1.0f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     skyboxUboData.view = glm::mat3(houseUboData.view);
     houseUboData.projection = glm::perspectiveFov(glm::radians(70.0f), static_cast<float>(objects.swapchain->Extent().width), static_cast<float>(objects.swapchain->Extent().height), 0.1f, 1000.0f);
     houseUboData.projection[1][1] *= -1.0f;
     skyboxUboData.projection = houseUboData.projection;
     houseUboData.model = glm::mat4(1.0f);
-    houseUboData.model = glm::scale(houseUboData.model, scale);
     skyboxUboData.model = glm::mat4(1.0f);
     createSemaphores();
     createSampler();
