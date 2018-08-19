@@ -38,8 +38,4 @@ TARGET_INCLUDE_DIRECTORIES(ResourceContextSceneTest PRIVATE ${Boost_INCLUDE_DIRS
 ENDIF()
 
 ADD_CUSTOM_COMMAND(TARGET ResourceContextSceneTest POST_BUILD COMMAND ${CMAKE_COMMAND}
-    -E copy_file "../../../assets/textures/Starbox.dds" "${CMAKE_CURRENT_BINARY_DIR}/")
-ADD_CUSTOM_COMMAND(TARGET ResourceContextSceneTest POST_BUILD COMMAND ${CMAKE_COMMAND}
-    -E copy_file "../../../assets/textures/House.png" "${CMAKE_CURRENT_BINARY_DIR}/")
-ADD_CUSTOM_COMMAND(TARGET ResourceContextSceneTest POST_BUILD COMMAND ${CMAKE_COMMAND}
-    -E copy_file "../../../assets/models/House.obj"  "${CMAKE_CURRENT_BINARY_DIR}/")    
+    -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../../../assets/ResourceContextTestAssets/" "${CMAKE_CURRENT_BINARY_DIR}/")
