@@ -112,6 +112,11 @@ SOURCE_GROUP("shaders/modifiers" FILES ${NOISE_MODIFIER_SHADERS})
 SOURCE_GROUP("shaders/generators" FILES ${NOISE_GENERATOR_SHADERS})
 
 ADD_PLUGIN(noise_plugin
+    "include/NoiseModule.hpp"
+    "include/ComputeDispatcher.hpp"
+    "include/NoisePluginAPI.hpp"
+    "src/ComputeDispatcher.cpp"
+    "src/NoisePluginAPI.cpp"
     ${NOISE_BASE}
     ${NOISE_COMBINERS}
     ${NOISE_GENERATORS}
@@ -125,6 +130,6 @@ ADD_PLUGIN(noise_plugin
 )
 
 TARGET_INCLUDE_DIRECTORIES(noise_plugin PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include/modules"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/models")
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/models" ${VPR_INCLUDE_DIRS_PLUGIN_RELATIVE} "../../plugins")
 TARGET_INCLUDE_DIRECTORIES(noise_plugin PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/common" "${CMAKE_CURRENT_SOURCE_DIR}/frontend/modules")
 TARGET_INCLUDE_DIRECTORIES(noise_plugin PRIVATE "../resource_context/include" "../renderer_context/include" "${Vulkan_INCLUDE_DIR}")
