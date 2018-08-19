@@ -1,4 +1,4 @@
-#include "MeshFile.hpp"
+#include "MeshData.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 #include "glm/gtc/quaternion.hpp"
@@ -12,8 +12,9 @@
 #include <stdexcept>
 #include <memory>
 #include <vulkan/vulkan.h>
+#include <string>
 
-constexpr static const uint32_t LOADER_VERSION = 0x00000001;
+constexpr static const uint32_t LOADER_VERSION = 0x00000002;
 
 glm::i16vec4 packSnorm16(glm::vec4 v) noexcept {
     auto packSnorm16_single = [](float v)->int16_t {
@@ -50,21 +51,18 @@ static glm::quat pack_tangent_frame(const glm::mat3& m, size_t storage_size = si
 }
 
 struct vertex_t {
-    vertex_t(const glm::vec3& p, const glm::quat& _tangents, const glm::vec4& _color, const glm::vec3& _uv0) : tangents(packSnorm16(glm::vec4(_tangents.x, _tangents.y, _tangents.z, _tangents.w))),
-        color(glm::u8vec4(glm::clamp(_color, glm::vec4(0.0f), glm::vec4(1.0f)) * 255.0f)) {
+    vertex_t(const glm::vec3& p, const glm::quat& _tangents, const glm::vec3& _uv0) : tangents(packSnorm16(glm::vec4(_tangents.x, _tangents.y, _tangents.z, _tangents.w))) {
         position = fvec4(p.x, p.y, p.z, 1.0f);
         uv0 = fvec2(_uv0.x, _uv0.y);
     }
     fvec4 position;
     glm::i16vec4 tangents;
-    glm::u8vec4 color;
     fvec2 uv0;
 };
 
 struct uninterleaved_data_t {
     std::vector<decltype(vertex_t::position)> positions;
     std::vector<decltype(vertex_t::tangents)> tangents;
-    std::vector<decltype(vertex_t::color)> colors;
     std::vector<decltype(vertex_t::uv0)> uv0s;
     std::vector<decltype(vertex_t::uv0)> uv1s;
 };
@@ -146,17 +144,15 @@ void process_ainode(const aiScene* scene, const aiNode* node, mesh_conversion_jo
         const glm::vec3* normals = reinterpret_cast<const glm::vec3*>(mesh->mNormals);
         const glm::vec3* uv0 = reinterpret_cast<const glm::vec3*>(mesh->mTextureCoords[0]);
         const glm::vec3* uv1 = reinterpret_cast<const glm::vec3*>(mesh->mTextureCoords[1]);
-        const glm::vec4* colors = reinterpret_cast<const glm::vec4*>(mesh->mColors[0]);
 
-        if (!mesh->HasVertexColors(0)) {
-            colors = nullptr;
+        if (mesh->HasVertexColors(0)) {
+            LOG(WARNING) << "Mesh uses per-vertex colors, which are unsupported!";
         }
 
         if (!mesh->HasTextureCoords(1)) {
             uv1 = nullptr;
         }
 
-        glm::vec4 color{ 0.0f, 0.0f, 0.0f, 0.0f };
         const size_t num_vertices = mesh->mNumVertices;
         if (num_vertices > 0) {
 
@@ -179,15 +175,13 @@ void process_ainode(const aiScene* scene, const aiNode* node, mesh_conversion_jo
 
                 for (size_t j = 0; j < num_vertices; ++j) {
                     glm::quat q = pack_tangent_frame(glm::mat3(tangents[j], bitangents[j], normals[j]));
-                    color = colors ? colors[j] : glm::vec4(1.0f);
                     if (INTERLEAVED) {
-                        job_data->g_vertices.emplace_back(vertices[j], q, color, uv0[j]);
+                        job_data->g_vertices.emplace_back(vertices[j], q, uv0[j]);
                     }
                     else {
-                        vertex_t v(vertices[j], q, color, uv0[j]);
+                        vertex_t v(vertices[j], q, uv0[j]);
                         job_data->g_data.positions.emplace_back(v.position);
                         job_data->g_data.tangents.emplace_back(v.tangents);
-                        job_data->g_data.colors.emplace_back(v.color);
                         job_data->g_data.uv0s.emplace_back(v.uv0);
                         if (uv1 != nullptr) {
                             job_data->g_data.uv1s.emplace_back(uv1[j].x, uv1[j].y);
@@ -224,7 +218,6 @@ void process_ainode(const aiScene* scene, const aiNode* node, mesh_conversion_jo
     job_data->g_indices.shrink_to_fit();
     job_data->g_data.positions.shrink_to_fit();
     job_data->g_data.tangents.shrink_to_fit();
-    job_data->g_data.colors.shrink_to_fit();
     job_data->g_data.uv0s.shrink_to_fit();
     job_data->g_data.uv1s.shrink_to_fit();
     job_data->meshes.shrink_to_fit();
@@ -243,7 +236,12 @@ std::unique_ptr<mesh_conversion_job_data_t> loadUninterleaved(const aiScene* sce
     return job_data;
 }
 
-MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning( disable : 4996 )
+#endif
+
+MeshData* AssimpLoadMeshData(const char * fname, MeshProcessingOptions* opts) {
     using namespace Assimp;
     Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
@@ -257,9 +255,14 @@ MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
         aiProcess_PreTransformVertices | aiProcess_SortByPType | aiProcess_Triangulate
     );
 
+    if (!scene) {
+        LOG(ERROR) << "Failed to load scene from file " << fname << "! File either doesn't exist or loading failed in-progress";
+        return nullptr;
+    }
+
     std::unique_ptr<mesh_conversion_job_data_t> data = nullptr;
 
-    if (interleaved) {
+    if (opts->Interleaved) {
         data = loadInterleaved(scene, scene->mRootNode);
     }
     else {
@@ -267,7 +270,7 @@ MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
     }
 
     const bool has_uv1 = data->g_data.uv1s.size() > 0;
-    const bool has_index_16 = data->numVertices < std::numeric_limits<uint16_t>::max();
+    const bool has_index_16 = (data->numVertices < std::numeric_limits<uint16_t>::max()) && (opts->AllowInt16_Indices);
 
     auto union_aabb = [](imported_aabb& dest, const imported_aabb& other) {
         dest.set(glm::min(dest.min(), other.min()), glm::max(dest.max(), other.max()));
@@ -291,30 +294,25 @@ MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
     header.HalfExtent[1] = total_aabb.half_extent.y;
     header.HalfExtent[2] = total_aabb.half_extent.z;
     header.NumParts = static_cast<uint32_t>(data->meshes.size());
-    header.Interleaved = uint32_t(interleaved);
+    header.Interleaved = uint32_t(opts->Interleaved);
     header.PositionAttrFormat = uint32_t(VK_FORMAT_R32G32B32A32_SFLOAT);
-    header.TangentAttrFormat = uint32_t(VK_FORMAT_R16G16B16A16_SINT);
-    header.ColorAttrFormat = uint32_t(VK_FORMAT_R8G8B8_UNORM);
+    header.TangentAttrFormat = uint32_t(VK_FORMAT_R16G16B16A16_SNORM);
     header.UV0_Format = uint32_t(VK_FORMAT_R32G32_SFLOAT);
 
-    if (interleaved) {
+    if (opts->Interleaved) {
         header.PositionAttrOffset = offsetof(vertex_t, position);
         header.TangentAttrOffset = offsetof(vertex_t, tangents);
-        header.ColorAttrOffset = offsetof(vertex_t, color);
         header.UV0_Offset = offsetof(vertex_t, uv0);
         header.PositionAttrStride = sizeof(vertex_t);
         header.TangentAttrStride = sizeof(vertex_t);
-        header.ColorAttrStride = sizeof(vertex_t);
         header.UV0_Stride = sizeof(vertex_t);
     }
     else {
         header.PositionAttrOffset = 0;
         header.TangentAttrOffset = static_cast<uint32_t>(data->numVertices * sizeof(vertex_t::position));
-        header.ColorAttrOffset = static_cast<uint32_t>(header.TangentAttrOffset + data->numVertices * sizeof(vertex_t::tangents));
-        header.UV0_Offset = static_cast<uint32_t>(header.ColorAttrOffset + data->numVertices * sizeof(vertex_t::color));
+        header.UV0_Offset = static_cast<uint32_t>(header.TangentAttrOffset + data->numVertices * sizeof(vertex_t::tangents));
         header.PositionAttrStride = sizeof(vertex_t::position);
         header.TangentAttrStride = sizeof(vertex_t::tangents);
-        header.ColorAttrStride = sizeof(vertex_t::color);
         header.UV0_Stride = sizeof(vertex_t::uv0);
         if (has_uv1) {
             header.UV1_Offset = static_cast<uint32_t>(header.UV0_Offset + data->numVertices * sizeof(vertex_t::uv0));
@@ -344,13 +342,16 @@ MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
         if (mat->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
             LOG(WARNING) << "Unnamed material replaced with default material.";
             result->Materials[i].NameLength = uint32_t(7);
-            result->Materials[i].Name = new char[result->Materials[i].NameLength];
-            result->Materials[i].Name = "default";
+            result->Materials[i].Name = new char[8];
+            constexpr const char* const default_str = "Default\0";
+
+            strncpy(result->Materials[i].Name, default_str, 8);
         }
         else {
             result->Materials[i].NameLength = uint32_t(name.length);
-            result->Materials[i].Name = new char[name.length];
-            result->Materials[i].Name = name.C_Str();
+            result->Materials[i].Name = new char[name.length + 1];
+            strncpy(result->Materials[i].Name, name.C_Str(), name.length);
+            result->Materials[i].Name[name.length] = '\0';
         }
     }
 
@@ -366,7 +367,7 @@ MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
         memcpy(result->Indices, data->g_indices.data(), sizeof(uint32_t) * data->g_indices.size());
     }
 
-    if (interleaved) {
+    if (opts->Interleaved) {
         result->Vertices = new Vertex[data->g_vertices.size()];
         static_assert(sizeof(vertex_t) == sizeof(Vertex), "Size of vertex_t and public-facing Vertex types must be the same!");
         memcpy(result->Vertices, data->g_vertices.data(), data->g_vertices.size() * sizeof(vertex_t));
@@ -378,8 +379,6 @@ MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
         memcpy(vertex_data->Positions, data->g_data.positions.data(), sizeof(fvec4) * data->g_data.positions.size());
         vertex_data->Tangents = new int16_t[data->g_data.tangents.size() * 4];
         memcpy(vertex_data->Tangents, data->g_data.tangents.data(), sizeof(glm::i16vec4) * data->g_data.tangents.size());
-        vertex_data->Colors = new uint8_t[data->g_data.colors.size() * 4];
-        memcpy(vertex_data->Colors, data->g_data.colors.data(), sizeof(glm::u8vec4) * data->g_data.colors.size());
         vertex_data->UV0s = new fvec2[data->g_data.uv0s.size()];
         memcpy(vertex_data->UV0s, data->g_data.uv0s.data(), sizeof(fvec2) * data->g_data.uv0s.size());
         if (has_uv1) {
@@ -390,3 +389,8 @@ MeshData* LoadMeshDataFromFile(const char * fname, bool interleaved) {
 
     return result;
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif //!_MSC_VER 
+
