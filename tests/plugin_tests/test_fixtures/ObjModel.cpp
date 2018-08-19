@@ -5,6 +5,7 @@
 #include <glm/gtx/hash.hpp>
 #define NOMINMAX
 #define TINYOBJ_LOADER_OPT_IMPLEMENTATION 
+#include <algorithm>
 #include <tinyobjloader/experimental/tinyobj_loader_opt.h>
 #include <fstream>
 #include <unordered_map>

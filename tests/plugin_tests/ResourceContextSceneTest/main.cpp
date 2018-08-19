@@ -5,7 +5,7 @@
 #include "../../../plugin_manager/include/PluginManager.hpp"
 #include "../../..//plugin_manager/include/CoreAPIs.hpp"
 #include "../../../plugins/application_context/include/AppContextAPI.hpp"
-#include "vpr/PipelineCache.hpp"
+#include "PipelineCache.hpp"
 #include "easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 
@@ -27,7 +27,7 @@ static void objFileLoadedCallback(void* scene_ptr, void* data_ptr) {
     reinterpret_cast<VulkanComplexScene*>(scene_ptr)->CreateHouseMesh(data_ptr);
 }
 
-static void jpegLoadedCallback(void* scene_ptr, void* data_ptr) {
+static void pngLoadedCallback(void* scene_ptr, void* data_ptr) {
     reinterpret_cast<VulkanComplexScene*>(scene_ptr)->CreateHouseTexture(data_ptr);
 }
 
@@ -44,7 +44,7 @@ static void CompleteResizeCallback(uint64_t handle, uint32_t width, uint32_t hei
     auto& scene = VulkanComplexScene::GetScene();
     scene.Construct(RequiredVprObjects{ context->LogicalDevice, context->PhysicalDevices[0], context->VulkanInstance, context->Swapchain }, resource_api);
     resource_api->LoadFile("OBJ", HouseObjFile.c_str(), &scene, objFileLoadedCallback, nullptr);
-    resource_api->LoadFile("JPEG", HousePngFile.c_str(), &scene, jpegLoadedCallback, nullptr);
+    resource_api->LoadFile("PNG", HousePngFile.c_str(), &scene, pngLoadedCallback, nullptr);
     resource_api->LoadFile("DDS", SkyboxDdsFile.c_str(), &scene, skyboxLoadedCallback, nullptr);
 }
 
@@ -70,13 +70,13 @@ int main(int argc, char* argv[]) {
     context = renderer_api->GetContext();
     resource_api = reinterpret_cast<ResourceContext_API*>(manager.RetrieveAPI(RESOURCE_CONTEXT_API_ID));
     resource_api->RegisterFileTypeFactory("OBJ", &VulkanComplexScene::LoadObjFile, &VulkanComplexScene::DestroyObjFileData);
-    resource_api->RegisterFileTypeFactory("JPEG", &VulkanComplexScene::LoadJpegImage, &VulkanComplexScene::DestroyJpegFileData);
+    resource_api->RegisterFileTypeFactory("PNG", &VulkanComplexScene::LoadPngImage, &VulkanComplexScene::DestroyPngFileData);
     resource_api->RegisterFileTypeFactory("DDS", &VulkanComplexScene::LoadCompressedTexture, &VulkanComplexScene::DestroyCompressedTextureData);
 
     auto& scene = VulkanComplexScene::GetScene();
     scene.Construct(RequiredVprObjects{ context->LogicalDevice, context->PhysicalDevices[0], context->VulkanInstance, context->Swapchain }, resource_api);
     resource_api->LoadFile("OBJ", HouseObjFile.c_str(), &scene, objFileLoadedCallback, nullptr);
-    resource_api->LoadFile("JPEG", HousePngFile.c_str(), &scene, jpegLoadedCallback, nullptr);
+    resource_api->LoadFile("PNG", HousePngFile.c_str(), &scene, pngLoadedCallback, nullptr);
     resource_api->LoadFile("DDS", SkyboxDdsFile.c_str(), &scene, skyboxLoadedCallback, nullptr);
 
     SwapchainCallbacks_API callbacks{ nullptr };
@@ -93,12 +93,12 @@ int main(int argc, char* argv[]) {
         resource_api->CompletePendingTransfers();
         scene.Render(nullptr);
         /*if (scene.AllAssetsLoaded() && !assets_loaded) {
-            resource_api->UnloadFile("OBJ", HouseObjFile.c_str());
-            resource_api->UnloadFile("JPEG", HousePngFile.c_str());
-            resource_api->UnloadFile("DDS", SkyboxDdsFile.c_str());
             assets_loaded = true;
         }*/
     }
 
+    resource_api->UnloadFile("OBJ", HouseObjFile.c_str());
+    resource_api->UnloadFile("PNG", HousePngFile.c_str());
+    resource_api->UnloadFile("DDS", SkyboxDdsFile.c_str());
 
 }
