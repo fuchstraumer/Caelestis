@@ -10,7 +10,7 @@ struct MeshProcessingOptions {
 };
 
 struct MeshDataHeader {
-    char Magic[12]{ "Hephaestus0" };
+    char Magic[12]{ "Hephaestus\0" };
     uint32_t Version{ 0x00000000 };
     float Center[3]{ 0.0f, 0.0f, 0.0f };
     float HalfExtent[3]{ 0.0f, 0.0f, 0.0f };

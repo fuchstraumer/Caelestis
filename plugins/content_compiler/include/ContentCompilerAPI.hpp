@@ -10,14 +10,16 @@
 
 constexpr static unsigned int ASSET_PIPELINE_PLUGIN_API_ID = 0x3e25cf4c;
 
+struct MeshProcessingOptions;
+
 struct ContentCompiler_API {
     // Blocking load
-    struct MeshData* (*LoadMeshFromFileAssimp)(const char* fname, bool interleaved);
+    struct MeshData* (*LoadMeshFromFileAssimp)(const char* fname, MeshProcessingOptions* options);
     // Signal called for async loading. Use instance pointer for a class instance,
     // if the signal function desired is a class member function (no *this with C)
     using mesh_loaded_signal_t = void(*)(void* instance, void* mesh_data);
     // Generated mesh data will use uninterleaved format
-    void (*AsyncLoadMeshFromFileAssimp)(const char* fname, bool interleaved, void* requester, mesh_loaded_signal_t signal);
+    void (*AsyncLoadMeshFromFileAssimp)(const char* fname, bool interleaved, void* requester, mesh_loaded_signal_t signal, MeshProcessingOptions* opts);
     void (*DestroyMeshData)(struct MeshData* data);
 };
 

@@ -393,4 +393,3 @@ MeshData* AssimpLoadMeshData(const char * fname, MeshProcessingOptions* opts) {
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif //!_MSC_VER 
-

@@ -63,7 +63,7 @@ MeshData* LoadMeshData(const char* fname, bool interleaved) {
 
 void LoadMeshDataAsync(const char* fname, bool interleaved, void* requester, ContentCompiler_API::mesh_loaded_signal_t signal) {
     loadedFiles.emplace_back(std::string(fname));
-    resource_api->LoadFile("ASSET_PIPELINE_MESH", fname, requester, signal);
+    resource_api->LoadFile("ASSET_PIPELINE_MESH", fname, requester, signal, nullptr);
 }
 
 static Plugin_API* GetCoreAPI() {
