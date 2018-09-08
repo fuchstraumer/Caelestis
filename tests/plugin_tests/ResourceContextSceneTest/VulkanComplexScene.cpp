@@ -357,7 +357,7 @@ void VulkanComplexScene::update() {
     static auto start_time = std::chrono::high_resolution_clock::now();
     auto curr_time = std::chrono::high_resolution_clock::now();
     float diff = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - start_time).count()) / 10000.0f;
-    houseUboData.model = glm::scale(glm::mat4(1.0f), scale);
+    houseUboData.model = glm::mat4(1.0f);
     houseUboData.model = glm::rotate(houseUboData.model, diff * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // pivot house around center axis based on time.
     houseUboData.model = glm::translate(houseUboData.model, translation);
     const gpu_resource_data_t house_ubo_data{
