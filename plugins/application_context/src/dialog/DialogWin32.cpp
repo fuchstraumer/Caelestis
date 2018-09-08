@@ -52,6 +52,8 @@ uint32_t GetResponse(int response) {
         return selection_type::Retry;
     case IDIGNORE:
         return selection_type::Ignore;
+    default:
+        return selection_type::Ok;
     };
 }
 
