@@ -13,7 +13,7 @@ VkCommandPoolCreateInfo getCreateInfo(const vpr::Device* device) {
         0
     };
     VkCommandPoolCreateInfo result = pool_info;
-    result.queueFamilyIndex = device->QueueFamilyIndices.Transfer;
+    result.queueFamilyIndex = device->QueueFamilyIndices().Transfer;
     return result;
 }
 

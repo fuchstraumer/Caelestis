@@ -4,6 +4,7 @@
 #include "../../../plugins//renderer_context/include/core/RendererContext.hpp"
 #include "../../../plugin_manager/include/PluginManager.hpp"
 #include "../../..//plugin_manager/include/CoreAPIs.hpp"
+#include <experimental/filesystem>
 static RendererContext* context = nullptr;
 
 static void BeginRecreateCallback(uint64_t handle, uint32_t width, uint32_t height) {
@@ -20,13 +21,18 @@ static void CompleteResizeCallback(uint64_t handle, uint32_t width, uint32_t hei
 }
 
 int main(int argc, char* argv[]) {
+    namespace fs = std::experimental::filesystem;
+    const auto cwd = fs::current_path().string();
     PluginManager& manager = PluginManager::GetPluginManager();
-#ifndef __APPLE_CC__
+#ifdef _MSC_VER
     manager.LoadPlugin("application_context.dll");
     manager.LoadPlugin("renderer_context.dll");
-#else
+#elif defined __APPLE_CC__
     manager.LoadPlugin("libapplication_context.dylib");
     manager.LoadPlugin("librenderer_context.dylib");
+#else 
+    manager.LoadPlugin("libapplication_context.so");
+    manager.LoadPlugin("librenderer_context.so");
 #endif
     ApplicationContext_API* appl_api = reinterpret_cast<ApplicationContext_API*>(manager.RetrieveAPI(APPLICATION_CONTEXT_API_ID));
     void* storage_ptr = appl_api->GetLoggingStoragePointer();

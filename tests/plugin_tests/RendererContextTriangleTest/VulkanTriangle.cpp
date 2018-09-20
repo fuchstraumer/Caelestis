@@ -6,6 +6,8 @@
 #include "vkAssert.hpp"
 #include "Semaphore.hpp"
 #include <fstream>
+#include <cstdlib>
+#include <cstring>
 
 constexpr static const uint32_t triangle_vert_shader_spv[349] = {
 	0x07230203,0x00010000,0x00080007,0x0000002c,0x00000000,0x00020011,0x00000001,0x0006000b,
@@ -246,7 +248,7 @@ void VulkanTriangle::setupCommandPool() {
         VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         nullptr,
         VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-        vprObjects.device->QueueFamilyIndices.Graphics
+        vprObjects.device->QueueFamilyIndices().Graphics
     };
 
     VkResult result = vkCreateCommandPool(vprObjects.device->vkHandle(), &pool_info, nullptr, &commandPool);

@@ -432,8 +432,8 @@ void ResourceContext::setImageInitialData(VulkanResource* resource, const size_t
             VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            device->QueueFamilyIndices.Transfer,
-            device->QueueFamilyIndices.Transfer,
+            device->QueueFamilyIndices().Transfer,
+            device->QueueFamilyIndices().Transfer,
             reinterpret_cast<VkImage>(resource->Handle),
             VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers }
         };
@@ -446,8 +446,8 @@ void ResourceContext::setImageInitialData(VulkanResource* resource, const size_t
             accessFlagsFromImageUsage(info->usage),
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             imageLayoutFromUsage(info->usage),
-            device->QueueFamilyIndices.Transfer,
-            device->QueueFamilyIndices.Graphics,
+            device->QueueFamilyIndices().Transfer,
+            device->QueueFamilyIndices().Graphics,
             reinterpret_cast<VkImage>(resource->Handle),
             VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, info->mipLevels, 0, info->arrayLayers }
         };

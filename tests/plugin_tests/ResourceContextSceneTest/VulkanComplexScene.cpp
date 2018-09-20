@@ -602,7 +602,7 @@ void VulkanComplexScene::createCommandPool() {
         VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         nullptr,
         VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-        vprObjects.device->QueueFamilyIndices.Graphics
+        vprObjects.device->QueueFamilyIndices().Graphics
     };
     cmdPool = std::make_unique<vpr::CommandPool>(vprObjects.device->vkHandle(), create_info);
     cmdPool->AllocateCmdBuffers(vprObjects.swapchain->ImageCount(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
