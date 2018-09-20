@@ -10,12 +10,10 @@
 #endif
 
 #if defined(__GNUC__)
-#if defined(__cplusplus)
-#define API_EXPORT extern "C" __attribute__((visibility("default")))
-#else
+#define API_C_EXPORT extern "C" __attribute__((visibility("default")))
 #define API_EXPORT __attribute__((visibility("default")))
-#endif
 #define API_IMPORT 
+#define API_C_IMPORT 
 #endif
 
 #ifdef BUILDING_SHARED_LIBRARY
