@@ -97,10 +97,10 @@ bool FindFile(const char* fname, const char* starting_dir, uint32_t depth_limit,
 
         if (stdfs::exists(file_name_path)) {
             const std::string found_path_str = file_name_path.string();
-#ifndef __APPLE_CC__
-            *found_file = _strdup(found_path_str.c_str());
-#else
+#ifndef _MSC_VER
             *found_file = strdup(found_path_str.c_str());
+#else
+            *found_file = _strdup(found_path_str.c_str());
 #endif
             return true;
         }
@@ -122,10 +122,10 @@ bool FindFile(const char* fname, const char* starting_dir, uint32_t depth_limit,
                 stdfs::path entry_path(dir_entry);
                 if (entry_path.has_filename() && (entry_path.filename() == file_name_path)) {
                     const std::string found_path_str = entry_path.string();
-#ifndef __APPLE_CC__
-                    *found_file = _strdup(found_path_str.c_str());
-#else
+#ifndef _MSC_VER
                     *found_file = strdup(found_path_str.c_str());
+#else
+                    *found_file = _strdup(found_path_str.c_str());
 #endif
                     return true;
                 }
