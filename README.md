@@ -1,6 +1,12 @@
 # Caelestis
 
-Caelestis is my attempt at a Vulkan rendering engine - but using a highly plugin-based architecture. Each individual folder in `plugins` is an almost entirely independent "module" of code. I have attempted to keep these modules clear and apparent in regards to their responsibilities, and will be adding `README`s to them as I get the time. 
+#### Quick Aside
+
+I'm just returning to this project for the first time in a long time! I'll be pulling stuff out of DiamondDogs as I can. Integration tests will be running again, as these are just too good I've learned. More demos as well - I want to get to a state where this project isn't just the heart of my long-term vision: it can be a fun quick way to play with new technologies and concepts I have. 
+
+___
+
+Caelestis is my attempt at a game engine - but using a highly plugin-based architecture. Each individual folder in `plugins` is an almost entirely independent "module" of code. I have attempted to keep these modules clear and apparent in regards to their responsibilities, and will be adding `README`s to them as I get the time. 
 
 So far, it features:
 - a base utility layer of common application building blocks and utility functions
