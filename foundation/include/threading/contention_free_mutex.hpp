@@ -54,28 +54,74 @@ private:
     size_t recursiveExclusiveLockCount{ 0u };
     std::atomic<std::thread::id> ownerThreadId;
 
+    struct auto_unregister
+    {
+        size_t threadIdx{ std::numeric_limits<size_t>::max() };
+        std::shared_ptr<shared_lock_array> sharedPtr;
+        auto_unregister(size_t thread_idx, const std::shared_ptr<shared_lock_array>& shared_ptr) : threadIdx(std::move(thread_idx)),
+            sharedPtr(shared_ptr) {}
+        auto_unregister(auto_unregister&& other) noexcept : threadIdx(std::move(other.threadIdx)), sharedPtr(std::move(other.sharedPtr)) {}
+        ~auto_unregister()
+        {
+            if (sharedPtr.use_count() > 0u)
+            {
+                (*sharedPtr)[threadIdx].value--;
+            }
+        }
+    };
+
     __forceinline std::thread::id fast_get_this_thread_id() const noexcept
     {
         return std::this_thread::get_id();
     }
-
-    size_t getOrSetIndex(size_t set_index = std::numeric_limits<size_t>::max()) noexcept
+    
+    enum class index_operation : uint8_t
     {
-        // this is a fused method for the sake of this map
-        thread_local static std::unordered_map<void*, size_t> threadLocalIdxMap;
-        if (set_index == std::numeric_limits<size_t>::max())
+        InvalidOp = 0u,
+        UnregisterThread,
+        GetIndex,
+        RegisterThread
+    };
+
+    size_t getOrSetIndex(index_operation operation, size_t result_index = std::numeric_limits<size_t>::max()) noexcept
+    {
+        thread_local static std::unordered_map<void*, auto_unregister> threadLocalIdxMap;
+
+        auto iter = threadLocalIdxMap.find(this);
+        if (iter != std::cend(threadLocalIdxMap))
         {
-            auto iter = threadLocalIdxMap.find(this);
-            if (iter != std::cend(threadLocalIdxMap))
+            result_index = iter->second.
+        }
+
+        if (operation == index_operation::UnregisterThread)
+        {
+            if (sharedLocksArray[result_index].value == 1u)
             {
-                set_index = iter->second;
+                threadLocalIdxMap.erase(this);
+            }
+            else
+            {
+                return std::numeric_limits<size_t>::max();
             }
         }
-        else
+        else if (operation == index_operation::RegisterThread)
         {
-            threadLocalIdxMap.emplace(this, set_index);
+            threadLocalIdxMap.emplace(this, result_index, sharedLocksArrayPtr);
+
+            for (auto removal_iter = threadLocalIdxMap.begin(); removal_iter != threadLocalIdxMap.end();)
+            {
+                if (removal_iter->second.sharedPtr->at(iter->second.threadIdx).value == std::numeric_limits<size_t>::max())
+                {
+                    removal_iter = threadLocalIdxMap.erase(removal_iter);
+                }
+                else
+                {
+                    ++removal_iter;
+                }
+            }
         }
-        return set_index;
+
+        return result_index;
     }
 
     /* 
@@ -99,13 +145,18 @@ public:
 
     ~contention_free_mutex() = default;
 
+    bool unregister_thread() noexcept
+    {
+        return getOrSetIndex(index_operation::UnregisterThread) != std::numeric_limits<size_t>::max();
+    }
+
     size_t register_thread() noexcept
     {
-        size_t curr_index = getOrSetIndex();
+        size_t curr_index = getOrSetIndex(index_operation::GetIndex);
         if (curr_index == std::numeric_limits<size_t>::max())
         {
             // I chose early return, instead of reference implementations <= preceding entry to the for loop
-            if (sharedLocksArrayPtr.use_count() >= sharedLocksArray.size())
+            if (sharedLocksArrayPtr.use_count() > sharedLocksArray.size())
             {
                 return curr_index;
             }
@@ -117,7 +168,7 @@ public:
                     if (sharedLocksArray[i].value.compare_exchange_strong(unregistered_value, 1u))
                     {
                         curr_index = i;
-                        getOrSetIndex(curr_index);
+                        getOrSetIndex(index_operation::RegisterThread, curr_index);
                         break;
                     }
                 }
@@ -200,7 +251,35 @@ public:
         const size_t register_index = register_thread();
         if (register_index != std::numeric_limits<size_t>::max())
         {
-            assert(sharedLocksArray[register_index].value.load(std::memory_order_acquire) == 1);
+            if constexpr(DebugAssertEnabled())
+            {
+                assert(sharedLocksArray[register_index].value.load(std::memory_order_acquire) == 1);
+            }
+            
+            if (ownerThreadId.load(std::memory_order_acquire) != fast_get_this_thread_id())
+            {
+                size_t i = 0u; // spin/wait to acquire the lock
+                for (bool flag = false; !wantExclusiveLock.compare_exchange_weak(flag, true, std::memory_order_seq_cst); flag = false)
+                {
+                    if (++i % 100000 == 0)
+                    {
+                        std::this_thread::yield();
+                    }
+                }
+                ownerThreadId.store(fast_get_this_thread_id(), std::memory_order_release);
+            }
+
+            ++recursiveExclusiveLockCount;
+        }
+    }
+
+    void unlock() noexcept
+    {
+        assert(recursiveExclusiveLockCount > 0u);
+        if (--recursiveExclusiveLockCount == 0u)
+        {
+            ownerThreadId.store(std::thread::id(), std::memory_order_release);
+            wantExclusiveLock.store(false, std::memory_order_release);
         }
     }
 
