@@ -21,7 +21,7 @@ enum class truth_type : uint16_t {
     DOUBLE = 10u,
     LONG_DOUBLE = 11u,
     STRING = 12u,
-    BUFFER = 13u,
+    BUFFER = 13u, // binary blob of untyped data
     OBJECT_REFERENCE = 14u,
     SUBOBJECT = 15u
 };

@@ -1,6 +1,5 @@
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
-
 SET(VPR_INCLUDE_DIRS_PLUGIN_RELATIVE
     "../../third_party/vulpesrender/alloc/include"
     "../../third_party/vulpesrender/command/include"
