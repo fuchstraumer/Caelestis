@@ -1,6 +1,7 @@
 #pragma once
 #ifndef FOUNDATION_PARTITIONED_MAP_HPP
 #define FOUNDATION_PARTITIONED_MAP_HPP
+#include "safe_ptr.hpp"
 
 namespace foundation
 {

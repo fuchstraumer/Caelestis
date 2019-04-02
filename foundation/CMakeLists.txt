@@ -21,9 +21,10 @@ ENDIF()
 
 ADD_LIBRARY(foundation STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include/threading/contention_free_mutex.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/threading/partitioned_map.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/threading/safe_object.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/threading/safe_ptr.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/threading/spinlock.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/threading/partitioned_map.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/CoreAPIs.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/PluginAPI.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/PluginManager.hpp"
