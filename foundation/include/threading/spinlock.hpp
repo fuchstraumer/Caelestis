@@ -3,52 +3,57 @@
 #define FUCHSTRAUMER_SPIN_LOCK_HPP
 #include <atomic>
 
-struct spin_lock
+namespace foundation
 {
-    spin_lock() = default;
-    ~spin_lock() = default;
 
-    bool try_lock() noexcept
+    struct spin_lock
     {
-        return !flag.test_and_set(std::memory_order::memory_order_acquire);
-    }
+        spin_lock() = default;
+        ~spin_lock() = default;
 
-    void lock() noexcept
-    {
-        while (try_lock())
+        bool try_lock() noexcept
         {
-
+            return !flag.test_and_set(std::memory_order::memory_order_acquire);
         }
-    }
 
-    void unlock() noexcept
+        void lock() noexcept
+        {
+            while (try_lock())
+            {
+
+            }
+        }
+
+        void unlock() noexcept
+        {
+            flag.clear(std::memory_order::memory_order_release);
+        }
+
+    private:
+        std::atomic_flag flag{ 0 };
+    };
+
+    struct spin_lock_guard
     {
-        flag.clear(std::memory_order::memory_order_release);
-    }
+        spin_lock_guard(spin_lock& lock) noexcept : ref(lock)
+        {
+            ref.lock();
+        }
 
-private:
-    std::atomic_flag flag{ 0 };
-};
+        ~spin_lock_guard() noexcept
+        {
+            ref.unlock();
+        }
 
-struct spin_lock_guard
-{
-    spin_lock_guard(spin_lock& lock) noexcept : ref(lock)
-    {
-        ref.lock();
-    }
+        spin_lock_guard(const spin_lock_guard&) = delete;
+        spin_lock_guard(spin_lock_guard&& other) = delete;
+        spin_lock_guard& operator=(const spin_lock_guard&) = delete;
+        spin_lock_guard& operator=(spin_lock_guard&& other) = delete;
 
-    ~spin_lock_guard() noexcept
-    {
-        ref.unlock();
-    }
+    private:
+        spin_lock& ref;
+    };
 
-    spin_lock_guard(const spin_lock_guard&) = delete;
-    spin_lock_guard(spin_lock_guard&& other) = delete;
-    spin_lock_guard& operator=(const spin_lock_guard&) = delete;
-    spin_lock_guard& operator=(spin_lock_guard&& other) = delete;
-
-private:
-    spin_lock& ref;
-};
+}
 
 #endif //!FUCHSTRAUMER_SPIN_LOCK_HPP
