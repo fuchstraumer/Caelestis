@@ -115,6 +115,8 @@ namespace foundation
 
     public:
 
+		using value_type = T;
+
         template<typename...Args>
         safe_ptr(Args&&...args) : ptr(std::make_shared<T>(std::forward<Args>(args...))), mutexPointer(std::make_shared<MutexType>()) {}
 
