@@ -145,11 +145,17 @@ namespace foundation
     {
     protected:
         T object;
+        using object_type = T;
         mutable MutexType mutex;
 
-        T* get_object_pointer() const noexcept
+        __forceinline T* get_object_pointer() const noexcept
         {
             return const_cast<T*>(&object);
+        }
+
+        __forceinline MutexType* get_mutex_pointer() const noexcept
+        {
+            return &mutex;
         }
 
         template<typename RequestedLock>
@@ -213,8 +219,61 @@ namespace foundation
     {
         T& safeRef;
         typename T::exclusive_lock_type lock;
-        exclusive_locked_safe_ptr(const T& p) : safeRef(*const_cast<T*>(&p))
+        exclusive_locked_safe_ptr(const T& p) noexcept : safeRef(*const_cast<T*>(&p)), lock(*(safeRef.get_mutex_pointer())) {}
+
+        typename T::object_type* operator->() noexcept
+        {
+            return safeRef.get_object_pointer();
+        }
+
+        typename T::auto_null_lock operator*() noexcept
+        {
+            return typename T::auto_null_lock(safeRef.get_object_pointer(), *safeRef.get_mutex_pointer());
+        }
+
+        operator typename T::ObjectType() noexcept
+        {
+            return safeRef.object;
+        }
+
     };
+
+    template<typename T>
+    exclusive_locked_safe_ptr<T> exclusively_lock_safe_ptr(const T& arg) noexcept
+    {
+        return exclusive_locked_safe_ptr<T>(arg);
+    }
+
+    template<typename T>
+    struct share_locked_safe_ptr
+    {
+        T& safeRef;
+        typename T::shared_lock_type lock;
+
+        share_locked_safe_ptr(const T& p) noexcept : safeRef(*const_cast<T*>(&p)), lock(*(safeRef.get_mutex_pointer())) {}
+
+        typename const T::object_type* operator->() const noexcept
+        {
+            return safeRef.get_object_pointer();
+        }
+
+        typename const T::auto_null_lock operator*() const noexcept
+        {
+            return typename T::auto_null_lock(safeRef.get_object_pointer(), *safeRef.get_mutex_pointer());
+        }
+
+        operator typename T::object_type() const noexcept
+        {
+            return safeRef.object;
+        }
+
+    };
+
+    template<typename T>
+    share_locked_safe_ptr<T> share_lock_safe_ptr(const T& arg) noexcept
+    {
+        return share_locked_safe_ptr<T>(arg);
+    }
 
 }
 
